@@ -60,6 +60,20 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+ # frontend:                              # ← descomente na Sprint 5
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: ../docker/Dockerfile.frontend
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./frontend:/app
+  #     - /app/node_modules             # evita sobrescrever node_modules do container
+  #   environment:
+  #     - VITE_API_URL=http://localhost:8000
+  #   depends_on:
+  #     - api
+  #   command: npm run dev -- --host
 
 volumes:
   postgres_data:
