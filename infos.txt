@@ -1,0 +1,14 @@
+Dentro do Docker Compose, os serviços se enxergam pelo nome. Por isso no `.env` você usa `@db:5432` e não `@localhost:5432` — o nome `db` resolve para o IP interno do container do PostgreSQL:
+```
+api    → fala com → db      na porta 5432
+api    → fala com → redis   na porta 6379
+worker → fala com → redis   na porta 6379 (busca tarefas)
+worker → fala com → db      na porta 5432 (salva resultados)
+
+
+
+Celery é uma biblioteca Python que gerencia execução de tarefas em background. Ele tem três partes:
+1. A tarefa — uma função Python normal decorada com @celery_app.task. Você define o que deve ser executado.
+2. O broker — onde as tarefas ficam na fila esperando ser executadas. No SIRS é o Redis. A API coloca tarefas aqui, o worker busca daqui.
+3. O worker — um processo separado que fica rodando em loop, buscando tarefas no broker e executando. No Docker Compose é o serviço worker.
+O Celery é o carteiro do SIRS — a API escreve uma carta (tarefa) e joga na caixa de correio (Redis). O worker fica vigiando a caixa, pega a carta e entrega (processa). A API não precisa esperar a entrega para continuar trabalhando.
