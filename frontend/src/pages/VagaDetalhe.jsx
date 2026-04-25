@@ -23,9 +23,9 @@ const labelStatus = {
 }
 
 const rankStyle = [
-  "bg-amber-400 text-white",
-  "bg-slate-400 text-white",
-  "bg-orange-400 text-white",
+  { background: "linear-gradient(135deg, #1AAA80, #2EE8B4)", color: "#07111A" },
+  { background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)", color: "#07111A" },
+  { background: "rgba(77, 200, 232, 0.2)",                   color: "#4DC8E8" },
 ]
 
 export function VagaDetalhe() {
@@ -57,15 +57,15 @@ export function VagaDetalhe() {
 
   if (loading) return (
     <div className="space-y-4">
-      <div className="h-8 w-64 bg-slate-100 rounded-xl animate-pulse"/>
-      <div className="h-4 w-96 bg-slate-100 rounded animate-pulse"/>
+      <div className="h-8 w-64 rounded-xl animate-pulse" style={{ background: "rgba(14, 80, 104, 0.3)" }} />
+      <div className="h-4 w-96 rounded animate-pulse" style={{ background: "rgba(14, 80, 104, 0.2)" }} />
     </div>
   )
 
   if (!vaga) return (
     <div className="text-center py-20">
-      <p className="text-slate-400">Vaga não encontrada.</p>
-      <Link to="/" className="text-sm text-indigo-500 hover:text-indigo-700 mt-2 block font-semibold">
+      <p className="text-brand-pale/45">Vaga não encontrada.</p>
+      <Link to="/" className="text-sm text-brand-sky hover:text-brand-pale mt-2 block font-semibold transition-colors">
         ← Voltar para vagas
       </Link>
     </div>
@@ -77,31 +77,50 @@ export function VagaDetalhe() {
   return (
     <div>
       {/* Breadcrumb */}
-      <Link to="/"
-        className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-indigo-600 transition-colors mb-6 font-semibold">
+      <Link
+        to="/"
+        className="inline-flex items-center gap-1.5 text-sm text-brand-pale/45 hover:text-brand-sky transition-colors mb-6 font-semibold"
+      >
         ← Vagas
       </Link>
 
       {/* Header da vaga */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 mb-6 shadow-sm">
+      <div className="card-glass rounded-2xl p-6 mb-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-xl font-bold text-slate-900">{vaga.nome}</h1>
+              <h1 className="text-xl font-bold text-brand-cloud">{vaga.nome}</h1>
               <Badge cor={{ aberta: "green", pausada: "amber", fechada: "gray" }[vaga.status]}>
                 {vaga.status}
               </Badge>
             </div>
-            <p className="text-sm text-slate-500 leading-relaxed">{vaga.requisitos_texto}</p>
+            <p className="text-sm text-brand-pale/55 leading-relaxed">{vaga.requisitos_texto}</p>
           </div>
           <button
             onClick={handleAnalisarMercado}
             disabled={analisando}
-            className="flex-shrink-0 px-4 py-2 border border-indigo-200 hover:border-indigo-400 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-sm font-bold rounded-xl transition-all disabled:opacity-50"
+            className="flex-shrink-0 px-4 py-2 text-brand-sky text-sm font-bold rounded-xl transition-all disabled:opacity-50"
+            style={{
+              background: "rgba(26, 139, 191, 0.14)",
+              border: "1px solid rgba(26, 139, 191, 0.3)",
+            }}
+            onMouseEnter={e => {
+              if (!analisando) {
+                e.currentTarget.style.background = "rgba(26, 139, 191, 0.25)"
+                e.currentTarget.style.borderColor = "rgba(26, 139, 191, 0.5)"
+              }
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = "rgba(26, 139, 191, 0.14)"
+              e.currentTarget.style.borderColor = "rgba(26, 139, 191, 0.3)"
+            }}
           >
             {analisando ? (
               <span className="flex items-center gap-2">
-                <span className="w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"/>
+                <span
+                  className="w-3 h-3 border-2 rounded-full animate-spin"
+                  style={{ borderColor: "rgba(77,200,232,0.4)", borderTopColor: "#4DC8E8" }}
+                />
                 Analisando...
               </span>
             ) : "Analisar mercado"}
@@ -109,23 +128,34 @@ export function VagaDetalhe() {
         </div>
 
         {/* Pesos */}
-        <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-slate-100">
-          <span className="text-xs text-slate-400 font-medium">Pesos:</span>
+        <div
+          className="flex flex-wrap items-center gap-2 mt-4 pt-4"
+          style={{ borderTop: "1px solid rgba(77, 200, 232, 0.1)" }}
+        >
+          <span className="text-xs text-brand-pale/40 font-medium">Pesos:</span>
           {[
             `Requisitos ${Math.round(vaga.peso_rh * 100)}%`,
             `Mercado ${Math.round(vaga.peso_mercado * 100)}%`,
           ].map(label => (
-            <span key={label} className="text-xs font-mono bg-indigo-50 text-indigo-600 px-2.5 py-1 rounded-lg font-semibold">
+            <span
+              key={label}
+              className="text-xs font-mono px-2.5 py-1 rounded-lg font-semibold"
+              style={{ background: "rgba(26, 139, 191, 0.15)", color: "#4DC8E8" }}
+            >
               {label}
             </span>
           ))}
-          <span className="text-xs text-slate-300 mx-0.5">|</span>
+          <span className="text-brand-pale/20 mx-0.5">|</span>
           {[
             `Currículo ${Math.round(vaga.peso_curriculo * 100)}%`,
             `Entrev. RH ${Math.round(vaga.peso_entrevista_rh * 100)}%`,
             `Entrev. Tec. ${Math.round(vaga.peso_entrevista_tec * 100)}%`,
           ].map(label => (
-            <span key={label} className="text-xs font-mono bg-slate-100 text-slate-500 px-2.5 py-1 rounded-lg font-semibold">
+            <span
+              key={label}
+              className="text-xs font-mono px-2.5 py-1 rounded-lg font-semibold"
+              style={{ background: "rgba(14, 80, 104, 0.4)", color: "rgba(125, 216, 240, 0.6)" }}
+            >
               {label}
             </span>
           ))}
@@ -136,17 +166,20 @@ export function VagaDetalhe() {
         {/* Ranking de candidatos */}
         <div className="col-span-2 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <h2 className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">
               Candidatos
             </h2>
-            <span className="text-xs text-slate-400 font-mono font-semibold">
+            <span className="text-xs text-brand-pale/35 font-mono font-semibold">
               {candidaturas.length} {candidaturas.length === 1 ? "candidato" : "candidatos"}
             </span>
           </div>
 
           {candidaturas.length === 0 ? (
-            <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
-              <p className="text-slate-400 text-sm font-medium">Nenhum candidato vinculado a esta vaga.</p>
+            <div
+              className="rounded-2xl p-10 text-center border-2 border-dashed"
+              style={{ borderColor: "rgba(77, 200, 232, 0.12)" }}
+            >
+              <p className="text-brand-pale/40 text-sm font-medium">Nenhum candidato vinculado a esta vaga.</p>
             </div>
           ) : (
             candidaturas
@@ -164,23 +197,31 @@ export function VagaDetalhe() {
                                     (c.status === "triagem_pendente" && scoreRH === null)
 
                 const scoreCor =
-                  scoreFinal >= 70 ? "text-emerald-600" :
-                  scoreFinal >= 50 ? "text-amber-600"   : "text-red-500"
+                  scoreFinal >= 70 ? "#2EE8B4" :
+                  scoreFinal >= 50 ? "#FCD34D" : "#FCA5A5"
 
                 return (
-                  <div key={c.id}
-                    className="bg-white border border-slate-200 rounded-2xl p-5 hover:border-indigo-200 hover:shadow-sm transition-all">
+                  <div
+                    key={c.id}
+                    className="card-interactive rounded-2xl p-5"
+                  >
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
                         {/* Rank badge */}
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${rankStyle[i] ?? "bg-slate-100 text-slate-500"}`}>
+                        <div
+                          className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
+                          style={rankStyle[i] ?? {
+                            background: "rgba(14, 80, 104, 0.5)",
+                            color: "rgba(125, 216, 240, 0.6)",
+                          }}
+                        >
                           {i + 1}
                         </div>
                         <div>
-                          <p className="font-bold text-slate-900">
+                          <p className="font-bold text-brand-cloud">
                             {c.candidato?.nome ?? "Candidato"}
                           </p>
-                          <p className="text-xs text-slate-400 font-mono mt-0.5">
+                          <p className="text-xs text-brand-pale/40 font-mono mt-0.5">
                             {c.candidato?.email}
                           </p>
                         </div>
@@ -188,10 +229,10 @@ export function VagaDetalhe() {
                       <div className="flex items-center gap-3">
                         {scoreFinal !== null && (
                           <div className="text-right">
-                            <p className={`text-2xl font-bold font-mono ${scoreCor}`}>
+                            <p className="text-2xl font-bold font-mono" style={{ color: scoreCor }}>
                               {scoreFinal}
                             </p>
-                            <p className="text-xs text-slate-400">/ 100</p>
+                            <p className="text-xs text-brand-pale/35">/ 100</p>
                           </div>
                         )}
                         <Badge cor={corStatus[c.status] ?? "gray"}>
@@ -202,8 +243,11 @@ export function VagaDetalhe() {
 
                     {processando ? (
                       <div className="flex items-center gap-2 pl-11">
-                        <span className="w-3 h-3 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"/>
-                        <span className="text-xs text-slate-400">Processando currículo...</span>
+                        <span
+                          className="w-3 h-3 border-2 rounded-full animate-spin"
+                          style={{ borderColor: "rgba(77,200,232,0.3)", borderTopColor: "#4DC8E8" }}
+                        />
+                        <span className="text-xs text-brand-pale/40">Processando currículo...</span>
                       </div>
                     ) : scoreRH !== null ? (
                       <div className="pl-11 space-y-2.5">
@@ -219,16 +263,19 @@ export function VagaDetalhe() {
 
         {/* Sidebar: skills de mercado */}
         <div className="space-y-3">
-          <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+          <h2 className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">
             Top skills de mercado
           </h2>
-          <div className="bg-white border border-slate-200 rounded-2xl p-5">
+          <div className="card-glass rounded-2xl p-5">
             {termos.length === 0 ? (
               <div className="text-center py-6">
-                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center mx-auto mb-3">
-                  <span className="text-indigo-400 text-base">◎</span>
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center mx-auto mb-3"
+                  style={{ background: "rgba(26, 139, 191, 0.14)" }}
+                >
+                  <span className="text-brand-sky text-base">◎</span>
                 </div>
-                <p className="text-xs text-slate-400 leading-relaxed">
+                <p className="text-xs text-brand-pale/40 leading-relaxed">
                   Clique em "Analisar mercado" para ver as skills mais demandadas para este cargo.
                 </p>
               </div>
@@ -236,24 +283,27 @@ export function VagaDetalhe() {
               <div className="space-y-3">
                 {termos.map((t, i) => (
                   <div key={t.termo} className="flex items-center gap-2.5">
-                    <span className="text-xs font-mono text-slate-300 w-4 text-right flex-shrink-0">
+                    <span className="text-xs font-mono text-brand-pale/25 w-4 text-right flex-shrink-0">
                       {i + 1}
                     </span>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold text-slate-700 truncate">
+                        <span className="text-sm font-semibold text-brand-pale/80 truncate">
                           {t.termo}
                         </span>
-                        <span className="text-xs font-mono text-indigo-400 ml-2 flex-shrink-0 font-bold">
+                        <span className="text-xs font-mono text-brand-sky ml-2 flex-shrink-0 font-bold">
                           {t.frequencia}×
                         </span>
                       </div>
-                      <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                      <div
+                        className="w-full rounded-full h-1.5 overflow-hidden"
+                        style={{ background: "rgba(7, 17, 26, 0.5)" }}
+                      >
                         <div
                           className="h-full rounded-full transition-all duration-500"
                           style={{
                             width: `${(t.frequencia / termos[0].frequencia) * 100}%`,
-                            background: "linear-gradient(90deg, #818cf8, #a78bfa)",
+                            background: "linear-gradient(90deg, #1A8BBF, #4DC8E8)",
                           }}
                         />
                       </div>
@@ -262,7 +312,10 @@ export function VagaDetalhe() {
                 ))}
 
                 {totalVagas && (
-                  <p className="text-xs text-slate-400 pt-3 border-t border-slate-100 font-mono">
+                  <p
+                    className="text-xs text-brand-pale/35 pt-3 font-mono"
+                    style={{ borderTop: "1px solid rgba(77, 200, 232, 0.1)" }}
+                  >
                     {totalVagas} vagas analisadas · {vaga.ranking_mercado.fonte}
                   </p>
                 )}

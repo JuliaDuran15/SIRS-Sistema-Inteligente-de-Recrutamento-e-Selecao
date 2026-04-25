@@ -166,7 +166,6 @@ async def coletar_adzuna(titulo_vaga: str, n_paginas: int = 2) -> list[str]:
     print(f"Adzuna: {len(textos)} vagas coletadas para '{titulo_vaga}'")
     return textos
 
-
 # Mapeamento de termos em português → termos em inglês para busca no LinkedIn
 MAPEAMENTO_CARGOS = {
     # Tecnologia
@@ -314,7 +313,6 @@ def coletar_kaggle(titulo_vaga: str) -> list[str]:
     textos = melhor_df["skills_desc"].head(300).tolist()
     print(f"Kaggle: {len(textos)} vagas para '{titulo_vaga}'")
     return textos
-
 # ── Geração do vetor de mercado ────────────────────────────────────────────
 
 def gerar_vetor_mercado(termos_frequentes: list[tuple[str, int]]) -> list[float]:

@@ -1,0 +1,192 @@
+/* src/components/Login.css */
+
+/* 1. CENTRALIZAÇÃO ABSOLUTA E FUNDO DO SITE */
+.login-container {
+  display: flex;
+  justify-content: center; /* Centraliza horizontalmente */
+  align-items: center;    /* Centraliza verticalmente */
+  min-height: 100vh;      /* Garante altura total da tela */
+  width: 100%;
+  position: fixed;        /* Fixa o fundo, ignorando rolagem */
+  top: 0;
+  left: 0;
+  margin: 0;
+  padding: 20px;
+  box-sizing: border-box;
+  background-color: #07111A; /* Sua cor de fundo brand */
+  /* Adiciona o gradiente de fundo que estava no corpo */
+  background-image: linear-gradient(160deg, #07111A 0%, #0E5068 100%);
+  background-attachment: fixed;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: #DFF0F6;
+  z-index: 1000;          /* Garante que o container esteja acima de tudo */
+}
+
+/* 2. ESTILO DO CARD CENTRALIZADO */
+.login-card {
+  background: rgba(14, 80, 104, 0.25); /* card-glass */
+  backdrop-blur: 20px;
+  -webkit-backdrop-blur: 20px;
+  border: 1px solid rgba(77, 200, 232, 0.15);
+  padding: 40px;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 420px; /* Largura máxima do card */
+  box-sizing: border-box;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.3), 0 4px 14px 0 rgba(77, 200, 232, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centraliza conteúdo interno */
+}
+
+/* 3. ESTILO DO HEADER E TEXTOS */
+.login-header {
+  text-align: center;
+  margin-bottom: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.login-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin: 10px 0 5px 0;
+  letter-spacing: -0.02em;
+}
+
+.login-header .subtitle {
+  font-size: 14px;
+  color: rgba(223, 240, 246, 0.5); /* brand-cloud/50 */
+  margin: 0;
+}
+
+/* 4. ESTILO DOS INPUTS */
+.login-card form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px; /* Espaçamento entre inputs */
+}
+
+.form-group input {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 14px;
+  background-color: rgba(7, 17, 26, 0.6); /* brand-black/60 */
+  border: 1px solid rgba(77, 200, 232, 0.2);
+  color: #DFF0F6;
+  border-radius: 12px;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.form-group input::placeholder {
+  color: rgba(125, 216, 240, 0.35); /* brand-pale/35 */
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: rgba(26, 139, 191, 0.6); /* brand-ocean/60 */
+  box-shadow: 0 0 0 3px rgba(26, 139, 191, 0.15);
+}
+
+/* 5. ESTILO DO BOTÃO PRINCIPAL */
+.login-card button[type="submit"] {
+  width: 100%;
+  padding: 14px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #1A8BBF 0%, #4DC8E8 100%); /* gradient-brand */
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px 0 rgba(77, 200, 232, 0.4); /* shadow-gradient */
+}
+
+.login-card button[type="submit"]:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.login-card button[type="submit"]:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.login-card button[type="submit"]:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 6. ESTILO DO DIVIDER E ACESSO RÁPIDO */
+.error-message {
+  color: #ef4444; /* red-500 */
+  font-size: 13px;
+  text-align: center;
+  margin: 0;
+}
+
+.divider {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 32px 0;
+}
+
+.divider::before, .divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: rgba(77, 200, 232, 0.1);
+}
+
+.divider span {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: rgba(125, 216, 240, 0.3); /* brand-pale/30 */
+  letter-spacing: 0.1em;
+  font-weight: 600;
+}
+
+.quick-access {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quick-access-item {
+  width: 100%;
+  background: rgba(14, 80, 104, 0.2); /* card-interactive */
+  border: 1px solid rgba(77, 200, 232, 0.1);
+  padding: 12px 16px;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quick-access-item:hover {
+  background: rgba(14, 80, 104, 0.4);
+  border-color: rgba(77, 200, 232, 0.2);
+}
+
+.quick-access-item .email {
+  font-size: 13px;
+  color: rgba(223, 240, 246, 0.6); /* brand-cloud/60 */
+}
+
+.quick-access-item .role {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #2EE8B4; /* brand-mint */
+  background: rgba(46, 232, 180, 0.1);
+  padding: 4px 8px;
+  border-radius: 6px;
+}
