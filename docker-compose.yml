@@ -33,7 +33,7 @@ services:
     command: celery -A app.core.celery_app worker --loglevel=info
 
   db:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: sirs
       POSTGRES_PASSWORD: sirs123
@@ -42,6 +42,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sirs -d sirs_db"]
       interval: 5s
@@ -60,6 +61,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+
  # frontend:                              # ← descomente na Sprint 5
   #   build:
   #     context: ./frontend

@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { -webkit-font-smoothing: antialiased; }
+
+  body {
+    @apply bg-slate-50 text-slate-900;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+
+  h1, h2, h3 {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .font-serif { font-family: 'Instrument Serif', serif; }
+  .font-mono  { font-family: 'JetBrains Mono', monospace; }
+
+  .gradient-brand {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  }
+
+  .text-gradient-brand {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+}

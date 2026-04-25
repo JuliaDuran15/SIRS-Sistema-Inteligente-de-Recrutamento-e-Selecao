@@ -16,4 +16,6 @@ celery_app.conf.update(
     enable_utc=True,
     task_acks_late=True,
     task_reject_on_worker_lost=True,
+    broker_connection_retry_on_startup=True,  # corrige o aviso de deprecação
+    worker_uid="nobody", 
 )

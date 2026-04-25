@@ -12,3 +12,32 @@ Celery é uma biblioteca Python que gerencia execução de tarefas em background
 2. O broker — onde as tarefas ficam na fila esperando ser executadas. No SIRS é o Redis. A API coloca tarefas aqui, o worker busca daqui.
 3. O worker — um processo separado que fica rodando em loop, buscando tarefas no broker e executando. No Docker Compose é o serviço worker.
 O Celery é o carteiro do SIRS — a API escreve uma carta (tarefa) e joga na caixa de correio (Redis). O worker fica vigiando a caixa, pega a carta e entrega (processa). A API não precisa esperar a entrega para continuar trabalhando.
+
+O que o Resume Parser precisa fazer
+PDF enviado pelo candidato
+        ↓
+PyMuPDF — extrai o texto bruto do PDF
+        ↓
+spaCy — identifica entidades no texto (tecnologias, cargos, instituições)
+        ↓
+sentence-transformers — vetoriza o texto completo (384 dimensões)
+        ↓
+Normalização semântica — compara entidades encontradas com catálogo de skills
+        ↓
+Salva no banco: texto, vetor, skills extraídas
+
+PyMuPDF (importado como fitz) lê arquivos PDF e extrai o texto. Um PDF por dentro é uma coleção de páginas, cada uma com objetos de texto posicionados em coordenadas. O PyMuPDF percorre esses objetos e devolve o texto como string.
+Para o SIRS você vai usar "text" — o texto puro é suficiente para o NLP.
+
+O spaCy é uma biblioteca de NLP (Processamento de Linguagem Natural). Ele recebe um texto e retorna um objeto rico com tokens, entidades, dependências gramaticais e muito mais.
+Para o SIRS o mais importante é o NER — Named Entity Recognition (Reconhecimento de Entidades Nomeadas). O NER identifica automaticamente partes do texto que são entidades — nomes de pessoas, organizações, locais, datas.
+
+A biblioteca sentence-transformers é um wrapper sobre modelos BERT que facilita a geração de embeddings. Você passa um texto, ela devolve um vetor numpy.
+O modelo all-MiniLM-L6-v2 foi treinado com aprendizado contrastivo — dado um par de frases similares ele aproxima os vetores, dado um par diferente ele afasta. O resultado é que frases com significado parecido ficam próximas no espaço vetorial.
+
+Três schemas, cada um com responsabilidade clara:
+VagaCreate — usado no POST /vagas. O analista preenche o nome e os requisitos em texto livre. Os pesos têm valores padrão mas podem ser ajustados. Valida que os pesos somam 1.0.
+VagaResponse — o que a API devolve em qualquer endpoint de vaga. Não expõe o vetor_vaga (lista de 384 floats) porque poluiria a resposta sem utilidade para o frontend.
+VagaUpdatePesos — usado no PATCH /vagas/{id}/pesos. Só os pesos, sem mexer em mais nada. Valida a soma também.
+VagaUpdateRequisitos — usado no PATCH /vagas/{id}/requisitos. Só o texto, e o endpoint recalcula o vetor automaticamente.
+
