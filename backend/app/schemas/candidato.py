@@ -1,7 +1,9 @@
-from pydantic import BaseModel, EmailStr
-from uuid import UUID
-from datetime import datetime, date
+from datetime import date, datetime
 from typing import Any
+from uuid import UUID
+
+from pydantic import BaseModel, EmailStr
+
 
 class FormacaoItem(BaseModel):
     curso        : str

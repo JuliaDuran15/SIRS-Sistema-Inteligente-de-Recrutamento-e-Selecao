@@ -1,10 +1,12 @@
-from fastapi import APIRouter, HTTPException, Depends
-from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
-from pydantic import BaseModel, EmailStr
+from uuid import UUID
+
 from app.api.deps import DB
+from app.core.auth import criar_token, get_usuario_atual, hash_senha, verificar_senha
 from app.models.usuario import Usuario
-from app.core.auth import verificar_senha, criar_token, get_usuario_atual
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -16,7 +18,7 @@ class LoginResponse(BaseModel):
 
 
 class UsuarioAtualResponse(BaseModel):
-    id    : str
+    id    : UUID
     nome  : str
     email : str
     papel : str
@@ -61,3 +63,22 @@ def login(
 @router.get("/me", response_model=UsuarioAtualResponse)
 def me(usuario=Depends(get_usuario_atual)):
     return usuario
+
+
+class AlterarSenhaRequest(BaseModel):
+    senha_atual : str
+    senha_nova  : str
+
+
+@router.patch("/senha", status_code=204)
+def alterar_senha(
+    dados  : AlterarSenhaRequest,
+    db     : Session = DB,
+    usuario=Depends(get_usuario_atual),
+):
+    if not verificar_senha(dados.senha_atual, usuario.senha_hash):
+        raise HTTPException(status_code=400, detail="Senha atual incorreta")
+    if len(dados.senha_nova) < 6:
+        raise HTTPException(status_code=400, detail="A nova senha deve ter pelo menos 6 caracteres")
+    usuario.senha_hash = hash_senha(dados.senha_nova)
+    db.commit()

@@ -1,9 +1,9 @@
-from sqlalchemy.orm import Session
-from app.db.session import SessionLocal
-from app.models.usuario import Usuario, PapelUsuario
 from app.core.auth import hash_senha, verificar_senha
 from app.core.config import settings
 from app.core.logger import get_logger
+from app.db.session import SessionLocal
+from app.models.usuario import PapelUsuario, Usuario
+from sqlalchemy.orm import Session
 
 logger = get_logger("ADMIN")
 

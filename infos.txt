@@ -41,3 +41,19 @@ VagaResponse — o que a API devolve em qualquer endpoint de vaga. Não expõe o
 VagaUpdatePesos — usado no PATCH /vagas/{id}/pesos. Só os pesos, sem mexer em mais nada. Valida a soma também.
 VagaUpdateRequisitos — usado no PATCH /vagas/{id}/requisitos. Só o texto, e o endpoint recalcula o vetor automaticamente.
 
+Testes 
+
+test_matching_engine.py	23	calcular_score_rh/mercado/curriculo, gerar_explicacao, calcular_score_final
+test_market_analyzer.py	26	detectar_categoria (8 cargos), limpar_skills_desc, extrair_de_kaggle/adzuna
+test_auth.py	19	Login, /me, hash/token, exigir_papel
+test_usuarios.py	18	CRUD completo, inativo não lista, admin não pode ser deletado
+test_vagas.py	27	CRUD + permissões RH/gestor/admin, Celery disparado, analisar-mercado
+test_candidatos.py	21	CRUD + webhook sem auth + permissões
+test_candidaturas.py	27	CRUD + máquina de estados + upload PDF + Celery + permissões
+test_entrevistas.py	32	Agendar (RH só faz RH, gestor só faz técnica), registrar resultado, scores, avanço de status
+
+Rodar os testes: docker compose exec api python -m pytest tests/
+Mais detalhadamente (verbose): docker compose exec api python -m pytest tests/ -v
+
+Enche o banco de dados  
+docker compose exec api python tests/seed_full.py 2>&1

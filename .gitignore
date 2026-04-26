@@ -14,3 +14,4 @@ dist/
 .DS_Store
 backend/data/*.csv
 data/
+backend/uploads/curriculos

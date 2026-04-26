@@ -1,69 +1,77 @@
-import { Link, useLocation, useNavigate } from "react-router-dom"
-import { useAuth } from "../context/AuthContext"
+import { Link, useLocation } from "react-router-dom"
+import logo from "../assets/logo.png"
 
-const nav = [
-  { path: "/",           label: "Vagas"      },
-  { path: "/candidatos", label: "Candidatos" },
-]
+export function Layout({ children, usuario, onLogout }) {
+  const loc = useLocation()
 
-export function Layout({ children }) {
-  const loc      = useLocation()
-  const navigate = useNavigate()
-  const { usuario, logout } = useAuth()
-
-  function handleLogout() {
-    logout()
-    navigate("/login")
-  }
+  const nav = [
+    { path: "/",           label: "VAGAS",      papeis: null },
+    { path: "/candidatos", label: "CANDIDATOS", papeis: null },
+    { path: "/admin",      label: "ADMIN",      papeis: ["admin"] },
+  ].filter(n => !n.papeis || n.papeis.includes(usuario?.papel))
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+    <div className="min-h-screen">
+      <header
+        className="sticky top-0 z-10 border-b"
+        style={{
+          background: "rgba(7, 17, 26, 0.88)",
+          borderColor: "rgba(77, 200, 232, 0.12)",
+          backdropFilter: "blur(18px)",
+        }}
+      >
         <div className="max-w-6xl mx-auto px-8 h-16 flex items-center justify-between">
+
           {/* Brand */}
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)" }}>
-              <span className="text-white font-mono text-sm font-bold">S</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-bold text-slate-900 text-sm tracking-tight">SIRS</span>
-              <span className="hidden sm:inline text-slate-300">·</span>
-              <span className="hidden sm:inline text-slate-400 text-xs font-medium">
-                Recrutamento Inteligente
-              </span>
-            </div>
+            <img src={logo} alt="SIRS"
+              className="h-10 w-auto object-contain rounded-lg flex-shrink-0" />
+            <span className="hidden sm:inline text-xs font-medium"
+              style={{ color: "rgba(125, 216, 240, 0.45)" }}>
+              Recrutamento Inteligente
+            </span>
           </div>
 
-          {/* Right side */}
-          <div className="flex items-center gap-3">
+          {/* Nav + user */}
+          <div className="flex items-center gap-2">
             <nav className="flex items-center gap-1">
               {nav.map(n => (
-                <Link key={n.path} to={n.path}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                <Link
+                  key={n.path}
+                  to={n.path}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold tracking-widest transition-all ${
                     loc.pathname === n.path
-                      ? "bg-indigo-600 text-white shadow-sm"
-                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
-                  }`}>
+                      ? "text-brand-black"
+                      : "text-brand-pale/55 hover:text-brand-cloud hover:bg-brand-teal/30"
+                  }`}
+                  style={loc.pathname === n.path
+                    ? { background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }
+                    : undefined}
+                >
                   {n.label}
                 </Link>
               ))}
             </nav>
 
             {usuario && (
-              <div className="flex items-center gap-3 pl-3 border-l border-slate-200">
-                <div className="hidden sm:block text-right">
-                  <p className="text-xs font-semibold text-slate-700 leading-none">{usuario.nome}</p>
-                  <p className="text-xs text-slate-400 mt-0.5 capitalize">{usuario.papel}</p>
-                </div>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm"
-                  style={{ background: "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)" }}>
-                  <span className="text-white text-xs font-bold">
-                    {usuario.nome.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-                <button onClick={handleLogout}
-                  className="text-xs text-slate-400 hover:text-indigo-600 transition-colors font-medium">
+              <div className="flex items-center gap-3 pl-3 ml-1"
+                style={{ borderLeft: "1px solid rgba(77, 200, 232, 0.15)" }}>
+                <Link to="/perfil" className="flex items-center gap-2 group">
+                  <div className="hidden sm:block text-right">
+                    <p className="text-xs font-semibold text-brand-cloud leading-none group-hover:text-brand-sky transition-colors">
+                      {usuario.nome}
+                    </p>
+                    <p className="text-xs text-brand-pale/45 mt-0.5 capitalize">{usuario.papel}</p>
+                  </div>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 group-hover:opacity-80 transition-opacity"
+                    style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}>
+                    <span className="text-xs font-bold text-brand-black">
+                      {usuario.nome.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </Link>
+                <button onClick={onLogout}
+                  className="text-xs text-brand-pale/45 hover:text-brand-sky font-medium transition-colors">
                   Sair
                 </button>
               </div>

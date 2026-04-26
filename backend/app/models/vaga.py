@@ -1,10 +1,12 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, DateTime, Text, Float
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from pgvector.sqlalchemy import Vector
+
 from app.db.session import Base
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import DateTime, Float, String, Text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 
 class Vaga(Base):
     __tablename__ = "vagas"

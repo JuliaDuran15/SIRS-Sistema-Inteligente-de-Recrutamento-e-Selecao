@@ -5,12 +5,10 @@ Rode com:
 """
 
 import sys
-import os
 sys.path.insert(0, "/app")
 
 from sqlalchemy.orm import sessionmaker
 from app.db.session import engine
-from app.db.base import Base  # isso já importa todos os models
 from app.db.session import SessionLocal
 from app.models.usuario import Usuario, PapelUsuario
 from app.models.candidato import Candidato
@@ -22,6 +20,7 @@ from app.ai.resume_parser import vetorizar_texto
 from passlib.context import CryptContext
 from datetime import date
 from app.core.auth import hash_senha
+from app.core.config import settings
 
 
 pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -61,8 +60,8 @@ def criar_usuarios():
         ),
         Usuario(
             nome       = "Administrador",
-            email      = "admin@sirs.com",
-            senha_hash = hash_senha("senha123"),
+            email      = settings.ADMIN_EMAIL,
+            senha_hash = hash_senha(settings.ADMIN_SENHA),
             papel      = PapelUsuario.ADMIN,
         ),
     ]

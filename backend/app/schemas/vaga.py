@@ -1,6 +1,8 @@
-from pydantic import BaseModel, model_validator
-from uuid import UUID
 from datetime import datetime
+from typing import Any
+from uuid import UUID
+
+from pydantic import BaseModel, model_validator
 
 
 class VagaCreate(BaseModel):
@@ -46,6 +48,7 @@ class VagaResponse(BaseModel):
     peso_entrevista_rh  : float
     peso_entrevista_tec : float
     status           : str
+    ranking_mercado  : Any
     criado_em        : datetime
 
     model_config = {"from_attributes": True}

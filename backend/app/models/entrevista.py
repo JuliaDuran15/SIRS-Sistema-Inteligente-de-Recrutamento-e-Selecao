@@ -1,10 +1,12 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Float, DateTime, Text, String, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
-from sqlalchemy import String as SAString
+
 from app.db.session import Base
+from sqlalchemy import DateTime, Float, ForeignKey, String, Text
+from sqlalchemy import String as SAString
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 
 class Entrevista(Base):
     __tablename__ = "entrevistas"

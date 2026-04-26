@@ -1,10 +1,13 @@
-import uuid
 import enum
+import uuid
 from datetime import datetime
-from sqlalchemy import Float, DateTime, ForeignKey, Enum as SAEnum
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+
 from app.db.session import Base
+from sqlalchemy import DateTime, Float, ForeignKey
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 
 class StatusCandidatura(str, enum.Enum):
     NOVO                     = "novo"
@@ -44,3 +47,4 @@ class Candidatura(Base):
     candidato  : Mapped["Candidato"]        = relationship(back_populates="candidaturas")
     vaga       : Mapped["Vaga"]             = relationship(back_populates="candidaturas")
     entrevistas: Mapped[list["Entrevista"]] = relationship(back_populates="candidatura", order_by="Entrevista.agendada_para")
+    curriculo  : Mapped["Curriculo"]        = relationship(back_populates="candidatura", uselist=False)

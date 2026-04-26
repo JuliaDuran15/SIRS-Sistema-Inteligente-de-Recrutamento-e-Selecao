@@ -1,12 +1,13 @@
-from pydantic import BaseModel
-from uuid import UUID
 from datetime import datetime
+from uuid import UUID
+
+from pydantic import BaseModel
+
 
 class EntrevistaCreate(BaseModel):
-    candidatura_id   : UUID
-    entrevistador_id : UUID
-    tipo             : str   # "rh" | "tecnica"
-    agendada_para    : datetime
+    candidatura_id : UUID
+    tipo           : str   # "rh" | "tecnica"
+    agendada_para  : datetime
 
 class EntrevistaResultado(BaseModel):
     score_manual  : float        # 0–10

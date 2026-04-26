@@ -10,9 +10,6 @@ from app.core.config import settings
 from app.db.base import Base
 
 # registra o tipo vector para o autogenerate reconhecer
-from pgvector.sqlalchemy import Vector
-from alembic.autogenerate import renderers
-from sqlalchemy import types
 
 config = context.config
 

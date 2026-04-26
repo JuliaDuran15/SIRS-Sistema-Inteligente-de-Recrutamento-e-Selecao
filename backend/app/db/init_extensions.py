@@ -1,5 +1,6 @@
-from sqlalchemy import text
 from app.db.session import engine
+from sqlalchemy import text
+
 
 def criar_extensoes():
     """

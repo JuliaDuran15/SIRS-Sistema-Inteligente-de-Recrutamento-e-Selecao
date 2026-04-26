@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useParams, Link } from "react-router-dom"
-import { getVaga, getCandidaturas, analisarMercado } from "../api"
+import { getVaga, getCandidaturas, analisarMercado, updatePesos } from "../api"
 import { ScoreBar } from "../components/ScoreBar"
 import { Badge } from "../components/Badge"
 
@@ -28,12 +28,18 @@ const rankStyle = [
   { background: "rgba(77, 200, 232, 0.2)",                   color: "#4DC8E8" },
 ]
 
-export function VagaDetalhe() {
+export function VagaDetalhe({ usuario }) {
   const { id }                          = useParams()
   const [vaga, setVaga]                 = useState(null)
   const [candidaturas, setCandidaturas] = useState([])
   const [analisando, setAnalisando]     = useState(false)
   const [loading, setLoading]           = useState(true)
+  const [editandoPesos, setEditandoPesos] = useState(false)
+  const [pesos, setPesos]               = useState(null)
+  const [salvandoPesos, setSalvandoPesos] = useState(false)
+  const [erroPesos, setErroPesos]       = useState(null)
+
+  const podeEditarPesos = usuario?.papel === "admin" || usuario?.papel === "rh"
 
   useEffect(() => {
     Promise.all([
@@ -44,6 +50,51 @@ export function VagaDetalhe() {
       setCandidaturas(rc.data)
     }).finally(() => setLoading(false))
   }, [id])
+
+  function abrirEdicaoPesos() {
+    setPesos({
+      peso_rh:             vaga.peso_rh,
+      peso_mercado:        vaga.peso_mercado,
+      peso_curriculo:      vaga.peso_curriculo,
+      peso_entrevista_rh:  vaga.peso_entrevista_rh,
+      peso_entrevista_tec: vaga.peso_entrevista_tec,
+    })
+    setErroPesos(null)
+    setEditandoPesos(true)
+  }
+
+  function setPeso(campo, valor) {
+    const v = Math.max(0, Math.min(100, Number(valor))) / 100
+    setPesos(prev => {
+      const next = { ...prev, [campo]: v }
+      // auto-ajusta o complementar para os pares que devem somar 1
+      if (campo === "peso_rh")        next.peso_mercado        = Math.round((1 - v) * 100) / 100
+      if (campo === "peso_mercado")   next.peso_rh             = Math.round((1 - v) * 100) / 100
+      if (campo === "peso_curriculo") {
+        const resto = Math.round((1 - v) * 100) / 100
+        next.peso_entrevista_rh  = Math.round(resto / 2 * 100) / 100
+        next.peso_entrevista_tec = Math.round((resto - next.peso_entrevista_rh) * 100) / 100
+      }
+      return next
+    })
+  }
+
+  async function handleSalvarPesos() {
+    const somaScore = Math.round((pesos.peso_rh + pesos.peso_mercado) * 100) / 100
+    const somaFinal = Math.round((pesos.peso_curriculo + pesos.peso_entrevista_rh + pesos.peso_entrevista_tec) * 100) / 100
+    if (somaScore !== 1) { setErroPesos(`Requisitos + Mercado devem somar 100% (atual: ${Math.round(somaScore*100)}%)`); return }
+    if (somaFinal !== 1) { setErroPesos(`Currículo + Entrev. RH + Entrev. Tec. devem somar 100% (atual: ${Math.round(somaFinal*100)}%)`); return }
+    setSalvandoPesos(true); setErroPesos(null)
+    try {
+      const r = await updatePesos(id, pesos)
+      setVaga(r.data)
+      setEditandoPesos(false)
+    } catch (err) {
+      setErroPesos(err.response?.data?.detail ?? "Erro ao salvar pesos")
+    } finally {
+      setSalvandoPesos(false)
+    }
+  }
 
   async function handleAnalisarMercado() {
     setAnalisando(true)
@@ -129,36 +180,109 @@ export function VagaDetalhe() {
 
         {/* Pesos */}
         <div
-          className="flex flex-wrap items-center gap-2 mt-4 pt-4"
+          className="mt-4 pt-4"
           style={{ borderTop: "1px solid rgba(77, 200, 232, 0.1)" }}
         >
-          <span className="text-xs text-brand-pale/40 font-medium">Pesos:</span>
-          {[
-            `Requisitos ${Math.round(vaga.peso_rh * 100)}%`,
-            `Mercado ${Math.round(vaga.peso_mercado * 100)}%`,
-          ].map(label => (
-            <span
-              key={label}
-              className="text-xs font-mono px-2.5 py-1 rounded-lg font-semibold"
-              style={{ background: "rgba(26, 139, 191, 0.15)", color: "#4DC8E8" }}
-            >
-              {label}
-            </span>
-          ))}
-          <span className="text-brand-pale/20 mx-0.5">|</span>
-          {[
-            `Currículo ${Math.round(vaga.peso_curriculo * 100)}%`,
-            `Entrev. RH ${Math.round(vaga.peso_entrevista_rh * 100)}%`,
-            `Entrev. Tec. ${Math.round(vaga.peso_entrevista_tec * 100)}%`,
-          ].map(label => (
-            <span
-              key={label}
-              className="text-xs font-mono px-2.5 py-1 rounded-lg font-semibold"
-              style={{ background: "rgba(14, 80, 104, 0.4)", color: "rgba(125, 216, 240, 0.6)" }}
-            >
-              {label}
-            </span>
-          ))}
+          {!editandoPesos ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs text-brand-pale/40 font-medium">Pesos:</span>
+              {[
+                `Requisitos ${Math.round(vaga.peso_rh * 100)}%`,
+                `Mercado ${Math.round(vaga.peso_mercado * 100)}%`,
+              ].map(label => (
+                <span key={label} className="text-xs font-mono px-2.5 py-1 rounded-lg font-semibold"
+                  style={{ background: "rgba(26, 139, 191, 0.15)", color: "#4DC8E8" }}>
+                  {label}
+                </span>
+              ))}
+              <span className="text-brand-pale/20 mx-0.5">|</span>
+              {[
+                `Currículo ${Math.round(vaga.peso_curriculo * 100)}%`,
+                `Entrev. RH ${Math.round(vaga.peso_entrevista_rh * 100)}%`,
+                `Entrev. Tec. ${Math.round(vaga.peso_entrevista_tec * 100)}%`,
+              ].map(label => (
+                <span key={label} className="text-xs font-mono px-2.5 py-1 rounded-lg font-semibold"
+                  style={{ background: "rgba(14, 80, 104, 0.4)", color: "rgba(125, 216, 240, 0.6)" }}>
+                  {label}
+                </span>
+              ))}
+              {podeEditarPesos && (
+                <button onClick={abrirEdicaoPesos}
+                  className="ml-auto text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
+                  style={{ background: "rgba(26,139,191,0.12)", border: "1px solid rgba(26,139,191,0.25)", color: "#4DC8E8" }}>
+                  Editar pesos
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">Editar pesos</p>
+
+              {/* Score curricular */}
+              <div>
+                <p className="text-xs text-brand-pale/40 mb-2">Score curricular (deve somar 100%)</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { campo: "peso_rh",      label: "Requisitos da vaga" },
+                    { campo: "peso_mercado", label: "Mercado" },
+                  ].map(({ campo, label }) => (
+                    <div key={campo}>
+                      <label className="block text-xs text-brand-pale/50 mb-1">{label}</label>
+                      <div className="flex items-center gap-2">
+                        <input type="range" min="0" max="100" step="5"
+                          value={Math.round((pesos[campo] ?? 0) * 100)}
+                          onChange={e => setPeso(campo, e.target.value)}
+                          className="flex-1 accent-sky-400" />
+                        <span className="text-xs font-mono font-bold text-brand-sky w-10 text-right">
+                          {Math.round((pesos[campo] ?? 0) * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Score consolidado */}
+              <div>
+                <p className="text-xs text-brand-pale/40 mb-2">Score consolidado (deve somar 100%)</p>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { campo: "peso_curriculo",      label: "Currículo" },
+                    { campo: "peso_entrevista_rh",  label: "Entrev. RH" },
+                    { campo: "peso_entrevista_tec", label: "Entrev. Tec." },
+                  ].map(({ campo, label }) => (
+                    <div key={campo}>
+                      <label className="block text-xs text-brand-pale/50 mb-1">{label}</label>
+                      <div className="flex items-center gap-2">
+                        <input type="range" min="0" max="100" step="5"
+                          value={Math.round((pesos[campo] ?? 0) * 100)}
+                          onChange={e => setPeso(campo, e.target.value)}
+                          className="flex-1 accent-sky-400" />
+                        <span className="text-xs font-mono font-bold text-brand-sky w-10 text-right">
+                          {Math.round((pesos[campo] ?? 0) * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {erroPesos && <p className="text-xs text-red-400">{erroPesos}</p>}
+
+              <div className="flex gap-3">
+                <button onClick={() => setEditandoPesos(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-brand-pale/50 transition-colors hover:text-brand-pale"
+                  style={{ border: "1px solid rgba(77,200,232,0.15)" }}>
+                  Cancelar
+                </button>
+                <button onClick={handleSalvarPesos} disabled={salvandoPesos}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-brand-black disabled:opacity-50"
+                  style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}>
+                  {salvandoPesos ? "Salvando..." : "Salvar pesos"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -255,6 +379,20 @@ export function VagaDetalhe() {
                         <ScoreBar score={scoreMkt} label="Aderência ao mercado" />
                       </div>
                     ) : null}
+
+                    <div className="flex justify-end mt-2">
+                      <Link
+                        to={`/candidaturas/${c.id}/entrevistas`}
+                        className="text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
+                        style={{
+                          background: "rgba(26,139,191,0.12)",
+                          border: "1px solid rgba(26,139,191,0.25)",
+                          color: "#4DC8E8",
+                        }}
+                      >
+                        Ver entrevistas →
+                      </Link>
+                    </div>
                   </div>
                 )
               })
