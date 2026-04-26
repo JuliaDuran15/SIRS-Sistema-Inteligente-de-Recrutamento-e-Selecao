@@ -520,7 +520,6 @@ def criar_candidaturas(vagas, candidatos, usuarios):
             "triagem_pendente" : StatusCandidatura.TRIAGEM_PENDENTE,
             "reprovado_triagem": StatusCandidatura.REPROVADO_TRIAGEM,
             "aprovado_triagem" : StatusCandidatura.APROVADO_TRIAGEM,
-            "aprovado_triagem" : StatusCandidatura.APROVADO_TRIAGEM,
             "contratada"       : StatusCandidatura.CONTRATADO,
             "contratado"       : StatusCandidatura.CONTRATADO,
             "nao_aprovado"     : StatusCandidatura.NAO_APROVADO,

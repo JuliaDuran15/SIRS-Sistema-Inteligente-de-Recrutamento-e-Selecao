@@ -5,7 +5,7 @@ from app.core.auth import criar_token, get_usuario_atual, hash_senha, verificar_
 from app.models.usuario import Usuario
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 router = APIRouter()
