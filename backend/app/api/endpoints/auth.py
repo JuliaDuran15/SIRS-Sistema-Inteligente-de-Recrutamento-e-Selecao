@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from uuid import UUID
 from pydantic import BaseModel, EmailStr
 from app.api.deps import DB
 from app.models.usuario import Usuario
@@ -16,7 +17,7 @@ class LoginResponse(BaseModel):
 
 
 class UsuarioAtualResponse(BaseModel):
-    id    : str
+    id    : UUID
     nome  : str
     email : str
     papel : str

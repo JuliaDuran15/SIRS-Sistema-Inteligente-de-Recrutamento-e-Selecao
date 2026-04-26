@@ -1,18 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
-  /* No v4, defina assim para que ele gere as classes bg-brand-black, text-brand-sky, etc. */
-  --color-brand-black: #07111A;
-  --color-brand-teal: #0E5068;
-  --color-brand-sky: #4DC8E8;
-  --color-brand-ocean: #1A8BBF;
-  --color-brand-pale: #7DD8F0;
+  --color-brand-black:   #07111A;
+  --color-brand-teal:    #0E5068;
+  --color-brand-ocean:   #1A8BBF;
+  --color-brand-sky:     #4DC8E8;
+  --color-brand-pale:    #7DD8F0;
   --color-brand-emerald: #1AAA80;
-  --color-brand-mint: #2EE8B4;
-  --color-brand-cloud: #DFF0F6;
+  --color-brand-mint:    #2EE8B4;
+  --color-brand-cloud:   #DFF0F6;
 
-  --font-plus-jakarta: "Plus Jakarta Sans", sans-serif;
-  
+  --font-sans: "Plus Jakarta Sans", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
   --shadow-gradient: 0 4px 14px 0 rgba(77, 200, 232, 0.4);
 }
 
@@ -20,15 +21,69 @@
   * {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    box-sizing: border-box;
   }
 
+  html { height: 100%; }
+
   body {
-    /* Use as variáveis aqui ou as classes do tailwind */
-    background-color: var(--color-brand-black);
-    color: var(--color-brand-cloud);
-    font-family: var(--font-plus-jakarta);
     min-height: 100vh;
+    background-color: var(--color-brand-black);
+    background-image: linear-gradient(160deg, #07111A 0%, #0E5068 100%);
+    background-attachment: fixed;
+    color: var(--color-brand-cloud);
+    font-family: var(--font-sans);
     margin: 0;
+  }
+
+  h1, h2, h3 {
+    letter-spacing: -0.02em;
+  }
+
+  /* Dark inputs globais */
+  input, textarea, select {
+    background: rgba(7, 17, 26, 0.65);
+    color: var(--color-brand-cloud);
+    border: 1px solid rgba(77, 200, 232, 0.2);
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: rgba(125, 216, 240, 0.35);
+  }
+
+  input:focus, textarea:focus, select:focus {
+    outline: none;
+    border-color: rgba(26, 139, 191, 0.55);
+    box-shadow: 0 0 0 3px rgba(26, 139, 191, 0.15);
+  }
+
+  option {
+    background: #07111A;
+    color: var(--color-brand-cloud);
   }
 }
 
+@layer components {
+  /* Card de vidro estático */
+  .card-glass {
+    background: rgba(14, 80, 104, 0.25);
+    border: 1px solid rgba(77, 200, 232, 0.15);
+  }
+
+  /* Card clicável com hover */
+  .card-interactive {
+    background: rgba(14, 80, 104, 0.2);
+    border: 1px solid rgba(77, 200, 232, 0.12);
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  .card-interactive:hover {
+    background: rgba(14, 80, 104, 0.42);
+    border-color: rgba(77, 200, 232, 0.28);
+  }
+
+  /* Card interno (dentro de outro card) */
+  .card-inner {
+    background: rgba(7, 17, 26, 0.4);
+    border: 1px solid rgba(77, 200, 232, 0.1);
+  }
+}

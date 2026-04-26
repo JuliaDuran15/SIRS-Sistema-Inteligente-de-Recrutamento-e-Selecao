@@ -1,6 +1,9 @@
+import asyncio
 from datetime import datetime
+import app.db.base  # noqa: F401 — garante que todos os models estão mapeados
 from app.core.celery_app import celery_app
 from app.ai.resume_parser import parsear_curriculo
+from app.ai.market_analyzer import analisar_mercado
 from app.ai.matching_engine import (
     calcular_score_rh,
     calcular_score_mercado,
@@ -56,11 +59,11 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
 
         # 5. Salva no banco
         curriculo = db.query(Curriculo).filter(
-            Curriculo.candidato_id == candidatura.candidato_id
+            Curriculo.candidatura_id == candidatura_id
         ).first()
 
         if not curriculo:
-            curriculo = Curriculo(candidato_id=candidatura.candidato_id)
+            curriculo = Curriculo(candidatura_id=candidatura_id)
             db.add(curriculo)
 
         curriculo.texto_extraido   = resultado["texto_extraido"]

@@ -44,3 +44,4 @@ class Candidatura(Base):
     candidato  : Mapped["Candidato"]        = relationship(back_populates="candidaturas")
     vaga       : Mapped["Vaga"]             = relationship(back_populates="candidaturas")
     entrevistas: Mapped[list["Entrevista"]] = relationship(back_populates="candidatura", order_by="Entrevista.agendada_para")
+    curriculo  : Mapped["Curriculo"]        = relationship(back_populates="candidatura", uselist=False)

@@ -1,41 +1,36 @@
 import React, { useState, useEffect } from "react"
 import ReactDOM from "react-dom/client"
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
-import { Layout }      from "./components/Layout"
-import { Login }       from "./pages/Login"
-import { Vagas }       from "./pages/Vagas"
-import { VagaDetalhe } from "./pages/VagaDetalhe"
-import { Candidatos }  from "./pages/Candidatos"
-import api             from "./api"
+import { Layout }            from "./components/Layout"
+import { Login }             from "./pages/Login"
+import { Vagas }             from "./pages/Vagas"
+import { VagaDetalhe }       from "./pages/VagaDetalhe"
+import { Candidatos }        from "./pages/Candidatos"
+import { EntrevistaDetalhe } from "./pages/EntrevistaDetalhe"
+import { AdminUsuarios }     from "./pages/AdminUsuarios"
+import api                   from "./api"
 import "./index.css"
 
 function App() {
   const [usuario, setUsuario] = useState(() => {
-    // Recupera o usuário do localStorage na inicialização
     const salvo = localStorage.getItem("usuario")
     return salvo ? JSON.parse(salvo) : null
   })
 
   useEffect(() => {
-    // Restaura o token nas requisições se já estava logado
     const token = localStorage.getItem("token")
-    if (token) {
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`
-    }
+    if (token) api.defaults.headers.common["Authorization"] = `Bearer ${token}`
   }, [])
 
-  function handleLogin(u) {
-    setUsuario(u)
-  }
-
+  function handleLogin(u) { setUsuario(u) }
   function handleLogout() {
     setUsuario(null)
     delete api.defaults.headers.common["Authorization"]
   }
 
-  // Rota protegida — redireciona para login se não autenticado
-  function Protegida({ children }) {
+  function Protegida({ children, apenasAdmin }) {
     if (!usuario) return <Navigate to="/login" replace />
+    if (apenasAdmin && usuario.papel !== "admin") return <Navigate to="/" replace />
     return (
       <Layout usuario={usuario} onLogout={handleLogout}>
         {children}
@@ -53,10 +48,16 @@ function App() {
           <Protegida><Vagas /></Protegida>
         }/>
         <Route path="/vagas/:id" element={
-          <Protegida><VagaDetalhe /></Protegida>
+          <Protegida><VagaDetalhe usuario={usuario} /></Protegida>
         }/>
         <Route path="/candidatos" element={
           <Protegida><Candidatos /></Protegida>
+        }/>
+        <Route path="/candidaturas/:candidaturaId/entrevistas" element={
+          <Protegida><EntrevistaDetalhe usuario={usuario} /></Protegida>
+        }/>
+        <Route path="/admin" element={
+          <Protegida apenasAdmin><AdminUsuarios /></Protegida>
         }/>
         <Route path="*" element={<Navigate to="/" replace />}/>
       </Routes>
