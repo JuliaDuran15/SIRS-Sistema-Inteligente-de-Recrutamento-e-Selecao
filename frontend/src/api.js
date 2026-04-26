@@ -39,6 +39,7 @@ export const registrarResultado = (id, data)       => api.patch(`/entrevistas/${
 export const getUsuarios    = ()         => api.get("/usuarios/")
 export const createUsuario  = (data)     => api.post("/usuarios/", data)
 export const deleteUsuario  = (id)       => api.delete(`/usuarios/${id}`)
+export const alterarSenha   = (data)     => api.patch("/auth/senha", data)
 
 export const uploadCurriculo = (candidaturaId, arquivo) => {
   const form = new FormData()

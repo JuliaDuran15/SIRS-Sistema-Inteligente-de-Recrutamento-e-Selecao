@@ -8,6 +8,7 @@ import { VagaDetalhe }       from "./pages/VagaDetalhe"
 import { Candidatos }        from "./pages/Candidatos"
 import { EntrevistaDetalhe } from "./pages/EntrevistaDetalhe"
 import { AdminUsuarios }     from "./pages/AdminUsuarios"
+import { Perfil }           from "./pages/Perfil"
 import api                   from "./api"
 import "./index.css"
 
@@ -58,6 +59,9 @@ function App() {
         }/>
         <Route path="/admin" element={
           <Protegida apenasAdmin><AdminUsuarios /></Protegida>
+        }/>
+        <Route path="/perfil" element={
+          <Protegida><Perfil usuario={usuario} /></Protegida>
         }/>
         <Route path="*" element={<Navigate to="/" replace />}/>
       </Routes>

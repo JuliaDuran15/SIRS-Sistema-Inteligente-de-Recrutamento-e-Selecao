@@ -1,22 +1,24 @@
 # SIRS — Sistema Inteligente de Recrutamento e Seleção
 
-Sistema baseado em NLP e similaridade semântica para automatizar a triagem e avaliação de currículos, combinando aderência aos requisitos da vaga com tendências de mercado.
+Sistema web completo para automação do processo seletivo, combinando NLP semântico, análise de mercado em tempo real e gestão de entrevistas com controle de acesso por papel.
 
 ---
 
 ## Sumário
 
 - [Visão geral](#visão-geral)
-- [Arquitetura](#arquitetura)
 - [Tecnologias](#tecnologias)
-- [Pré-requisitos](#pré-requisitos)
-- [Instalação e configuração](#instalação-e-configuração)
-- [Variáveis de ambiente](#variáveis-de-ambiente)
-- [Rodando o projeto](#rodando-o-projeto)
-- [Estrutura de pastas](#estrutura-de-pastas)
+- [Arquitetura](#arquitetura)
+- [Papéis e permissões](#papéis-e-permissões)
+- [Pipeline do processo seletivo](#pipeline-do-processo-seletivo)
 - [Como o sistema avalia currículos](#como-o-sistema-avalia-currículos)
-- [Workflow do processo seletivo](#workflow-do-processo-seletivo)
+- [Pré-requisitos](#pré-requisitos)
+- [Instalação](#instalação)
+- [Variáveis de ambiente](#variáveis-de-ambiente)
+- [Populando o banco](#populando-o-banco)
+- [Estrutura de pastas](#estrutura-de-pastas)
 - [Endpoints da API](#endpoints-da-api)
+- [Frontend — páginas](#frontend--páginas)
 - [Testes](#testes)
 - [Comandos úteis](#comandos-úteis)
 
@@ -24,55 +26,36 @@ Sistema baseado em NLP e similaridade semântica para automatizar a triagem e av
 
 ## Visão geral
 
-O SIRS automatiza a triagem inicial de candidatos em duas etapas:
+O SIRS automatiza a triagem de candidatos em três camadas:
 
-**1ª avaliação — Aderência à vaga (peso 60%)**
-O RH preenche apenas o nome da vaga e os requisitos em texto livre. O sistema usa o modelo `all-MiniLM-L6-v2` para vetorizar os requisitos e o currículo, calculando a similaridade de cosseno entre os dois.
+**1 — Score curricular (automático, via Celery)**
 
-**2ª avaliação — Aderência ao mercado (peso 40%)**
-O Market Analyzer coleta dados de vagas reais (Adzuna API ou Kaggle) e identifica as skills mais demandadas para aquele cargo. O currículo é avaliado contra esse ranking de mercado.
+O RH faz upload do currículo em PDF. O sistema extrai o texto, gera um embedding de 384 dimensões e calcula dois scores:
 
-**Score final**
+| Score | O que mede | Peso padrão |
+|---|---|---|
+| Aderência à vaga | Similaridade de cosseno entre currículo e requisitos da vaga | 60% |
+| Aderência ao mercado | Similaridade entre currículo e o vetor das top skills do mercado | 40% |
+
 ```
 score_curriculo = (score_rh × 0.60) + (score_mercado × 0.40)
 ```
 
-Após a triagem automática, o RH conduz entrevistas (triagem e técnica) e o score consolidado final combina os três componentes:
+**2 — Entrevistas (RH e técnica)**
+
+RH agenda e registra a entrevista de RH. O gestor técnico registra o resultado da entrevista técnica. Cada entrevista tem score 0–10, anotações livres e listas de pontos fortes/fracos.
+
+**3 — Score consolidado final**
 
 ```
-score_total = (score_curriculo × 0.50) + (score_rh × 0.25) + (score_tecnico × 0.25)
+score_total = (score_curriculo × 0.50) + (score_rh × 0.25) + (score_técnico × 0.25)
 ```
 
----
+Os pesos são configuráveis por vaga pelo RH ou Admin.
 
-## Arquitetura
+**Market Analyzer (automático na criação da vaga)**
 
-```
-clientes (React SPA / sistema externo / candidato)
-                    ↓
-         FastAPI — API Gateway
-         (REST · JWT Auth · Webhook receiver)
-                    ↓
-    ┌───────────────┼───────────────┐
-    │               │               │
-Candidatos      Entrevistas      Vagas
-  Service         Service        Service
-    │               │               │
-    └───────────────┼───────────────┘
-                    ↓
-         Motor de Inteligência
-    ┌───────────────┬───────────────┐
-    │               │               │
-Resume Parser  Matching Engine  Market Analyzer
-PyMuPDF+spaCy  sentence-trans.  Adzuna/Kaggle
-                    ↓
-         Celery Worker (Redis broker)
-                    ↓
-    ┌───────────────┬───────────┐
-    │               │           │
-PostgreSQL       JSONB        Redis
-(dados rel.)  (embeddings)   (filas)
-```
+Ao criar uma vaga, o sistema dispara em background uma análise de mercado (Kaggle/Adzuna) que identifica as skills mais demandadas para aquele cargo e gera o vetor de mercado usado no score.
 
 ---
 
@@ -80,139 +63,279 @@ PostgreSQL       JSONB        Redis
 
 | Camada | Tecnologia |
 |---|---|
-| Backend | Python 3.11, FastAPI, SQLAlchemy, Alembic |
-| NLP / IA | sentence-transformers (`all-MiniLM-L6-v2`), spaCy, scikit-learn |
-| Extração de PDF | PyMuPDF |
-| Filas / Background | Celery, Redis |
-| Banco de dados | PostgreSQL 16 |
-| Autenticação | JWT (python-jose) |
-| Frontend | React (Sprint 3) |
-| Infraestrutura | Docker, Docker Compose |
-| CI | GitHub Actions (Ruff + pytest) |
+| **Backend** | Python 3.11, FastAPI, SQLAlchemy 2, Alembic |
+| **Frontend** | React 18, Vite, Tailwind CSS v4 |
+| **NLP / IA** | sentence-transformers (`all-MiniLM-L6-v2`), PyMuPDF |
+| **Análise de mercado** | Adzuna API, Kaggle LinkedIn Jobs dataset |
+| **Banco de dados** | PostgreSQL 16 + pgvector (vetores de 384 dims) |
+| **Filas / background** | Celery 5, Redis 7 |
+| **Autenticação** | JWT (python-jose, bcrypt) |
+| **Infraestrutura** | Docker, Docker Compose |
+| **Testes** | pytest, TestClient (FastAPI), banco de testes isolado por transação |
+
+---
+
+## Arquitetura
+
+```
+┌─────────────────────────────────────────────┐
+│              React SPA (Vite)               │
+│  /vagas  /candidatos  /admin  /entrevistas  │
+└──────────────────┬──────────────────────────┘
+                   │ HTTP /api/*
+┌──────────────────▼──────────────────────────┐
+│            FastAPI (porta 8000)             │
+│  JWT Auth · RBAC · REST · Webhook receiver  │
+│                                             │
+│  /auth  /vagas  /candidatos  /candidaturas  │
+│  /entrevistas  /usuarios                    │
+└──────┬─────────────────────┬────────────────┘
+       │                     │
+       │ SQLAlchemy           │ .delay()
+┌──────▼──────┐      ┌───────▼────────────────┐
+│ PostgreSQL  │      │    Celery Worker        │
+│  + pgvector │      │                         │
+│             │      │  processar_curriculo    │
+│  candidatos │      │  atualizar_mercado_vaga │
+│  vagas      │      └───────┬────────────────┘
+│  candidatur.│              │
+│  curriculos │    ┌─────────▼──────────────────┐
+│  entrevistas│    │      Motor de IA            │
+│  usuarios   │    │                             │
+└─────────────┘    │  Resume Parser  (PyMuPDF)  │
+                   │  Matching Engine (cosine)  │
+       ┌───────────│  Market Analyzer (Kaggle/  │
+       │           │    Adzuna + TF-IDF)        │
+┌──────▼──────┐    └────────────────────────────┘
+│    Redis    │
+│  (broker +  │
+│   results)  │
+└─────────────┘
+```
+
+---
+
+## Papéis e permissões
+
+O sistema tem 3 papéis com permissões distintas:
+
+| Ação | RH | Gestor técnico | Admin |
+|---|:---:|:---:|:---:|
+| Cadastrar candidato | ✓ | — | ✓ |
+| Criar / editar vaga | ✓ | — | ✓ |
+| Editar pesos da vaga | ✓ | — | ✓ |
+| Visualizar ranking de candidatos | ✓ | ✓ | ✓ |
+| Aprovar / reprovar triagem | ✓ | — | ✓ |
+| Fazer upload de currículo | ✓ | — | ✓ |
+| Agendar entrevista (RH ou técnica) | ✓ | — | ✓ |
+| Registrar resultado entrevista RH | ✓ | — | ✓ |
+| Registrar resultado entrevista técnica | — | ✓ | ✓ |
+| Tomar decisão final (contratar etc.) | ✓ | — | ✓ |
+| Gerenciar usuários (criar / desativar) | — | — | ✓ |
+| Receber webhook externo | sistema | sistema | sistema |
+
+> O webhook (`POST /candidatos/webhook`) não exige autenticação — é chamado por sistemas externos (ATS, HRIS).
+
+---
+
+## Pipeline do processo seletivo
+
+```
+Candidato entra
+(cadastro RH ou webhook externo)
+          │
+          ▼
+      [NOVO]
+          │  RH faz upload do PDF
+          ▼
+[AGUARDANDO_PROCESSAMENTO]
+          │  Celery pega a task
+          ▼
+  [PROCESSANDO_CURRICULO]
+          │  Embedding gerado, scores calculados
+          ▼
+   [TRIAGEM_PENDENTE]  ◄── RH analisa ranking
+          │
+    ┌─────┴──────┐
+    ▼            ▼
+[REPROVADO   [APROVADO
+ TRIAGEM]     TRIAGEM]
+    │              │  RH agenda entrevista
+    ▼              ▼
+[BANCO      [ENTREVISTA_RH_AGENDADA]
+TALENTOS]         │  RH registra resultado
+                  ▼
+         [ENTREVISTA_RH_REALIZADA]
+                  │
+         ┌────────┴──────────┐
+         ▼                   ▼
+    [REPROVADO_RH]  [ENTREVISTA_TEC_AGENDADA]
+         │                   │  Gestor registra resultado
+         ▼                   ▼
+    [BANCO          [ENTREVISTA_TEC_REALIZADA]
+    TALENTOS]               │
+                   ┌────────┴──────────┐
+                   ▼                   ▼
+           [REPROVADO_TEC]    [DECISAO_PENDENTE]
+                   │                   │  RH decide
+                   ▼         ┌─────────┼─────────┐
+           [BANCO           ▼         ▼         ▼
+           TALENTOS]  [CONTRATADO] [NAO_    [BANCO
+                                   APROVADO] TALENTOS]
+```
+
+Cada transição é registrada no campo `historico` (JSONB) com timestamp, status anterior/posterior e quem fez a ação.
+
+---
+
+## Como o sistema avalia currículos
+
+### Embeddings semânticos vs. TF-IDF
+
+O modelo `all-MiniLM-L6-v2` captura semântica — termos equivalentes ficam próximos no espaço vetorial mesmo com palavras diferentes:
+
+| Par de termos | TF-IDF | Embedding |
+|---|:---:|:---:|
+| "AWS" × "Amazon Web Services" | 0.00 | ~0.94 |
+| "Python dev" × "desenvolvedor backend" | 0.00 | ~0.82 |
+| "banco de dados" × "PostgreSQL" | 0.00 | ~0.71 |
+
+### Market Analyzer
+
+Ao criar uma vaga, o sistema detecta a categoria do cargo (tech, direito, RH, engenharia civil, financeiro, marketing, saúde) e coleta dados de:
+
+- **Kaggle** (dataset LinkedIn Jobs, ~120k vagas) — cargos tech
+- **Adzuna API** (vagas reais em PT-BR) — outros cargos
+
+Aplica TF-IDF nos textos coletados para extrair as top skills do mercado, gera um vetor médio ponderado e usa esse vetor para avaliar a aderência de cada currículo.
+
+Quando os dados externos são insuficientes (< 10 vagas encontradas), o sistema usa uma lista de skills curadas por categoria como fallback.
+
+### Currículo por candidatura
+
+Cada candidatura tem seu próprio currículo processado — o candidato pode enviar um CV focado em Python para a vaga de Dev e um CV diferente para a vaga de DevOps, sem que um sobrescreva o outro.
 
 ---
 
 ## Pré-requisitos
 
-- [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado
-- [WSL2](https://learn.microsoft.com/pt-br/windows/wsl/install) com Ubuntu 22.04 (Windows)
-- Git configurado
-- Conta no GitHub
+- Docker Desktop com WSL2 (Windows) ou Docker Engine (Linux/Mac)
+- Git
 
-> **Windows:** todo o desenvolvimento deve ser feito dentro do filesystem do Ubuntu (`~/projetos/sirs`), não em `/mnt/c/`. O Docker tem desempenho muito inferior acessando o filesystem do Windows.
+> **Windows:** desenvolva dentro do filesystem do Ubuntu (`~/projetos`), não em `/mnt/c/`. O Docker tem desempenho muito inferior ao acessar o filesystem Windows.
 
 ---
 
-## Instalação e configuração
+## Instalação
 
 ### 1. Clonar o repositório
 
 ```bash
-cd ~/projetos
 git clone https://github.com/JuliaDuran15/SIRS-Sistema-Inteligente-de-Recrutamento-e-Selecao.git sirs
 cd sirs
 ```
 
-### 2. Criar o arquivo de variáveis de ambiente
+### 2. Configurar variáveis de ambiente
 
 ```bash
 cp backend/.env.example backend/.env
+# edite backend/.env conforme necessário
 ```
 
-Edite `backend/.env` com suas configurações (veja a seção [Variáveis de ambiente](#variáveis-de-ambiente)).
-
-### 3. Build e subida dos containers
+### 3. Build e subida
 
 ```bash
 docker compose up --build
 ```
 
-> A primeira execução baixa o modelo `all-MiniLM-L6-v2` (~400MB) e o modelo do spaCy. Pode levar 5–10 minutos dependendo da conexão. As execuções seguintes são rápidas.
+> A primeira execução baixa o modelo `all-MiniLM-L6-v2` (~90 MB) e as dependências Python. Pode levar 5–10 minutos. As execuções seguintes são rápidas.
 
-### 4. Rodar as migrações do banco
+### 4. Rodar migrações
 
 ```bash
 docker compose exec api alembic upgrade head
 ```
 
-### 5. Verificar que tudo está rodando
+### 5. Verificar
 
 ```bash
 curl http://localhost:8000/health
 # → {"status":"ok"}
 ```
 
-Acesse a documentação interativa da API em: `http://localhost:8000/docs`
+| Serviço | URL | Descrição |
+|---|---|---|
+| Frontend | http://localhost:5173 | React SPA |
+| API | http://localhost:8000 | FastAPI REST |
+| Docs interativos | http://localhost:8000/docs | Swagger UI |
+| Banco | localhost:5432 | PostgreSQL |
 
 ---
 
 ## Variáveis de ambiente
 
-Copie `backend/.env.example` para `backend/.env` e preencha:
+Arquivo `backend/.env`:
 
 ```env
 # Banco de dados
 DATABASE_URL=postgresql://sirs:sirs123@db:5432/sirs_db
 
-# Celery (Redis como broker)
+# Celery
 CELERY_BROKER_URL=redis://redis:6379/0
 CELERY_RESULT_BACKEND=redis://redis:6379/1
 
-# Segurança — gere com: openssl rand -hex 32
+# JWT — gere com: openssl rand -hex 32
 SECRET_KEY=troque-por-uma-chave-longa-e-aleatoria
+ALGORITHM=HS256
 
-# Ambiente
-ENVIRONMENT=development
+# Usuário admin inicial
+ADMIN_EMAIL=admin@sirs.com
+ADMIN_SENHA=admin123
 
-# APIs externas (opcionais)
+# Market Analyzer: "kaggle" ou "adzuna" ou "ambos"
+MARKET_ANALYZER_SOURCE=kaggle
+
+# Adzuna API (opcional — cadastro gratuito em api.adzuna.com)
 ADZUNA_APP_ID=
 ADZUNA_APP_KEY=
+ADZUNA_COUNTRY=br
 ```
 
-> O arquivo `.env` está no `.gitignore` e nunca deve ser commitado.
+> Para usar o Kaggle como fonte, coloque o arquivo `postings.csv` do [dataset LinkedIn Job Postings](https://www.kaggle.com/datasets/arshkon/linkedin-job-postings) em `backend/data/postings.csv`.
 
 ---
 
-## Rodando o projeto
+## Populando o banco
 
-### Subir todos os serviços
-
-```bash
-docker compose up
-```
-
-### Subir em background
+### Seed básico (4 vagas, 4 candidatos)
 
 ```bash
-docker compose up -d
+docker compose exec api python tests/seed.py
 ```
 
-### Ver os serviços rodando
+### Seed completo (dados realistas em todas as etapas)
 
 ```bash
-docker compose ps
+docker compose exec api python tests/seed_full.py
 ```
 
-Devem aparecer 4 serviços com status `running` ou `healthy`:
+O seed completo cria:
 
-| Serviço | Porta | Descrição |
+- **6 usuários** — 2 RH, 3 gestores técnicos, 1 admin
+- **10 vagas** — Python, Full Stack, Dados, DevOps, RH, Direito, Civil, Financeiro, UX/UI, Marketing
+- **30 candidatos** com formações e perfis variados
+- **50 candidaturas** distribuídas em todas as etapas do pipeline, com currículos processados (scores reais via embedding), entrevistas agendadas/realizadas e histórico de transições
+
+Logins após o seed:
+
+| Email | Senha | Papel |
 |---|---|---|
-| `api` | 8000 | FastAPI — endpoints REST |
-| `worker` | — | Celery — processamento em background |
-| `db` | 5432 | PostgreSQL — dados relacionais |
-| `redis` | 6379 | Redis — broker de filas |
-
-### Parar os serviços
-
-```bash
-docker compose down
-```
-
-### Parar e apagar os dados do banco
-
-```bash
-docker compose down -v
-```
+| `ana@sirs.com` | `senha123` | RH |
+| `bruno@sirs.com` | `senha123` | RH |
+| `carlos@sirs.com` | `senha123` | Gestor técnico |
+| `daniela@sirs.com` | `senha123` | Gestor técnico |
+| `eduardo@sirs.com` | `senha123` | Gestor técnico |
+| `admin@sirs.com` | `senha123` | Admin |
 
 ---
 
@@ -220,236 +343,235 @@ docker compose down -v
 
 ```
 sirs/
-├── .github/
-│   └── workflows/
-│       └── lint.yml              # CI: lint + testes a cada push
-├── docker/
-│   └── Dockerfile.api            # imagem da API e do worker
 ├── docker-compose.yml
-├── docs/                         # documentação adicional
-├── frontend/                     # React SPA (Sprint 3)
-└── backend/
-    ├── .env.example
-    ├── pyproject.toml            # config do Ruff (linter)
-    ├── requirements.txt
-    ├── migrations/               # migrações Alembic
-    └── app/
-        ├── main.py               # inicialização do FastAPI
-        ├── ai/
-        │   ├── tasks.py          # tarefas Celery (background)
-        │   ├── resume_parser.py  # extração de texto e skills (Sprint 2)
-        │   ├── matching_engine.py# cálculo de scores (Sprint 2)
-        │   └── market_analyzer.py# análise de tendências de mercado (Sprint 2)
-        ├── api/
-        │   └── endpoints/
-        │       ├── candidatos.py
-        │       ├── vagas.py
-        │       └── entrevistas.py
-        ├── core/
-        │   ├── config.py         # variáveis de ambiente (pydantic-settings)
-        │   └── celery_app.py     # configuração do Celery
-        ├── db/
-        │   ├── session.py        # engine e SessionLocal
-        │   └── base.py           # importa todos os models para o Alembic
-        ├── models/               # SQLAlchemy ORM
-        │   ├── candidato.py
-        │   ├── vaga.py
-        │   ├── candidatura.py
-        │   └── entrevista.py
-        ├── schemas/              # Pydantic (request / response)
-        └── services/             # lógica de negócio
-```
-
----
-
-## Como o sistema avalia currículos
-
-### Pipeline de processamento (executado em background via Celery)
-
-```
-PDF do currículo
-      ↓
-PyMuPDF — extrai texto bruto
-      ↓
-spaCy NER — identifica entidades (skills, tecnologias, tempo de exp.)
-      ↓
-all-MiniLM-L6-v2 — vetoriza o texto completo (384 dimensões)
-      ↓
-┌─────────────────────┬──────────────────────────┐
-│  1ª avaliação       │  2ª avaliação             │
-│  Cosine similarity  │  Skills × ranking mercado │
-│  vetor vaga ×       │  (Adzuna / Kaggle)        │
-│  vetor currículo    │                           │
-│  peso: 60%          │  peso: 40%                │
-└─────────────────────┴──────────────────────────┘
-                      ↓
-              Score curricular (0–100)
-              + Breakdown por skill
-              + Explicação XAI (gaps identificados)
-```
-
-### Por que embeddings e não TF-IDF
-
-O modelo `all-MiniLM-L6-v2` captura semântica — "Python developer" e "desenvolvedor backend" geram vetores próximos mesmo sendo textos diferentes. TF-IDF não consegue isso, pois compara apenas palavras exatas.
-
-| Par | TF-IDF | Embedding |
-|---|---|---|
-| "AWS" × "Amazon Web Services" | 0.00 | ~0.94 |
-| "Python dev" × "desenvolvedor backend" | 0.00 | ~0.82 |
-| "banco de dados" × "PostgreSQL" | 0.00 | ~0.71 |
-
----
-
-## Workflow do processo seletivo
-
-```
-Entrada do candidato
-(webhook externo ou cadastro manual pelo RH)
-          ↓
-    [novo] → [aguardando_processamento] → [processando_curriculo]
-          ↓
-    [triagem_pendente]
-          ↓
-    RH revisa score e ranking
-          ↓
-    ┌─────────────────┐
-    │                 │
-[reprovado_triagem] [aprovado_triagem]
-    ↓                 ↓
-[banco_talentos]  [entrevista_rh_agendada]
-                      ↓
-                  [entrevista_rh_realizada]
-                      ↓
-              ┌───────────────────┐
-              │                   │
-          [reprovado_rh]  [entrevista_tec_agendada]
-              ↓                   ↓
-          [banco_talentos]  [entrevista_tec_realizada]
-                                  ↓
-                          ┌───────────────────┐
-                          │                   │
-                   [reprovado_tecnico]  [decisao_pendente]
-                          ↓                   ↓
-                   [banco_talentos]    RH decide
-                                       ↓
-                              ┌────────────────┐
-                              │                │
-                         [contratado]   [nao_aprovado]
+├── docker/
+│   ├── Dockerfile.api
+│   └── init.sql               # cria extensão pgvector
+│
+├── backend/
+│   ├── .env
+│   ├── pyproject.toml         # pytest config
+│   ├── migrations/            # Alembic
+│   │   └── versions/
+│   └── app/
+│       ├── main.py
+│       ├── ai/
+│       │   ├── tasks.py           # Celery tasks
+│       │   ├── resume_parser.py   # PDF → texto → embedding
+│       │   ├── matching_engine.py # cálculo de scores
+│       │   └── market_analyzer.py # Kaggle/Adzuna + TF-IDF
+│       ├── api/
+│       │   ├── deps.py
+│       │   └── endpoints/
+│       │       ├── auth.py
+│       │       ├── usuarios.py
+│       │       ├── vagas.py
+│       │       ├── candidatos.py
+│       │       ├── candidaturas.py
+│       │       └── entrevistas.py
+│       ├── core/
+│       │   ├── auth.py            # JWT, hash, guards RBAC
+│       │   ├── config.py
+│       │   └── celery_app.py
+│       ├── db/
+│       │   ├── session.py
+│       │   ├── base.py            # importa todos os models
+│       │   └── ensure_admin.py
+│       ├── models/
+│       │   ├── usuario.py
+│       │   ├── vaga.py
+│       │   ├── candidato.py
+│       │   ├── candidatura.py     # máquina de estados + histórico
+│       │   ├── curriculo.py       # associado à candidatura (não ao candidato)
+│       │   └── entrevista.py
+│       └── schemas/               # Pydantic request/response
+│
+├── frontend/
+│   ├── index.html
+│   ├── vite.config.js
+│   └── src/
+│       ├── main.jsx               # router + auth guard
+│       ├── api.js                 # axios + interceptors
+│       ├── components/
+│       │   ├── Layout.jsx         # nav com controle por papel
+│       │   ├── Badge.jsx
+│       │   └── ScoreBar.jsx
+│       ├── context/
+│       │   └── AuthContext.jsx
+│       └── pages/
+│           ├── Login.jsx
+│           ├── Vagas.jsx
+│           ├── VagaDetalhe.jsx    # ranking + edição de pesos
+│           ├── Candidatos.jsx
+│           ├── EntrevistaDetalhe.jsx  # upload CV, entrevistas, decisão
+│           └── AdminUsuarios.jsx  # CRUD de usuários (admin)
+│
+└── backend/tests/
+    ├── conftest.py    # DB de testes, fixtures, factories
+    ├── seed.py        # seed básico
+    ├── seed_full.py   # seed completo com 50 candidaturas
+    ├── test_auth.py
+    ├── test_usuarios.py
+    ├── test_vagas.py
+    ├── test_candidatos.py
+    ├── test_candidaturas.py
+    ├── test_entrevistas.py
+    ├── test_matching_engine.py
+    └── test_market_analyzer.py
 ```
 
 ---
 
 ## Endpoints da API
 
-A documentação completa e interativa está disponível em `http://localhost:8000/docs` (Swagger UI).
+Documentação interativa completa: `http://localhost:8000/docs`
 
-### Saúde
+### Auth
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| POST | `/auth/login` | público | Login OAuth2 password flow |
+| GET | `/auth/me` | autenticado | Usuário atual |
 
-```
-GET  /health
-```
-
-### Candidatos
-
-```
-POST /candidatos              — cadastro manual pelo RH
-POST /webhook/candidatos      — recebe candidatos de sistemas externos
-GET  /candidatos/{id}         — perfil completo com score e skills
-```
+### Usuários
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| POST | `/usuarios/` | admin | Criar usuário (RH ou gestor) |
+| GET | `/usuarios/` | autenticado | Listar usuários ativos |
+| GET | `/usuarios/{id}` | autenticado | Buscar usuário |
+| DELETE | `/usuarios/{id}` | admin | Desativar usuário |
 
 ### Vagas
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| POST | `/vagas/` | RH, admin | Criar vaga (dispara market analysis) |
+| GET | `/vagas/` | autenticado | Listar vagas abertas |
+| GET | `/vagas/{id}` | autenticado | Detalhes + ranking de mercado |
+| PATCH | `/vagas/{id}/pesos` | RH, admin | Ajustar pesos do score |
+| PATCH | `/vagas/{id}/status` | RH, admin | Abrir / pausar / fechar |
+| POST | `/vagas/{id}/analisar-mercado` | RH, admin | Re-executar análise de mercado |
+| DELETE | `/vagas/{id}` | admin | Fechar vaga |
 
-```
-POST /vagas                   — criar vaga (nome + requisitos em texto livre)
-GET  /vagas/{id}/ranking      — ranking de candidatos com scores e XAI
-```
+### Candidatos
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| POST | `/candidatos/` | RH, admin | Cadastrar candidato |
+| POST | `/candidatos/webhook` | público | Receber de sistema externo |
+| GET | `/candidatos/` | autenticado | Listar candidatos |
+| GET | `/candidatos/{id}` | autenticado | Perfil do candidato |
+| PATCH | `/candidatos/{id}` | RH, admin | Atualizar dados |
+
+### Candidaturas
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| POST | `/candidaturas/` | RH, admin | Vincular candidato a vaga |
+| GET | `/candidaturas/` | autenticado | Listar (filtrável por `?vaga_id=`) |
+| GET | `/candidaturas/{id}` | autenticado | Detalhes + candidato + currículo |
+| PATCH | `/candidaturas/{id}/status` | RH, admin | Avançar/reprovar no pipeline |
+| POST | `/candidaturas/{id}/curriculo` | RH, admin | Upload PDF (dispara processamento) |
 
 ### Entrevistas
+| Método | Rota | Acesso | Descrição |
+|---|---|---|---|
+| POST | `/entrevistas/` | RH, admin | Agendar entrevista (RH ou técnica) |
+| PATCH | `/entrevistas/{id}/resultado` | RH (tipo rh) / gestor (tipo técnica) / admin | Registrar resultado |
+| GET | `/entrevistas/candidatura/{id}` | autenticado | Listar entrevistas de uma candidatura |
 
-```
-POST /entrevistas             — agendar entrevista (RH ou técnica)
-PUT  /entrevistas/{id}        — registrar resultado (score + anotações)
-GET  /candidaturas/{id}/entrevistas — listar entrevistas de uma candidatura
-```
+---
 
-### Tarefas (Celery)
+## Frontend — páginas
 
-```
-GET  /tarefas/{task_id}       — consultar status do processamento do currículo
-```
+| Rota | Acesso | Descrição |
+|---|---|---|
+| `/login` | público | Login |
+| `/` | autenticado | Lista de vagas abertas |
+| `/vagas/:id` | autenticado | Ranking de candidatos, skills de mercado, edição de pesos |
+| `/candidatos` | autenticado | Lista de candidatos |
+| `/candidaturas/:id/entrevistas` | autenticado | Perfil do candidato, upload de CV, entrevistas, decisão final |
+| `/admin` | admin | Gerenciar usuários (criar RH/gestor, desativar) |
 
 ---
 
 ## Testes
 
+Os testes usam um banco PostgreSQL dedicado (`sirs_test_db`) com isolamento por transação — cada teste roda em um savepoint que é desfeito ao final, sem afetar o banco principal.
+
+Celery tasks e chamadas ao modelo de embeddings são mockadas para que os testes de API sejam rápidos.
+
 ### Rodar todos os testes
 
 ```bash
-docker compose exec api pytest tests/ -v
+docker compose exec api python -m pytest tests/ -v
 ```
 
-### Rodar com cobertura
+### Rodar um módulo específico
 
 ```bash
-docker compose exec api pytest tests/ -v --cov=app --cov-report=term-missing
+# testes de entrevistas
+docker compose exec api python -m pytest tests/test_entrevistas.py -v
+
+# só testes de funções puras (sem banco)
+docker compose exec api python -m pytest tests/test_matching_engine.py tests/test_market_analyzer.py -v
 ```
 
-### Rodar o linter
+### Cobertura por módulo
 
-```bash
-docker compose exec api ruff check app/
-```
+| Arquivo | Testes | O que cobre |
+|---|:---:|---|
+| `test_matching_engine.py` | 23 | Scores RH, mercado, currículo, XAI, score final |
+| `test_market_analyzer.py` | 26 | Detecção de categoria, extração de skills, TF-IDF |
+| `test_auth.py` | 19 | Login, /me, hash/token, guards RBAC |
+| `test_usuarios.py` | 20 | CRUD + guards admin |
+| `test_vagas.py` | 27 | CRUD + permissões + market analysis |
+| `test_candidatos.py` | 21 | CRUD + webhook + permissões |
+| `test_candidaturas.py` | 27 | CRUD + máquina de estados + upload PDF |
+| `test_entrevistas.py` | 33 | Agendamento (só RH), registrar resultado, permissões |
+| **Total** | **196** | |
 
 ---
 
 ## Comandos úteis
 
 ```bash
-# Logs em tempo real de um serviço específico
+# Subir os serviços
+docker compose up -d
+
+# Ver status dos containers
+docker compose ps
+
+# Logs em tempo real
 docker compose logs api -f
 docker compose logs worker -f
 
-# Entrar no container da API
-docker compose exec api bash
-
-# Entrar no banco de dados
+# Acessar o banco de dados
 docker compose exec db psql -U sirs -d sirs_db
-
-# Ver filas do Redis
-docker compose exec redis redis-cli -n 0 llen celery
 
 # Criar nova migração após alterar um model
 docker compose exec api alembic revision --autogenerate -m "descricao"
 docker compose exec api alembic upgrade head
 
-# Voltar uma migração
+# Reverter última migração
 docker compose exec api alembic downgrade -1
+
+# Rebuildar a imagem da API
+docker compose up --build api
+
+# Rodar o seed completo
+docker compose exec api python tests/seed_full.py
 
 # Ver workers Celery ativos
 docker compose exec worker celery -A app.core.celery_app inspect active
 
-# Rebuild de um serviço específico
-docker compose up --build api
+# Ver filas pendentes no Redis
+docker compose exec redis redis-cli llen celery
 ```
-
----
-
-## CI — GitHub Actions
-
-A cada push nas branches `main` e `develop`, o pipeline executa automaticamente:
-
-1. Lint com Ruff (`ruff check app/`)
-2. Testes com pytest (`pytest tests/ -v`)
-
-O status aparece na aba **Actions** do repositório no GitHub.
 
 ---
 
 ## Contexto acadêmico
 
-Este sistema foi desenvolvido como Trabalho de Conclusão de Curso, propondo uma abordagem baseada em NLP e similaridade semântica para o problema de triagem de currículos — contornando a ausência de datasets rotulados (contratado/não contratado) através de aprendizado não supervisionado e métricas de similaridade vetorial.
+Desenvolvido como Trabalho de Conclusão de Curso, propondo uma abordagem baseada em embeddings semânticos para o problema de triagem de currículos — contornando a ausência de datasets rotulados através de similaridade vetorial não supervisionada e análise de mercado em tempo real.
 
-**Referências técnicas principais:**
-- Reimers & Gurevych (2019) — Sentence-BERT
-- Salton & Buckley (1988) — TF-IDF e similaridade de cosseno
-- Mikolov et al. (2013) — Word2Vec e representações distribuídas
+**Referências principais:**
+- Reimers & Gurevych (2019) — Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks
+- Salton & Buckley (1988) — Term-weighting approaches in automatic text retrieval
+- Mikolov et al. (2013) — Distributed Representations of Words and Phrases

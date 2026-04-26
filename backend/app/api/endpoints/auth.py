@@ -5,7 +5,7 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr
 from app.api.deps import DB
 from app.models.usuario import Usuario
-from app.core.auth import verificar_senha, criar_token, get_usuario_atual
+from app.core.auth import verificar_senha, criar_token, get_usuario_atual, hash_senha
 
 router = APIRouter()
 
@@ -62,3 +62,22 @@ def login(
 @router.get("/me", response_model=UsuarioAtualResponse)
 def me(usuario=Depends(get_usuario_atual)):
     return usuario
+
+
+class AlterarSenhaRequest(BaseModel):
+    senha_atual : str
+    senha_nova  : str
+
+
+@router.patch("/senha", status_code=204)
+def alterar_senha(
+    dados  : AlterarSenhaRequest,
+    db     : Session = DB,
+    usuario=Depends(get_usuario_atual),
+):
+    if not verificar_senha(dados.senha_atual, usuario.senha_hash):
+        raise HTTPException(status_code=400, detail="Senha atual incorreta")
+    if len(dados.senha_nova) < 6:
+        raise HTTPException(status_code=400, detail="A nova senha deve ter pelo menos 6 caracteres")
+    usuario.senha_hash = hash_senha(dados.senha_nova)
+    db.commit()

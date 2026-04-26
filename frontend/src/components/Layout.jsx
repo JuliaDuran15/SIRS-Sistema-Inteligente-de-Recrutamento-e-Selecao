@@ -56,16 +56,20 @@ export function Layout({ children, usuario, onLogout }) {
             {usuario && (
               <div className="flex items-center gap-3 pl-3 ml-1"
                 style={{ borderLeft: "1px solid rgba(77, 200, 232, 0.15)" }}>
-                <div className="hidden sm:block text-right">
-                  <p className="text-xs font-semibold text-brand-cloud leading-none">{usuario.nome}</p>
-                  <p className="text-xs text-brand-pale/45 mt-0.5 capitalize">{usuario.papel}</p>
-                </div>
-                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}>
-                  <span className="text-xs font-bold text-brand-black">
-                    {usuario.nome.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+                <Link to="/perfil" className="flex items-center gap-2 group">
+                  <div className="hidden sm:block text-right">
+                    <p className="text-xs font-semibold text-brand-cloud leading-none group-hover:text-brand-sky transition-colors">
+                      {usuario.nome}
+                    </p>
+                    <p className="text-xs text-brand-pale/45 mt-0.5 capitalize">{usuario.papel}</p>
+                  </div>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 group-hover:opacity-80 transition-opacity"
+                    style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}>
+                    <span className="text-xs font-bold text-brand-black">
+                      {usuario.nome.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                </Link>
                 <button onClick={onLogout}
                   className="text-xs text-brand-pale/45 hover:text-brand-sky font-medium transition-colors">
                   Sair

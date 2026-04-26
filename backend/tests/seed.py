@@ -22,6 +22,7 @@ from app.ai.resume_parser import vetorizar_texto
 from passlib.context import CryptContext
 from datetime import date
 from app.core.auth import hash_senha
+from app.core.config import settings
 
 
 pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -61,8 +62,8 @@ def criar_usuarios():
         ),
         Usuario(
             nome       = "Administrador",
-            email      = "admin@sirs.com",
-            senha_hash = hash_senha("senha123"),
+            email      = settings.ADMIN_EMAIL,
+            senha_hash = hash_senha(settings.ADMIN_SENHA),
             papel      = PapelUsuario.ADMIN,
         ),
     ]

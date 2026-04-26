@@ -33,6 +33,7 @@ from app.ai.matching_engine import (
     calcular_score_rh, calcular_score_mercado, calcular_score_curriculo,
 )
 from app.core.auth import hash_senha
+from app.core.config import settings
 
 db = sessionmaker(autocommit=False, autoflush=False, bind=engine,
                   expire_on_commit=False)()
@@ -52,16 +53,16 @@ def limpar():
 # ─────────────────────────────────────────────────────────────────────────────
 def criar_usuarios():
     rows = [
-        ("Ana Paula Ramos",    "ana@sirs.com",     PapelUsuario.RH),
-        ("Bruno Mendes",       "bruno@sirs.com",   PapelUsuario.RH),
-        ("Carlos Andrade",     "carlos@sirs.com",  PapelUsuario.GESTOR),
-        ("Daniela Torres",     "daniela@sirs.com", PapelUsuario.GESTOR),
-        ("Eduardo Silva",      "eduardo@sirs.com", PapelUsuario.GESTOR),
-        ("Administrador",      "admin@sirs.com",   PapelUsuario.ADMIN),
+        ("Ana Paula Ramos",    "ana@sirs.com",          "senha123",           PapelUsuario.RH),
+        ("Bruno Mendes",       "bruno@sirs.com",        "senha123",           PapelUsuario.RH),
+        ("Carlos Andrade",     "carlos@sirs.com",       "senha123",           PapelUsuario.GESTOR),
+        ("Daniela Torres",     "daniela@sirs.com",      "senha123",           PapelUsuario.GESTOR),
+        ("Eduardo Silva",      "eduardo@sirs.com",      "senha123",           PapelUsuario.GESTOR),
+        ("Administrador",      settings.ADMIN_EMAIL,    settings.ADMIN_SENHA, PapelUsuario.ADMIN),
     ]
     usuarios = [
-        Usuario(nome=n, email=e, senha_hash=hash_senha("senha123"), papel=p)
-        for n, e, p in rows
+        Usuario(nome=n, email=e, senha_hash=hash_senha(s), papel=p)
+        for n, e, s, p in rows
     ]
     db.add_all(usuarios)
     db.commit()
@@ -677,7 +678,7 @@ def resumo(vagas, candidatos, candidaturas):
     print("\n  Logins:")
     print("  ana@sirs.com / bruno@sirs.com      → RH       (senha123)")
     print("  carlos / daniela / eduardo @sirs.com → Gestor  (senha123)")
-    print("  admin@sirs.com                     → Admin    (senha123)")
+    print(f"  {settings.ADMIN_EMAIL:<38} → Admin    ({settings.ADMIN_SENHA})")
     print("=" * 56)
 
 

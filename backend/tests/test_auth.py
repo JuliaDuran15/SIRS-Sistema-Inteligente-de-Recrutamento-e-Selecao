@@ -124,6 +124,51 @@ class TestMe:
         assert body["papel"] == "gestor"
 
 
+# ── Endpoint PATCH /auth/senha ───────────────────────────────────────────────
+class TestAlterarSenha:
+    def test_altera_senha_com_sucesso(self, client, db):
+        u = make_usuario(db, email="troca_senha@teste.com")
+        r = client.patch("/auth/senha", json={
+            "senha_atual": "senha123",
+            "senha_nova": "novasenha456",
+        }, headers=auth_header(u))
+        assert r.status_code == 204
+
+    def test_pode_logar_com_nova_senha(self, client, db):
+        make_usuario(db, email="nova_login@teste.com")
+        client.patch("/auth/senha", json={
+            "senha_atual": "senha123",
+            "senha_nova": "novasenha456",
+        }, headers=auth_header(make_usuario(db, email="nova_login2@teste.com")))
+        # tenta logar com nova senha
+        r = client.post("/auth/login", data={
+            "username": "nova_login2@teste.com",
+            "password": "novasenha456",
+        })
+        assert r.status_code == 200
+
+    def test_senha_atual_errada_retorna_400(self, client, rh):
+        r = client.patch("/auth/senha", json={
+            "senha_atual": "senha_errada",
+            "senha_nova": "novasenha456",
+        }, headers=auth_header(rh))
+        assert r.status_code == 400
+
+    def test_senha_nova_curta_retorna_400(self, client, rh):
+        r = client.patch("/auth/senha", json={
+            "senha_atual": "senha123",
+            "senha_nova": "abc",
+        }, headers=auth_header(rh))
+        assert r.status_code == 400
+
+    def test_sem_token_retorna_401(self, client):
+        r = client.patch("/auth/senha", json={
+            "senha_atual": "senha123",
+            "senha_nova": "novasenha456",
+        })
+        assert r.status_code == 401
+
+
 # ── Guards de permissão ───────────────────────────────────────────────────────
 class TestExigirPapel:
     def test_papel_correto_passa(self, db):
