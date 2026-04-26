@@ -1,14 +1,16 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File
-from sqlalchemy.orm import Session
+import shutil
+import uuid as uuid_lib
 from datetime import datetime
 from pathlib import Path
-import shutil, uuid as uuid_lib
+
 from app.api.deps import DB
-from app.core.auth import RH_OU_ADMIN, QUALQUER_PAPEL
-from app.models.candidatura import Candidatura, StatusCandidatura
+from app.core.auth import QUALQUER_PAPEL, RH_OU_ADMIN
 from app.models.candidato import Candidato
+from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.vaga import Vaga
 from app.schemas.candidatura import CandidaturaCreate, CandidaturaResponse
+from fastapi import APIRouter, File, HTTPException, UploadFile
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 

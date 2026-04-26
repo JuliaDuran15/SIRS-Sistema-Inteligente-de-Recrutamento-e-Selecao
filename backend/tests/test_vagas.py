@@ -1,8 +1,6 @@
 """Testes dos endpoints de vagas — /vagas/"""
-import pytest
 from unittest.mock import AsyncMock, patch
-from tests.conftest import make_usuario, make_vaga, auth_header
-from app.models.usuario import PapelUsuario
+from tests.conftest import make_vaga, auth_header
 
 
 _VAGA_PAYLOAD = {

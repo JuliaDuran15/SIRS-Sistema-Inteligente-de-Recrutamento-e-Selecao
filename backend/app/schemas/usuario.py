@@ -1,7 +1,9 @@
-from uuid import UUID
 from datetime import datetime
+from uuid import UUID
+
 from app.models.usuario import PapelUsuario
 from pydantic import BaseModel, EmailStr
+
 
 class UsuarioCreate(BaseModel):
     nome  : str

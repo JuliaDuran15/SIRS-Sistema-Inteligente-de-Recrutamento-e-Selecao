@@ -1,18 +1,19 @@
 import asyncio
 from datetime import datetime
+
 import app.db.base  # noqa: F401 — garante que todos os models estão mapeados
-from app.core.celery_app import celery_app
-from app.ai.resume_parser import parsear_curriculo
 from app.ai.market_analyzer import analisar_mercado
 from app.ai.matching_engine import (
-    calcular_score_rh,
-    calcular_score_mercado,
     calcular_score_curriculo,
+    calcular_score_mercado,
+    calcular_score_rh,
     gerar_explicacao,
 )
+from app.ai.resume_parser import parsear_curriculo
+from app.core.celery_app import celery_app
 from app.db.session import SessionLocal
-from app.models.curriculo import Curriculo
 from app.models.candidatura import Candidatura, StatusCandidatura
+from app.models.curriculo import Curriculo
 from app.models.vaga import Vaga
 
 

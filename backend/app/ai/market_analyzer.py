@@ -1,10 +1,11 @@
-import re
 import math
-import numpy as np
+import re
 from collections import Counter
+
 import httpx
-from app.core.config import settings
+import numpy as np
 from app.ai.resume_parser import get_model
+from app.core.config import settings
 
 # ── Tradução ───────────────────────────────────────────────────────────────
 
@@ -183,7 +184,6 @@ def extrair_de_adzuna(textos: list[str], top_n: int = 30) -> list[tuple[str, int
     - TF: frequência do termo naquele conjunto de vagas
     - IDF: penaliza termos que aparecem em todas as vagas (genéricos)
     """
-    import math
 
     SKILLS_POR_DOMINIO = {
         # Tech
@@ -320,8 +320,9 @@ def extrair_termos_frequentes(textos: list[str], top_n: int = 30,
 # ── Coletor Kaggle ─────────────────────────────────────────────────────────
 
 def coletar_kaggle(titulo_vaga: str) -> list[str]:
-    import pandas as pd
     import os
+
+    import pandas as pd
 
     caminho = "/app/data/postings.csv"
     if not os.path.exists(caminho):

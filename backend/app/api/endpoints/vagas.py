@@ -1,12 +1,12 @@
-from fastapi import APIRouter, HTTPException
-from sqlalchemy.orm import Session
+from app.ai.market_analyzer import analisar_mercado
+from app.ai.resume_parser import vetorizar_texto
+from app.ai.tasks import atualizar_mercado_vaga
 from app.api.deps import DB
-from app.core.auth import RH_OU_ADMIN, QUALQUER_PAPEL, APENAS_ADMIN
+from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL, RH_OU_ADMIN
 from app.models.vaga import Vaga
 from app.schemas.vaga import VagaCreate, VagaResponse, VagaUpdatePesos
-from app.ai.resume_parser import vetorizar_texto
-from app.ai.market_analyzer import analisar_mercado
-from app.ai.tasks import atualizar_mercado_vaga
+from fastapi import APIRouter, HTTPException
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 

@@ -1,6 +1,6 @@
 """Testes do módulo de autenticação — /auth/login e /auth/me."""
 import pytest
-from tests.conftest import make_usuario, auth_header, token_para
+from tests.conftest import make_usuario, auth_header
 from app.models.usuario import PapelUsuario
 from app.core.auth import criar_token, hash_senha, verificar_senha, exigir_papel
 from fastapi import HTTPException
@@ -75,7 +75,6 @@ class TestLogin:
         assert r.status_code == 401
 
     def test_usuario_inativo_retorna_403(self, client, db):
-        from app.models.usuario import Usuario
         u = make_usuario(db, email="inativo@teste.com")
         u.ativo = False
         db.flush()

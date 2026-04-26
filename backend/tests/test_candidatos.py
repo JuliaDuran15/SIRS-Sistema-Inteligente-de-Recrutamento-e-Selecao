@@ -1,7 +1,5 @@
 """Testes dos endpoints de candidatos — /candidatos/"""
-import pytest
-from tests.conftest import make_usuario, make_candidato, auth_header
-from app.models.usuario import PapelUsuario
+from tests.conftest import make_candidato, auth_header
 
 
 _CAND_PAYLOAD = {

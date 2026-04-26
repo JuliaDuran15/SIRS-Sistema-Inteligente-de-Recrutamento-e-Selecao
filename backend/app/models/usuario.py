@@ -1,10 +1,13 @@
+import enum
 import uuid
 from datetime import datetime
-from sqlalchemy import String, DateTime, Enum as SAEnum
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID
+
 from app.db.session import Base
-import enum
+from sqlalchemy import DateTime, String
+from sqlalchemy import Enum as SAEnum
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 
 class PapelUsuario(str, enum.Enum):
     RH      = "rh"

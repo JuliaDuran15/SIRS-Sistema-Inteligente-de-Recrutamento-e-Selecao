@@ -7,12 +7,10 @@ Estratégia de banco:
   os commits do endpoint não persistam — rollback no final isola cada teste.
 - Célery/AI: patchados para não rodar de verdade.
 """
-import os
-import io
 import pytest
 from unittest.mock import patch, MagicMock
-from sqlalchemy import create_engine, text, event
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
 
 # ── URLs ──────────────────────────────────────────────────────────────────────
@@ -34,7 +32,6 @@ def test_database():
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         conn.commit()
 
-    import app.db.base  # registra todos os models
     from app.db.session import Base
     Base.metadata.create_all(eng)
     eng.dispose()
@@ -117,7 +114,6 @@ from app.models.usuario import Usuario, PapelUsuario
 from app.models.vaga import Vaga
 from app.models.candidato import Candidato
 from app.models.candidatura import Candidatura, StatusCandidatura
-from app.models.curriculo import Curriculo
 from app.models.entrevista import Entrevista
 from app.core.auth import hash_senha, criar_token
 from datetime import datetime, timedelta

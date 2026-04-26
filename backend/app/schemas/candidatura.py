@@ -1,8 +1,9 @@
-from pydantic import BaseModel
-from uuid import UUID
 from datetime import datetime
 from typing import Any
+from uuid import UUID
+
 from app.models.candidatura import StatusCandidatura
+from pydantic import BaseModel
 
 
 class CurriculoInfo(BaseModel):

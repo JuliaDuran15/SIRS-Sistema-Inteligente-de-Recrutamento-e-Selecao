@@ -1,9 +1,9 @@
-from fastapi import APIRouter, HTTPException
-from sqlalchemy.orm import Session
 from app.api.deps import DB
-from app.core.auth import RH_OU_ADMIN, QUALQUER_PAPEL
+from app.core.auth import QUALQUER_PAPEL, RH_OU_ADMIN
 from app.models.candidato import Candidato
 from app.schemas.candidato import CandidatoCreate, CandidatoResponse, CandidatoUpdate
+from fastapi import APIRouter, HTTPException
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 

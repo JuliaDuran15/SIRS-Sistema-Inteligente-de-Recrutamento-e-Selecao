@@ -1,11 +1,9 @@
 """Testes dos endpoints de entrevistas — /entrevistas/"""
-import pytest
 from datetime import datetime, timedelta
 from tests.conftest import (
-    make_usuario, make_vaga, make_candidato,
+    make_vaga, make_candidato,
     make_candidatura, make_entrevista, auth_header,
 )
-from app.models.usuario import PapelUsuario
 from app.models.candidatura import StatusCandidatura
 
 

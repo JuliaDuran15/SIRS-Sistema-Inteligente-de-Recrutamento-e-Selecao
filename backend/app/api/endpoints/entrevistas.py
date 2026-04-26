@@ -1,12 +1,13 @@
-from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
 from datetime import datetime
+
 from app.api.deps import DB
-from app.core.auth import get_usuario_atual, QUALQUER_PAPEL
-from app.models.entrevista import Entrevista
+from app.core.auth import QUALQUER_PAPEL, get_usuario_atual
 from app.models.candidatura import Candidatura, StatusCandidatura
+from app.models.entrevista import Entrevista
 from app.models.usuario import PapelUsuario
-from app.schemas.entrevista import EntrevistaCreate, EntrevistaResultado, EntrevistaResponse
+from app.schemas.entrevista import EntrevistaCreate, EntrevistaResponse, EntrevistaResultado
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 

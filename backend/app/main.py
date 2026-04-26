@@ -1,9 +1,9 @@
 import app.db.base  # noqa: F401 — importa todos os models antes de qualquer endpoint
+from app.api.endpoints import auth, candidatos, candidaturas, entrevistas, usuarios, vagas
+from app.db.ensure_admin import garantir_admin
+from app.db.init_extensions import criar_extensoes
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.db.init_extensions import criar_extensoes
-from app.db.ensure_admin import garantir_admin
-from app.api.endpoints import auth, usuarios, vagas, candidatos, candidaturas, entrevistas
 
 criar_extensoes()
 garantir_admin()

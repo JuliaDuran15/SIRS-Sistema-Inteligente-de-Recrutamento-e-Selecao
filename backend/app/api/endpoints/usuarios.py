@@ -1,10 +1,10 @@
-from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.orm import Session
-from passlib.context import CryptContext
 from app.api.deps import DB
 from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL
-from app.models.usuario import Usuario, PapelUsuario
+from app.models.usuario import PapelUsuario, Usuario
 from app.schemas.usuario import UsuarioCreate, UsuarioResponse
+from fastapi import APIRouter, HTTPException
+from passlib.context import CryptContext
+from sqlalchemy.orm import Session
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

@@ -1,12 +1,9 @@
 """Testes dos endpoints de candidaturas — /candidaturas/ — incluindo upload de currículo."""
 import io
-import pytest
-from unittest.mock import patch
 from tests.conftest import (
-    make_usuario, make_vaga, make_candidato, make_candidatura,
+    make_vaga, make_candidato, make_candidatura,
     auth_header, make_pdf_bytes,
 )
-from app.models.usuario import PapelUsuario
 from app.models.candidatura import StatusCandidatura
 
 

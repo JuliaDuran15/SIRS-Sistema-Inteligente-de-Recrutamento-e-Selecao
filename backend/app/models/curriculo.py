@@ -1,10 +1,12 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Float, DateTime, Text, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID, JSONB
-from pgvector.sqlalchemy import Vector
+
 from app.db.session import Base
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import DateTime, Float, ForeignKey, Text
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 
 class Curriculo(Base):
     __tablename__ = "curriculos"

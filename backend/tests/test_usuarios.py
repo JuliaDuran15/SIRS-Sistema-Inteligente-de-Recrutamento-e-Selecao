@@ -1,5 +1,4 @@
 """Testes dos endpoints de usuários — /usuarios/"""
-import pytest
 from tests.conftest import make_usuario, auth_header
 from app.models.usuario import PapelUsuario
 

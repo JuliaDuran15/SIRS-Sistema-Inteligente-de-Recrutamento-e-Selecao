@@ -1,5 +1,4 @@
 """Testes unitários para funções puras do market_analyzer."""
-import pytest
 from app.ai.market_analyzer import (
     detectar_categoria,
     limpar_skills_desc,

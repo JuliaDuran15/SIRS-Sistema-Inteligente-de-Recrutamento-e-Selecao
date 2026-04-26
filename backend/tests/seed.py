@@ -5,12 +5,10 @@ Rode com:
 """
 
 import sys
-import os
 sys.path.insert(0, "/app")
 
 from sqlalchemy.orm import sessionmaker
 from app.db.session import engine
-from app.db.base import Base  # isso já importa todos os models
 from app.db.session import SessionLocal
 from app.models.usuario import Usuario, PapelUsuario
 from app.models.candidato import Candidato

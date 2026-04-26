@@ -13,7 +13,8 @@ Rode com:
   docker compose exec api python tests/seed_full.py
 """
 
-import sys, os, asyncio
+import sys
+import asyncio
 sys.path.insert(0, "/app")
 
 from datetime import date, datetime, timedelta

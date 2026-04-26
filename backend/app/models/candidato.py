@@ -1,9 +1,11 @@
 import uuid
-from datetime import datetime, date
-from sqlalchemy import String, DateTime, Date, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from datetime import date, datetime
+
 from app.db.session import Base
+from sqlalchemy import Date, DateTime, String
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 
 class Candidato(Base):
     __tablename__ = "candidatos"
