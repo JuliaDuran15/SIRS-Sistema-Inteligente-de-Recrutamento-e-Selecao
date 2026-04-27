@@ -19,6 +19,14 @@ class Settings(BaseSettings):
     ADZUNA_COUNTRY         : str = "br"
     MARKET_ANALYZER_SOURCE : str = "adzuna"
 
+    # SMTP — deixe vazio para desabilitar envio de e-mail
+    SMTP_HOST    : str = ""
+    SMTP_PORT    : int = 587
+    SMTP_USER    : str = ""
+    SMTP_PASS    : str = ""
+    SMTP_FROM    : str = ""
+    FRONTEND_URL : str = "http://localhost:5173"
+
     class Config:
         env_file = ".env"
 

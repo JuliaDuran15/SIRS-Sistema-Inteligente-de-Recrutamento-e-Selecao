@@ -5,7 +5,8 @@ from app.core.auth import QUALQUER_PAPEL, get_usuario_atual
 from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.entrevista import Entrevista
 from app.models.usuario import PapelUsuario
-from app.schemas.entrevista import EntrevistaCreate, EntrevistaResponse, EntrevistaResultado
+from app.models.vaga import Vaga
+from app.schemas.entrevista import AnotacoesUpdate, EntrevistaCreate, EntrevistaResponse, EntrevistaResultado
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -98,6 +99,48 @@ def registrar_resultado(
 
     from app.api.endpoints.candidaturas import transicionar
     transicionar(candidatura, STATUS_APOS_REALIZAR[entrevista.tipo], ator=usuario.nome)
+
+    db.commit()
+    db.refresh(entrevista)
+    return entrevista
+
+
+@router.patch("/{entrevista_id}/anotacoes", response_model=EntrevistaResponse)
+def editar_anotacoes(
+    entrevista_id: str,
+    dados: AnotacoesUpdate,
+    db: Session = DB,
+    usuario=Depends(get_usuario_atual),
+):
+    """
+    Permite ao gestor técnico atribuído à vaga editar as anotações de uma
+    entrevista técnica já realizada. Cada edição é registrada no histórico.
+    Admin também pode editar qualquer entrevista.
+    """
+    entrevista = db.query(Entrevista).filter(Entrevista.id == entrevista_id).first()
+    if not entrevista:
+        raise HTTPException(status_code=404, detail="Entrevista não encontrada")
+    if entrevista.status != "realizada":
+        raise HTTPException(status_code=400, detail="Só é possível editar anotações de entrevistas realizadas")
+    if entrevista.tipo != "tecnica" and usuario.papel != PapelUsuario.ADMIN:
+        raise HTTPException(status_code=400, detail="Apenas anotações de entrevistas técnicas podem ser editadas por gestores")
+
+    if usuario.papel != PapelUsuario.ADMIN:
+        if usuario.papel != PapelUsuario.GESTOR:
+            raise HTTPException(status_code=403, detail="Apenas gestores técnicos ou admin podem editar anotações")
+        candidatura = db.query(Candidatura).filter(Candidatura.id == entrevista.candidatura_id).first()
+        vaga = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
+        if str(usuario.id) not in (vaga.gestores_ids or []):
+            raise HTTPException(status_code=403, detail="Você não é gestor desta vaga")
+
+    historico = list(entrevista.historico_edicoes or [])
+    historico.append({
+        "texto_anterior": entrevista.anotacoes,
+        "editado_em"    : datetime.utcnow().isoformat(),
+        "editado_por"   : usuario.nome,
+    })
+    entrevista.historico_edicoes = historico
+    entrevista.anotacoes = dados.anotacoes
 
     db.commit()
     db.refresh(entrevista)

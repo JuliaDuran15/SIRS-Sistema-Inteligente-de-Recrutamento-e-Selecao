@@ -4,34 +4,33 @@ from datetime import datetime
 from app.db.session import Base
 from sqlalchemy import DateTime, Float, ForeignKey, String, Text
 from sqlalchemy import String as SAString
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
 class Entrevista(Base):
     __tablename__ = "entrevistas"
 
-    id               : Mapped[uuid.UUID]   = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    candidatura_id   : Mapped[uuid.UUID]   = mapped_column(UUID(as_uuid=True), ForeignKey("candidaturas.id"))
-    entrevistador_id : Mapped[uuid.UUID]   = mapped_column(UUID(as_uuid=True), ForeignKey("usuarios.id"))
+    id               : Mapped[uuid.UUID]    = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    candidatura_id   : Mapped[uuid.UUID]    = mapped_column(UUID(as_uuid=True), ForeignKey("candidaturas.id"))
+    entrevistador_id : Mapped[uuid.UUID]    = mapped_column(UUID(as_uuid=True), ForeignKey("usuarios.id"))
 
-    tipo             : Mapped[str]         = mapped_column(String(20))
+    tipo             : Mapped[str]          = mapped_column(String(20))
     # "rh" | "tecnica"
 
-    status           : Mapped[str]         = mapped_column(String(20), default="agendada")
+    status           : Mapped[str]          = mapped_column(String(20), default="agendada")
     # "agendada" | "realizada" | "cancelada"
 
-    score_manual     : Mapped[float | None]= mapped_column(Float)
-    # 0–10 — preenchido pelo entrevistador após a entrevista
+    score_manual     : Mapped[float | None] = mapped_column(Float)
+    # 0–10
 
-    anotacoes        : Mapped[str | None]  = mapped_column(Text)
-    # texto livre sem limite — o entrevistador escreve o que quiser
+    anotacoes        : Mapped[str | None]   = mapped_column(Text)
 
-    pontos_fortes    : Mapped[list | None] = mapped_column(ARRAY(SAString))
-    # ["comunicação clara", "domínio de Python"]
+    historico_edicoes: Mapped[list | None]  = mapped_column(JSONB, default=list)
+    # [{"texto_anterior": "...", "editado_em": "...", "editado_por": "..."}]
 
-    pontos_fracos    : Mapped[list | None] = mapped_column(ARRAY(SAString))
-    # ["pouca experiência com Docker"]
+    pontos_fortes    : Mapped[list | None]  = mapped_column(ARRAY(SAString))
+    pontos_fracos    : Mapped[list | None]  = mapped_column(ARRAY(SAString))
 
     agendada_para    : Mapped[datetime | None] = mapped_column(DateTime)
     realizada_em     : Mapped[datetime | None] = mapped_column(DateTime)

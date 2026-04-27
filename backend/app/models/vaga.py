@@ -16,24 +16,20 @@ class Vaga(Base):
     requisitos_texto : Mapped[str]       = mapped_column(Text, nullable=False)
     vetor_vaga                           = mapped_column(Vector(384), nullable=True)
     ranking_mercado  : Mapped[dict | None] = mapped_column(JSONB)
-    # {"Python": 0.95, "Docker": 0.88, ...} vindo do Market Analyzer
+    vetor_mercado                        = mapped_column(Vector(384), nullable=True)
 
-    vetor_mercado = mapped_column(Vector(384), nullable=True)
-    # vetor gerado pelo Market Analyzer
-    # representa as top skills do mercado para aquele cargo
+    peso_rh          : Mapped[float]    = mapped_column(Float, default=0.6)
+    peso_mercado     : Mapped[float]    = mapped_column(Float, default=0.4)
+    peso_curriculo   : Mapped[float]    = mapped_column(Float, default=0.5)
+    peso_entrevista_rh  : Mapped[float] = mapped_column(Float, default=0.25)
+    peso_entrevista_tec : Mapped[float] = mapped_column(Float, default=0.25)
 
-    # ── Pesos do score curricular ──────────────────────────────────
-    peso_rh          : Mapped[float]      = mapped_column(Float, default=0.6)
-    peso_mercado     : Mapped[float]      = mapped_column(Float, default=0.4)
-
-        # ── Pesos do score consolidado final ──────────────────────────
-    # (currículo + entrevista RH + entrevista técnica)
-    peso_curriculo   : Mapped[float]      = mapped_column(Float, default=0.5)
-    peso_entrevista_rh  : Mapped[float]   = mapped_column(Float, default=0.25)
-    peso_entrevista_tec : Mapped[float]   = mapped_column(Float, default=0.25)
-
-    status           : Mapped[str]        = mapped_column(String(20), default="aberta")
+    status           : Mapped[str]      = mapped_column(String(20), default="aberta")
     # "aberta" | "pausada" | "fechada"
-    criado_em        : Mapped[datetime]   = mapped_column(DateTime, default=datetime.utcnow)
+
+    gestores_ids     : Mapped[list | None] = mapped_column(JSONB, default=list)
+    # [str(uuid), ...] — gestores técnicos atribuídos a esta vaga
+
+    criado_em        : Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     candidaturas: Mapped[list["Candidatura"]] = relationship(back_populates="vaga")

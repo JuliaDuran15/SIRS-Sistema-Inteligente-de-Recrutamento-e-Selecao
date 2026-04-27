@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import api from "../api"
 import logo from "../assets/logo.png"
 
@@ -98,6 +98,15 @@ return (
           >
             {loading ? "Processando..." : "Entrar na Plataforma"}
           </button>
+
+          <div className="text-center">
+            <Link
+              to="/esqueceu-senha"
+              className="text-xs text-white/35 hover:text-white/60 transition-colors"
+            >
+              Esqueceu a senha?
+            </Link>
+          </div>
         </form>
 
         {/* DIVIDER */}

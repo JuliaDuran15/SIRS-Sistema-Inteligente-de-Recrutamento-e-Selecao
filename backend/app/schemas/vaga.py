@@ -8,6 +8,7 @@ from pydantic import BaseModel, model_validator
 class VagaCreate(BaseModel):
     nome             : str
     requisitos_texto : str
+    gestores_ids     : list[str] = []
 
     # Pesos do score curricular — devem somar 1.0
     peso_rh      : float = 0.6
@@ -49,6 +50,7 @@ class VagaResponse(BaseModel):
     peso_entrevista_tec : float
     status           : str
     ranking_mercado  : Any
+    gestores_ids     : Any
     criado_em        : datetime
 
     model_config = {"from_attributes": True}
