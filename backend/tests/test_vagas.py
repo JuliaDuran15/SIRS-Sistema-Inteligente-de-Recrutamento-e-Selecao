@@ -1,4 +1,5 @@
 """Testes dos endpoints de vagas — /vagas/"""
+import pytest
 from unittest.mock import AsyncMock, patch
 from tests.conftest import make_vaga, auth_header
 
@@ -58,12 +59,18 @@ class TestListarVagas:
         nomes = [v["nome"] for v in client.get("/vagas/", headers=auth_header(rh)).json()]
         assert "Vaga Listável" in nomes
 
-    def test_vaga_fechada_nao_aparece(self, client, rh, db):
-        v = make_vaga(db, nome="Vaga Fechada")
-        v.status = "fechada"
+    def test_vaga_fechada_aparece_por_ultimo(self, client, rh, db):
+        """Vagas fechadas aparecem na lista mas ordenadas no fim."""
+        v_fechada = make_vaga(db, nome="Vaga Fechada Ordenacao")
+        v_fechada.status = "fechada"
+        make_vaga(db, nome="Vaga Aberta Ordenacao")
         db.flush()
-        nomes = [v["nome"] for v in client.get("/vagas/", headers=auth_header(rh)).json()]
-        assert "Vaga Fechada" not in nomes
+        lista = [v["nome"] for v in client.get("/vagas/", headers=auth_header(rh)).json()]
+        # A vaga aberta deve vir antes da fechada
+        idx_aberta = next((i for i, n in enumerate(lista) if n == "Vaga Aberta Ordenacao"), None)
+        idx_fechada = next((i for i, n in enumerate(lista) if n == "Vaga Fechada Ordenacao"), None)
+        assert idx_aberta is not None and idx_fechada is not None
+        assert idx_aberta < idx_fechada
 
     def test_sem_token_retorna_401(self, client):
         assert client.get("/vagas/").status_code == 401
@@ -113,6 +120,35 @@ class TestAtualizarPesos:
         r = client.patch("/vagas/00000000-0000-0000-0000-000000000000/pesos",
                          json=self._PESOS, headers=auth_header(rh))
         assert r.status_code == 404
+
+    def test_atualizar_pesos_recalcula_score_curriculo(self, client, rh, db):
+        from tests.conftest import make_candidato, make_candidatura
+        from app.models.curriculo import Curriculo
+        from app.models.candidatura import StatusCandidatura
+
+        v = make_vaga(db, nome="Vaga Recalculo")
+        c = make_candidato(db, email="recalculo@teste.com")
+        cand = make_candidatura(db, c, v, StatusCandidatura.TRIAGEM_PENDENTE)
+
+        # Cria currículo com scores conhecidos
+        cur = Curriculo(
+            candidatura_id=cand.id,
+            score_rh=80.0,       # 0–100
+            score_mercado=60.0,  # 0–100
+            score_curriculo=72.0,  # 0.8*0.6 + 0.6*0.4 = 0.72 → 72.0
+        )
+        db.add(cur)
+        db.flush()
+
+        # Muda para peso_rh=0.5, peso_mercado=0.5
+        # Esperado: 0.8*0.5 + 0.6*0.5 = 0.7 → 70.0
+        novos_pesos = {
+            "peso_rh": 0.5, "peso_mercado": 0.5,
+            "peso_curriculo": 0.5, "peso_entrevista_rh": 0.25, "peso_entrevista_tec": 0.25,
+        }
+        client.patch(f"/vagas/{v.id}/pesos", json=novos_pesos, headers=auth_header(rh))
+        db.refresh(cur)
+        assert cur.score_curriculo == pytest.approx(70.0, abs=0.2)
 
 
 class TestAtualizarStatus:

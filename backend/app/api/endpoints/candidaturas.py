@@ -8,7 +8,8 @@ from app.core.auth import QUALQUER_PAPEL, RH_OU_ADMIN
 from app.models.candidato import Candidato
 from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.vaga import Vaga
-from app.schemas.candidatura import CandidaturaCreate, CandidaturaResponse
+from app.models.curriculo import Curriculo
+from app.schemas.candidatura import CandidaturaCreate, CandidaturaResponse, CurriculoDetalhado
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
@@ -71,10 +72,17 @@ def criar_candidatura(dados: CandidaturaCreate, db: Session = DB, _=RH_OU_ADMIN)
 
 
 @router.get("/", response_model=list[CandidaturaResponse])
-def listar_candidaturas(vaga_id: str | None = None, db: Session = DB, _=QUALQUER_PAPEL):
+def listar_candidaturas(
+    vaga_id      : str | None = None,
+    candidato_id : str | None = None,
+    db: Session = DB,
+    _=QUALQUER_PAPEL,
+):
     query = db.query(Candidatura)
     if vaga_id:
         query = query.filter(Candidatura.vaga_id == vaga_id)
+    if candidato_id:
+        query = query.filter(Candidatura.candidato_id == candidato_id)
     return query.all()
 
 
@@ -121,6 +129,16 @@ def upload_curriculo(candidatura_id: str, arquivo: UploadFile = File(...),
 
     db.refresh(candidatura)
     return candidatura
+
+
+@router.get("/{candidatura_id}/curriculo", response_model=CurriculoDetalhado)
+def get_curriculo(candidatura_id: str, db: Session = DB, _=QUALQUER_PAPEL):
+    curriculo = db.query(Curriculo).filter(
+        Curriculo.candidatura_id == candidatura_id
+    ).first()
+    if not curriculo:
+        raise HTTPException(status_code=404, detail="Currículo não encontrado para esta candidatura")
+    return curriculo
 
 
 @router.patch("/{candidatura_id}/status", response_model=CandidaturaResponse)

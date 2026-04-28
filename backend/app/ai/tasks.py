@@ -35,7 +35,7 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
         if not vaga:
             raise ValueError(f"Vaga não encontrada para candidatura {candidatura_id}")
 
-        if not vaga.vetor_vaga:
+        if vaga.vetor_vaga is None:
             raise ValueError("Vaga não possui vetor — crie a vaga antes de processar currículos")
 
         # 2. Parseia o currículo — extrai texto e gera vetor

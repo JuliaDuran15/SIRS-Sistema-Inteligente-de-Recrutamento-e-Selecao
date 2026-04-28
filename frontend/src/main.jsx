@@ -8,7 +8,10 @@ import { VagaDetalhe }       from "./pages/VagaDetalhe"
 import { Candidatos }        from "./pages/Candidatos"
 import { EntrevistaDetalhe } from "./pages/EntrevistaDetalhe"
 import { AdminUsuarios }     from "./pages/AdminUsuarios"
+import { CandidatoDetalhe } from "./pages/CandidatoDetalhe"
 import { Perfil }           from "./pages/Perfil"
+import { EsqueceuSenha }   from "./pages/EsqueceuSenha"
+import { ResetarSenha }    from "./pages/ResetarSenha"
 import api                   from "./api"
 import "./index.css"
 
@@ -45,14 +48,19 @@ function App() {
         <Route path="/login" element={
           usuario ? <Navigate to="/" replace /> : <Login onLogin={handleLogin} />
         }/>
+        <Route path="/esqueceu-senha" element={<EsqueceuSenha />} />
+        <Route path="/resetar-senha"  element={<ResetarSenha />} />
         <Route path="/" element={
-          <Protegida><Vagas /></Protegida>
+          <Protegida><Vagas usuario={usuario} /></Protegida>
         }/>
         <Route path="/vagas/:id" element={
           <Protegida><VagaDetalhe usuario={usuario} /></Protegida>
         }/>
         <Route path="/candidatos" element={
           <Protegida><Candidatos /></Protegida>
+        }/>
+        <Route path="/candidatos/:id" element={
+          <Protegida><CandidatoDetalhe usuario={usuario} /></Protegida>
         }/>
         <Route path="/candidaturas/:candidaturaId/entrevistas" element={
           <Protegida><EntrevistaDetalhe usuario={usuario} /></Protegida>

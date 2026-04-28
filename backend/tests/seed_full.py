@@ -72,6 +72,21 @@ def criar_usuarios():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Gestores atribuídos a cada vaga (emails dos gestores)
+# carlos → tech backend/infra | daniela → dados/rh/financeiro | eduardo → fullstack/legal/marketing
+GESTORES_POR_VAGA = [
+    ["carlos@sirs.com", "daniela@sirs.com"],          # 0: Dev Python
+    ["carlos@sirs.com", "eduardo@sirs.com"],           # 1: Full Stack
+    ["daniela@sirs.com", "eduardo@sirs.com"],          # 2: Eng. Dados
+    ["carlos@sirs.com", "eduardo@sirs.com"],           # 3: DevOps
+    ["daniela@sirs.com"],                              # 4: Analista RH
+    ["eduardo@sirs.com"],                              # 5: Advogado
+    ["carlos@sirs.com"],                               # 6: Eng. Civil
+    ["daniela@sirs.com", "eduardo@sirs.com"],          # 7: Financeiro
+    ["carlos@sirs.com", "daniela@sirs.com"],           # 8: Product Designer
+    ["eduardo@sirs.com"],                              # 9: Marketing
+]
+
 SPECS_VAGAS = [
     {
         "nome": "Desenvolvedor Python Sênior",
@@ -155,9 +170,11 @@ SPECS_VAGAS = [
     },
 ]
 
-def criar_vagas():
+def criar_vagas(usuarios):
     vagas = []
-    for s in SPECS_VAGAS:
+    for i, s in enumerate(SPECS_VAGAS):
+        emails_gestores = GESTORES_POR_VAGA[i]
+        ids_gestores = [str(usuarios[e].id) for e in emails_gestores if e in usuarios]
         v = Vaga(
             nome=s["nome"],
             requisitos_texto=s["req"],
@@ -165,6 +182,7 @@ def criar_vagas():
             peso_rh=0.6, peso_mercado=0.4,
             peso_curriculo=0.5, peso_entrevista_rh=0.25, peso_entrevista_tec=0.25,
             status="aberta",
+            gestores_ids=ids_gestores,
         )
         vagas.append(v)
     db.add_all(vagas)
@@ -631,6 +649,16 @@ def criar_candidaturas(vagas, candidatos, usuarios):
             nota_tec = NOTAS_TEC[idx_c % len(NOTAS_TEC)]
             tec_status = "realizada" if etapa != "tec_agendada" else "agendada"
             tec_score  = round(7.0 + (idx_c % 3) * 0.5, 1) if tec_status == "realizada" else None
+
+            # Alguns registros com histórico de edição para demonstrar a feature
+            historico_edicoes = []
+            if tec_status == "realizada" and idx_c % 3 == 0:
+                historico_edicoes = [{
+                    "texto_anterior": "Avaliação inicial — pendente de complemento.",
+                    "editado_em"    : _ago(2, horas=3).isoformat(),
+                    "editado_por"   : gest.nome,
+                }]
+
             ent_tec = Entrevista(
                 candidatura_id=cand_obj.id,
                 entrevistador_id=gest.id,
@@ -642,6 +670,7 @@ def criar_candidaturas(vagas, candidatos, usuarios):
                 anotacoes=nota_tec[0] if tec_status == "realizada" else None,
                 pontos_fortes=nota_tec[1] if tec_status == "realizada" else None,
                 pontos_fracos=nota_tec[2] if tec_status == "realizada" else None,
+                historico_edicoes=historico_edicoes,
             )
             db.add(ent_tec)
 
@@ -652,15 +681,23 @@ def criar_candidaturas(vagas, candidatos, usuarios):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-def resumo(vagas, candidatos, candidaturas):
+def resumo(vagas, candidatos, candidaturas, usuarios):
     from collections import Counter
     contagem = Counter(c.status for c in candidaturas)
-    print("\n" + "=" * 56)
+    print("\n" + "=" * 60)
     print("  BANCO POPULADO — RESUMO")
-    print("=" * 56)
-    print(f"\n  Vagas    : {len(vagas)}")
-    print(f"  Candidatos: {len(candidatos)}")
+    print("=" * 60)
+    print(f"\n  Vagas       : {len(vagas)}")
+    print(f"  Candidatos  : {len(candidatos)}")
     print(f"  Candidaturas: {len(candidaturas)}")
+
+    print("\n  Gestores por vaga:")
+    gestores_por_id = {str(u.id): u.nome for u in usuarios.values()
+                       if u.papel.value == "gestor"}
+    for i, v in enumerate(vagas):
+        nomes = [gestores_por_id.get(gid, gid) for gid in (v.gestores_ids or [])]
+        print(f"  [{i}] {v.nome[:40]:<40} → {', '.join(nomes) if nomes else '(sem gestor)'}")
+
     print("\n  Distribuição do pipeline:")
     ordem = [
         StatusCandidatura.NOVO, StatusCandidatura.TRIAGEM_PENDENTE,
@@ -675,11 +712,12 @@ def resumo(vagas, candidatos, candidaturas):
         if n:
             barra = "█" * n
             print(f"  {s.value:<35} {barra} {n}")
+
     print("\n  Logins:")
-    print("  ana@sirs.com / bruno@sirs.com      → RH       (senha123)")
-    print("  carlos / daniela / eduardo @sirs.com → Gestor  (senha123)")
-    print(f"  {settings.ADMIN_EMAIL:<38} → Admin    ({settings.ADMIN_SENHA})")
-    print("=" * 56)
+    print("  ana@sirs.com / bruno@sirs.com         → RH       (senha123)")
+    print("  carlos / daniela / eduardo @sirs.com  → Gestor   (senha123)")
+    print(f"  {settings.ADMIN_EMAIL:<40} → Admin    ({settings.ADMIN_SENHA})")
+    print("=" * 60)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -689,10 +727,10 @@ if __name__ == "__main__":
     print("Criando usuários...")
     usuarios = criar_usuarios()
     print("Criando vagas e vetorizando requisitos...")
-    vagas = criar_vagas()
+    vagas = criar_vagas(usuarios)
     print("Criando candidatos...")
     candidatos = criar_candidatos()
     print("Criando candidaturas, currículos e entrevistas (gerando embeddings)...")
     candidaturas = criar_candidaturas(vagas, candidatos, usuarios)
-    resumo(vagas, candidatos, candidaturas)
+    resumo(vagas, candidatos, candidaturas, usuarios)
     db.close()

@@ -7,6 +7,8 @@ import {
   registrarResultado,
   atualizarStatusCandidatura,
   uploadCurriculo,
+  getCurriculo,
+  editarAnotacoes,
 } from "../api"
 import { Badge } from "../components/Badge"
 import { ScoreBar } from "../components/ScoreBar"
@@ -63,6 +65,65 @@ function TagInput({ tags, onChange, placeholder }) {
   )
 }
 
+// ── Botão + modal visualizar conteúdo do currículo ───────────────────────────
+function VerCurriculoBtn({ candidaturaId }) {
+  const [aberto, setAberto]   = useState(false)
+  const [texto, setTexto]     = useState(null)
+  const [loading, setLoading] = useState(false)
+
+  async function abrir() {
+    setAberto(true)
+    if (texto !== null) return
+    setLoading(true)
+    try {
+      const r = await getCurriculo(candidaturaId)
+      setTexto(r.data.texto_extraido ?? "(Texto não disponível)")
+    } catch {
+      setTexto("Erro ao carregar o conteúdo do currículo.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <>
+      <button onClick={abrir}
+        className="text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
+        style={{ background: "rgba(26,139,191,0.14)", border: "1px solid rgba(26,139,191,0.25)", color: "#4DC8E8" }}>
+        Ver currículo
+      </button>
+
+      {aberto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(7,17,26,0.8)", backdropFilter: "blur(4px)" }}>
+          <div className="card-glass rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-5 border-b"
+              style={{ borderColor: "var(--b-subtle)" }}>
+              <h3 className="text-sm font-bold text-brand-cloud">Conteúdo extraído do currículo</h3>
+              <button onClick={() => setAberto(false)}
+                className="text-brand-pale/40 hover:text-brand-pale text-xl leading-none">×</button>
+            </div>
+            <div className="flex-1 overflow-auto p-5">
+              {loading ? (
+                <div className="flex items-center gap-2 text-brand-pale/45 text-sm">
+                  <span className="w-4 h-4 border-2 rounded-full animate-spin"
+                    style={{ borderColor: "var(--b-normal)", borderTopColor: "#4DC8E8" }} />
+                  Carregando...
+                </div>
+              ) : (
+                <pre className="text-xs text-brand-pale/70 leading-relaxed whitespace-pre-wrap font-mono">
+                  {texto}
+                </pre>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
+
 // ── Seção upload currículo ───────────────────────────────────────────────────
 function UploadCurriculo({ candidaturaId, status, curriculo, onAtualizado }) {
   const [enviando, setEnviando]   = useState(false)
@@ -101,7 +162,7 @@ function UploadCurriculo({ candidaturaId, status, curriculo, onAtualizado }) {
     <div className="card-glass rounded-2xl p-6">
       <div className="flex items-center gap-3">
         <span className="w-5 h-5 border-2 rounded-full animate-spin flex-shrink-0"
-          style={{ borderColor: "rgba(77,200,232,0.3)", borderTopColor: "#4DC8E8" }} />
+          style={{ borderColor: "var(--b-normal)", borderTopColor: "#4DC8E8" }} />
         <div>
           <p className="text-sm font-bold text-brand-cloud">Processando currículo...</p>
           <p className="text-xs text-brand-pale/45 mt-0.5">A IA está extraindo texto e calculando scores. Aguarde.</p>
@@ -114,8 +175,10 @@ function UploadCurriculo({ candidaturaId, status, curriculo, onAtualizado }) {
     <div className="card-glass rounded-2xl p-5 space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">Currículo</h2>
-        <span className="text-xs px-2.5 py-1 rounded-lg font-semibold"
-          style={{ background: "rgba(26,170,128,0.18)", color: "#2EE8B4" }}>✓ Processado</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs px-2.5 py-1 rounded-lg font-semibold"
+            style={{ background: "rgba(26,170,128,0.18)", color: "#2EE8B4" }}>✓ Processado</span>
+        </div>
       </div>
       <ScoreBar score={curriculo.score_rh}       label="Aderência aos requisitos da vaga" />
       <ScoreBar score={curriculo.score_mercado}  label="Aderência ao mercado" />
@@ -131,10 +194,13 @@ function UploadCurriculo({ candidaturaId, status, curriculo, onAtualizado }) {
           Processado em {new Date(curriculo.processado_em).toLocaleString("pt-BR")}
         </p>
       )}
-      <button onClick={() => inputRef.current?.click()}
-        className="text-xs text-brand-pale/40 hover:text-brand-sky transition-colors">
-        Substituir PDF ↑
-      </button>
+      <div className="flex items-center gap-3 pt-1">
+        <VerCurriculoBtn candidaturaId={candidaturaId} />
+        <button onClick={() => inputRef.current?.click()}
+          className="text-xs text-brand-pale/35 hover:text-brand-sky transition-colors">
+          Substituir PDF ↑
+        </button>
+      </div>
       <input ref={inputRef} type="file" accept=".pdf" className="hidden"
         onChange={e => e.target.files[0] && enviar(e.target.files[0])} />
     </div>
@@ -151,14 +217,14 @@ function UploadCurriculo({ candidaturaId, status, curriculo, onAtualizado }) {
         onClick={() => !enviando && inputRef.current?.click()}
         className="rounded-2xl p-8 text-center cursor-pointer transition-all"
         style={{
-          border: `2px dashed ${drag ? "rgba(77,200,232,0.6)" : "rgba(77,200,232,0.2)"}`,
-          background: drag ? "rgba(26,139,191,0.08)" : "rgba(7,17,26,0.3)",
+          border: `2px dashed ${drag ? "rgba(77,200,232,0.6)" : "var(--b-strong)"}`,
+          background: drag ? "rgba(26,139,191,0.08)" : "var(--s-content)",
         }}
       >
         {enviando ? (
           <div className="flex flex-col items-center gap-2">
             <span className="w-8 h-8 border-2 rounded-full animate-spin"
-              style={{ borderColor: "rgba(77,200,232,0.3)", borderTopColor: "#4DC8E8" }} />
+              style={{ borderColor: "var(--b-normal)", borderTopColor: "#4DC8E8" }} />
             <p className="text-sm text-brand-pale/60">Enviando {arquivo?.name}...</p>
           </div>
         ) : (
@@ -188,20 +254,42 @@ function UploadCurriculo({ candidaturaId, status, curriculo, onAtualizado }) {
 }
 
 // ── Card entrevista ──────────────────────────────────────────────────────────
-function CardEntrevista({ entrevista, usuario, onResultadoSalvo }) {
-  const [open, setOpen]           = useState(false)
-  const [score, setScore]         = useState(entrevista.score_manual ?? "")
-  const [anotacoes, setAnotacoes] = useState(entrevista.anotacoes ?? "")
-  const [fortes, setFortes]       = useState(entrevista.pontos_fortes ?? [])
-  const [fracos, setFracos]       = useState(entrevista.pontos_fracos ?? [])
-  const [salvando, setSalvando]   = useState(false)
-  const [erro, setErro]           = useState(null)
+function CardEntrevista({ entrevista: initial, usuario, candidatura, onResultadoSalvo }) {
+  const [entrevista, setEntrevista] = useState(initial)
+  const [open, setOpen]             = useState(false)
+  const [score, setScore]           = useState(entrevista.score_manual ?? "")
+  const [anotacoes, setAnotacoes]   = useState(entrevista.anotacoes ?? "")
+  const [fortes, setFortes]         = useState(entrevista.pontos_fortes ?? [])
+  const [fracos, setFracos]         = useState(entrevista.pontos_fracos ?? [])
+  const [salvando, setSalvando]     = useState(false)
+  const [erro, setErro]             = useState(null)
 
+  const vaga        = candidatura?.vaga
+  const gestoresIds = vaga?.gestores_ids ?? []
+  const ehGestorDaVaga = gestoresIds.includes(usuario?.id) || gestoresIds.includes(String(usuario?.id))
+
+  // Pode registrar pela primeira vez (status = agendada)
   const podeRegistrar = entrevista.status === "agendada" && (
     usuario?.papel === "admin" ||
     (entrevista.tipo === "rh"      && usuario?.papel === "rh") ||
     (entrevista.tipo === "tecnica" && usuario?.papel === "gestor")
   )
+
+  // Pode editar resultado completo (status = realizada)
+  const podeEditarResultado = entrevista.status === "realizada" && (
+    usuario?.papel === "admin" ||
+    (entrevista.tipo === "rh"      && usuario?.papel === "rh") ||
+    (entrevista.tipo === "tecnica" && usuario?.papel === "gestor" && ehGestorDaVaga)
+  )
+
+  function abrirFormEdicao() {
+    setScore(entrevista.score_manual ?? "")
+    setAnotacoes(entrevista.anotacoes ?? "")
+    setFortes(entrevista.pontos_fortes ?? [])
+    setFracos(entrevista.pontos_fracos ?? [])
+    setErro(null)
+    setOpen(true)
+  }
 
   async function handleSalvar(e) {
     e.preventDefault()
@@ -216,6 +304,7 @@ function CardEntrevista({ entrevista, usuario, onResultadoSalvo }) {
         pontos_fortes: fortes,
         pontos_fracos: fracos,
       })
+      setEntrevista(r.data)
       onResultadoSalvo(r.data)
       setOpen(false)
     } catch (err) {
@@ -245,15 +334,57 @@ function CardEntrevista({ entrevista, usuario, onResultadoSalvo }) {
 
       {entrevista.status === "realizada" && (
         <div className="space-y-3">
-          <ScoreBar score={(entrevista.score_manual ?? 0) * 10}
-            label={`Score: ${entrevista.score_manual}/10`} />
-
-          {entrevista.anotacoes && (
-            <div className="rounded-xl p-4 text-sm text-brand-pale/80 leading-relaxed whitespace-pre-wrap"
-              style={{ background: "rgba(7,17,26,0.5)", border: "1px solid rgba(77,200,232,0.1)" }}>
-              {entrevista.anotacoes}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex-1 min-w-0">
+              <ScoreBar score={(entrevista.score_manual ?? 0) * 10}
+                label={`Score: ${entrevista.score_manual}/10`} />
             </div>
-          )}
+            {podeEditarResultado && !open && (
+              <button onClick={abrirFormEdicao}
+                className="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
+                style={{ background: "rgba(26,139,191,0.12)", border: "1px solid rgba(26,139,191,0.25)", color: "#4DC8E8" }}>
+                Editar resultado
+              </button>
+            )}
+          </div>
+
+          {/* Anotações (somente leitura quando form fechado) */}
+          <div>
+            <p className="text-xs font-bold text-brand-pale/40 uppercase tracking-wider mb-1.5">Anotações</p>
+            {!open && (
+              entrevista.anotacoes ? (
+                <div className="rounded-xl p-4 text-sm text-brand-pale/80 leading-relaxed whitespace-pre-wrap"
+                  style={{ background: "var(--s-track)", border: "1px solid var(--b-subtle)" }}>
+                  {entrevista.anotacoes}
+                </div>
+              ) : (
+                <p className="text-xs text-brand-pale/35 italic">Sem anotações.</p>
+              )
+            )}
+
+            {/* Histórico de edições */}
+            {entrevista.historico_edicoes?.length > 0 && (
+              <details className="mt-2">
+                <summary className="text-xs text-brand-pale/30 cursor-pointer hover:text-brand-pale/50">
+                  {entrevista.historico_edicoes.length} edição(ões) anterior(es)
+                </summary>
+                <div className="mt-2 space-y-2 pl-3 border-l"
+                  style={{ borderColor: "var(--b-normal)" }}>
+                  {[...entrevista.historico_edicoes].reverse().map((h, i) => (
+                    <div key={i}>
+                      <p className="text-xs text-brand-pale/30">
+                        Alterado por <span className="text-brand-pale/50 font-semibold">{h.editado_por}</span>
+                        {" · "}{new Date(h.editado_em).toLocaleString("pt-BR")}
+                      </p>
+                      <p className="text-xs text-brand-pale/45 mt-0.5 italic whitespace-pre-wrap line-clamp-3">
+                        {h.texto_anterior || "(em branco)"}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </details>
+            )}
+          </div>
 
           {(entrevista.pontos_fortes?.length > 0 || entrevista.pontos_fracos?.length > 0) && (
             <div className="grid grid-cols-2 gap-3">
@@ -284,58 +415,70 @@ function CardEntrevista({ entrevista, usuario, onResultadoSalvo }) {
         </div>
       )}
 
-      {podeRegistrar && (
-        <div>
-          <button onClick={() => setOpen(v => !v)}
-            className="text-xs font-bold px-4 py-2 rounded-xl transition-all"
-            style={{
-              background: open ? "rgba(26,139,191,0.25)" : "rgba(26,139,191,0.14)",
-              border: "1px solid rgba(26,139,191,0.3)", color: "#4DC8E8",
-            }}>
-            {open ? "Fechar" : "Registrar resultado"}
-          </button>
+      {/* Botão "Registrar resultado" — somente para entrevistas agendadas */}
+      {podeRegistrar && !open && (
+        <button onClick={() => { setErro(null); setOpen(true) }}
+          className="text-xs font-bold px-4 py-2 rounded-xl transition-all"
+          style={{ background: "rgba(26,139,191,0.14)", border: "1px solid rgba(26,139,191,0.3)", color: "#4DC8E8" }}>
+          Registrar resultado
+        </button>
+      )}
 
-          {open && (
-            <form onSubmit={handleSalvar} className="mt-4 space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-brand-pale/55 uppercase tracking-wider mb-2">
-                  Score (0–10)
-                </label>
-                <input type="number" min="0" max="10" step="0.1" value={score}
-                  onChange={e => setScore(e.target.value)}
-                  className="w-32 px-3 py-2 rounded-xl text-sm font-mono" required />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-brand-pale/55 uppercase tracking-wider mb-2">
-                  Anotações
-                </label>
-                <textarea value={anotacoes} onChange={e => setAnotacoes(e.target.value)}
-                  rows={5} placeholder="Observações sobre o candidato..."
-                  className="w-full px-3 py-2 rounded-xl text-sm resize-y" required />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-brand-mint/60 uppercase tracking-wider mb-2">
-                  Pontos fortes
-                </label>
-                <TagInput tags={fortes} onChange={setFortes}
-                  placeholder="ex: comunicação clara (Enter)" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-red-400/60 uppercase tracking-wider mb-2">
-                  Pontos fracos
-                </label>
-                <TagInput tags={fracos} onChange={setFracos}
-                  placeholder="ex: pouca experiência com Docker (Enter)" />
-              </div>
-              {erro && <p className="text-xs text-red-400">{erro}</p>}
-              <button type="submit" disabled={salvando}
-                className="px-5 py-2.5 rounded-xl text-sm font-bold text-brand-black disabled:opacity-50"
-                style={{ background: "linear-gradient(135deg, #1AAA80, #2EE8B4)" }}>
-                {salvando ? "Salvando..." : "Salvar resultado"}
-              </button>
-            </form>
-          )}
-        </div>
+      {/* Form unificado — aparece para registro (agendada) e edição (realizada) */}
+      {open && (
+        <form onSubmit={handleSalvar}
+          className="space-y-4 pt-4"
+          style={{ borderTop: "1px solid var(--b-subtle)" }}>
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">
+              {entrevista.status === "realizada" ? "Editar resultado" : "Registrar resultado"}
+            </p>
+            <button type="button" onClick={() => setOpen(false)}
+              className="text-brand-pale/35 hover:text-brand-pale transition-colors text-lg leading-none">×</button>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-brand-pale/55 uppercase tracking-wider mb-2">
+              Score (0–10)
+            </label>
+            <input type="number" min="0" max="10" step="0.1" value={score}
+              onChange={e => setScore(e.target.value)}
+              className="w-32 px-3 py-2 rounded-xl text-sm font-mono" required />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-brand-pale/55 uppercase tracking-wider mb-2">
+              Anotações
+            </label>
+            <textarea value={anotacoes} onChange={e => setAnotacoes(e.target.value)}
+              rows={5} placeholder="Observações sobre o candidato..."
+              className="w-full px-3 py-2 rounded-xl text-sm resize-y" required />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-brand-mint/60 uppercase tracking-wider mb-2">
+              Pontos fortes
+            </label>
+            <TagInput tags={fortes} onChange={setFortes}
+              placeholder="ex: comunicação clara (Enter)" />
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-red-400/60 uppercase tracking-wider mb-2">
+              Pontos fracos
+            </label>
+            <TagInput tags={fracos} onChange={setFracos}
+              placeholder="ex: pouca experiência com Docker (Enter)" />
+          </div>
+          {erro && <p className="text-xs text-red-400">{erro}</p>}
+          <div className="flex gap-3">
+            <button type="submit" disabled={salvando}
+              className="px-5 py-2.5 rounded-xl text-sm font-bold text-brand-black disabled:opacity-50"
+              style={{ background: "linear-gradient(135deg, #1AAA80, #2EE8B4)" }}>
+              {salvando ? "Salvando..." : "Salvar"}
+            </button>
+            <button type="button" onClick={() => setOpen(false)}
+              className="px-4 py-2 rounded-xl text-xs text-brand-pale/45 hover:text-brand-pale transition-colors">
+              Cancelar
+            </button>
+          </div>
+        </form>
       )}
     </div>
   )
@@ -456,7 +599,7 @@ export function EntrevistaDetalhe({ usuario }) {
 
   if (loading) return (
     <div className="space-y-4">
-      <div className="h-8 w-64 rounded-xl animate-pulse" style={{ background: "rgba(14,80,104,0.3)" }} />
+      <div className="h-8 w-64 rounded-xl animate-pulse" style={{ background: "var(--s-skeleton)" }} />
       <div className="h-4 w-96 rounded animate-pulse" style={{ background: "rgba(14,80,104,0.2)" }} />
     </div>
   )
@@ -550,6 +693,7 @@ export function EntrevistaDetalhe({ usuario }) {
           <h2 className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">Entrevistas</h2>
           {entrevistas.map(e => (
             <CardEntrevista key={e.id} entrevista={e} usuario={usuario}
+              candidatura={candidatura}
               onResultadoSalvo={onResultadoSalvo} />
           ))}
         </div>

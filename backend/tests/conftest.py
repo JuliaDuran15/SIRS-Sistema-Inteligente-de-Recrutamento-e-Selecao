@@ -145,6 +145,7 @@ def make_vaga(
     db,
     nome="Dev Python",
     requisitos="Python, FastAPI, PostgreSQL",
+    gestores_ids=None,
 ) -> Vaga:
     v = Vaga(
         nome=nome,
@@ -155,6 +156,7 @@ def make_vaga(
         peso_entrevista_rh=0.25,
         peso_entrevista_tec=0.25,
         status="aberta",
+        gestores_ids=gestores_ids or [],
     )
     db.add(v)
     db.flush()

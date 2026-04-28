@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import api from "../api"
 import logo from "../assets/logo.png"
 
@@ -41,7 +41,7 @@ export function Login({ onLogin }) {
   }
 
 return (
-<div className="flex h-screen w-screen items-center justify-center bg-brand-black p-4">
+<div className="auth-page flex h-screen w-screen items-center justify-center p-4">
       
       {/* O Card */}
       <div className="w-full max-w-[400px] rounded-3xl border border-brand-sky/20 bg-brand-teal/20 p-8 shadow-2xl backdrop-blur-xl">
@@ -98,6 +98,15 @@ return (
           >
             {loading ? "Processando..." : "Entrar na Plataforma"}
           </button>
+
+          <div className="text-center">
+            <Link
+              to="/esqueceu-senha"
+              className="text-xs text-white/35 hover:text-white/60 transition-colors"
+            >
+              Esqueceu a senha?
+            </Link>
+          </div>
         </form>
 
         {/* DIVIDER */}

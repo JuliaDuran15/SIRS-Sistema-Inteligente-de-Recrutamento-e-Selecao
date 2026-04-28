@@ -15,6 +15,18 @@ class CurriculoInfo(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CurriculoDetalhado(BaseModel):
+    id              : UUID
+    candidatura_id  : UUID
+    texto_extraido  : str | None
+    score_rh        : float | None
+    score_mercado   : float | None
+    score_curriculo : float | None
+    processado_em   : datetime | None
+
+    model_config = {"from_attributes": True}
+
+
 class CandidatoMin(BaseModel):
     id       : UUID
     nome     : str
@@ -28,8 +40,9 @@ class CandidatoMin(BaseModel):
 
 
 class VagaMin(BaseModel):
-    id  : UUID
-    nome: str
+    id           : UUID
+    nome         : str
+    gestores_ids : Any
 
     model_config = {"from_attributes": True}
 
