@@ -1,0 +1,59 @@
+Dentro do Docker Compose, os serviços se enxergam pelo nome. Por isso no `.env` você usa `@db:5432` e não `@localhost:5432` — o nome `db` resolve para o IP interno do container do PostgreSQL:
+```
+api    → fala com → db      na porta 5432
+api    → fala com → redis   na porta 6379
+worker → fala com → redis   na porta 6379 (busca tarefas)
+worker → fala com → db      na porta 5432 (salva resultados)
+
+
+
+Celery é uma biblioteca Python que gerencia execução de tarefas em background. Ele tem três partes:
+1. A tarefa — uma função Python normal decorada com @celery_app.task. Você define o que deve ser executado.
+2. O broker — onde as tarefas ficam na fila esperando ser executadas. No SIRS é o Redis. A API coloca tarefas aqui, o worker busca daqui.
+3. O worker — um processo separado que fica rodando em loop, buscando tarefas no broker e executando. No Docker Compose é o serviço worker.
+O Celery é o carteiro do SIRS — a API escreve uma carta (tarefa) e joga na caixa de correio (Redis). O worker fica vigiando a caixa, pega a carta e entrega (processa). A API não precisa esperar a entrega para continuar trabalhando.
+
+O que o Resume Parser precisa fazer
+PDF enviado pelo candidato
+        ↓
+PyMuPDF — extrai o texto bruto do PDF
+        ↓
+spaCy — identifica entidades no texto (tecnologias, cargos, instituições)
+        ↓
+sentence-transformers — vetoriza o texto completo (384 dimensões)
+        ↓
+Normalização semântica — compara entidades encontradas com catálogo de skills
+        ↓
+Salva no banco: texto, vetor, skills extraídas
+
+PyMuPDF (importado como fitz) lê arquivos PDF e extrai o texto. Um PDF por dentro é uma coleção de páginas, cada uma com objetos de texto posicionados em coordenadas. O PyMuPDF percorre esses objetos e devolve o texto como string.
+Para o SIRS você vai usar "text" — o texto puro é suficiente para o NLP.
+
+O spaCy é uma biblioteca de NLP (Processamento de Linguagem Natural). Ele recebe um texto e retorna um objeto rico com tokens, entidades, dependências gramaticais e muito mais.
+Para o SIRS o mais importante é o NER — Named Entity Recognition (Reconhecimento de Entidades Nomeadas). O NER identifica automaticamente partes do texto que são entidades — nomes de pessoas, organizações, locais, datas.
+
+A biblioteca sentence-transformers é um wrapper sobre modelos BERT que facilita a geração de embeddings. Você passa um texto, ela devolve um vetor numpy.
+O modelo all-MiniLM-L6-v2 foi treinado com aprendizado contrastivo — dado um par de frases similares ele aproxima os vetores, dado um par diferente ele afasta. O resultado é que frases com significado parecido ficam próximas no espaço vetorial.
+
+Três schemas, cada um com responsabilidade clara:
+VagaCreate — usado no POST /vagas. O analista preenche o nome e os requisitos em texto livre. Os pesos têm valores padrão mas podem ser ajustados. Valida que os pesos somam 1.0.
+VagaResponse — o que a API devolve em qualquer endpoint de vaga. Não expõe o vetor_vaga (lista de 384 floats) porque poluiria a resposta sem utilidade para o frontend.
+VagaUpdatePesos — usado no PATCH /vagas/{id}/pesos. Só os pesos, sem mexer em mais nada. Valida a soma também.
+VagaUpdateRequisitos — usado no PATCH /vagas/{id}/requisitos. Só o texto, e o endpoint recalcula o vetor automaticamente.
+
+Testes 
+
+test_matching_engine.py	23	calcular_score_rh/mercado/curriculo, gerar_explicacao, calcular_score_final
+test_market_analyzer.py	26	detectar_categoria (8 cargos), limpar_skills_desc, extrair_de_kaggle/adzuna
+test_auth.py	19	Login, /me, hash/token, exigir_papel
+test_usuarios.py	18	CRUD completo, inativo não lista, admin não pode ser deletado
+test_vagas.py	27	CRUD + permissões RH/gestor/admin, Celery disparado, analisar-mercado
+test_candidatos.py	21	CRUD + webhook sem auth + permissões
+test_candidaturas.py	27	CRUD + máquina de estados + upload PDF + Celery + permissões
+test_entrevistas.py	32	Agendar (RH só faz RH, gestor só faz técnica), registrar resultado, scores, avanço de status
+
+Rodar os testes: docker compose exec api python -m pytest tests/
+Mais detalhadamente (verbose): docker compose exec api python -m pytest tests/ -v
+
+Enche o banco de dados  
+docker compose exec api python tests/seed_full.py 2>&1
