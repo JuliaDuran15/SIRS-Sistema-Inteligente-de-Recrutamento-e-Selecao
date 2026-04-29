@@ -117,3 +117,9 @@ curl -s -X POST http://localhost:8000/webhook/importar \
   -H "Content-Type: application/xml" \
   -d '<importacao fonte="sap"><candidatos><candidato><nome>Ana</nome><email>ana@ext.com</email></candidato></candidatos></importacao>' \
   | python -m json.tool
+
+  Três correções:
+
+Schema — texto_extraido adicionado ao CurriculoInfo. Agora o frontend consegue detectar "texto importado mas score ainda calculando" → mostra spinner em vez do formulário de upload
+Dado no banco — status da Alice corrigido de NOVO para AGUARDANDO_PROC (o demo rodou antes do nosso fix do webhook)
+Task re-despachada — processar_curriculo_texto executou, calculou scores (67.6) e avançou status para TRIAGEM_PENDENTE

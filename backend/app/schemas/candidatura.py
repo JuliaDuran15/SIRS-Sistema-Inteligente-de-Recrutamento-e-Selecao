@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 
 class CurriculoInfo(BaseModel):
+    texto_extraido : str | None    # necessário para o frontend detectar "aguardando processamento"
     score_rh       : float | None
     score_mercado  : float | None
     score_curriculo: float | None
