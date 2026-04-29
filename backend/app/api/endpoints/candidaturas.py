@@ -4,13 +4,13 @@ from datetime import datetime
 from pathlib import Path
 
 from app.api.deps import DB
-from app.core.auth import QUALQUER_PAPEL, RH_OU_ADMIN
+from app.core.auth import QUALQUER_PAPEL, RH_OU_ADMIN, get_usuario_atual
 from app.models.candidato import Candidato
 from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.vaga import Vaga
 from app.models.curriculo import Curriculo
 from app.schemas.candidatura import CandidaturaCreate, CandidaturaResponse, CurriculoDetalhado
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 router = APIRouter()
@@ -143,11 +143,32 @@ def get_curriculo(candidatura_id: str, db: Session = DB, _=QUALQUER_PAPEL):
 
 
 @router.patch("/{candidatura_id}/status", response_model=CandidaturaResponse)
-def atualizar_status(candidatura_id: str, novo_status: StatusCandidatura,
-                     ator: str = "rh", db: Session = DB, _=RH_OU_ADMIN):
+def atualizar_status(
+    candidatura_id: str,
+    novo_status    : StatusCandidatura,
+    ator           : str = "rh",
+    db             : Session = DB,
+    usuario=Depends(get_usuario_atual),
+):
+    from app.models.usuario import PapelUsuario
+
     candidatura = db.query(Candidatura).filter(Candidatura.id == candidatura_id).first()
     if not candidatura:
         raise HTTPException(status_code=404, detail="Candidatura não encontrada")
+
+    if usuario.papel == PapelUsuario.GESTOR:
+        # Gestor só pode tomar a decisão final nas vagas onde está atribuído
+        if candidatura.status != StatusCandidatura.DECISAO_PENDENTE:
+            raise HTTPException(
+                status_code=403,
+                detail="Gestor só pode tomar a decisão final (contratado / não aprovado / banco de talentos)",
+            )
+        vaga = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
+        if not vaga or str(usuario.id) not in (vaga.gestores_ids or []):
+            raise HTTPException(status_code=403, detail="Você não é gestor desta vaga")
+    elif usuario.papel not in (PapelUsuario.RH, PapelUsuario.ADMIN):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+
     transicionar(candidatura, novo_status, ator)
     db.commit()
     db.refresh(candidatura)

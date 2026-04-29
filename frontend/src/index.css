@@ -67,58 +67,61 @@
 /* ── Light theme overrides ────────────────────────────────────────────────── */
 html.light {
   --color-brand-black:   #FFFFFF;
-  --color-brand-teal:    #EBF5FA;
+  --color-brand-teal:    #E8F3FA;
   --color-brand-ocean:   #1A8BBF;
-  --color-brand-sky:     #1A8BBF;
-  --color-brand-pale:    #475569;
-  --color-brand-emerald: #059669;
-  --color-brand-mint:    #059669;
-  --color-brand-cloud:   #0F172A;
+  --color-brand-sky:     #1270A8;   /* azul mais escuro — melhor contraste no claro */
+  --color-brand-pale:    #1E293B;   /* slate-800: base bem escura p/ opacidades legíveis */
+  --color-brand-emerald: #047857;
+  --color-brand-mint:    #065F46;
+  --color-brand-cloud:   #0D1B2A;   /* quase preto azulado para títulos */
 
-  --s-body-from:    #F0F7FC;
-  --s-body-to:      #DFF0F7;
-  --s-header:       rgba(255, 255, 255, 0.92);
-  --s-track:        rgba(203, 213, 225, 0.55);
-  --s-content:      rgba(248, 251, 254, 0.85);
-  --s-section:      rgba(255, 255, 255, 0.82);
-  --s-skeleton:     rgba(203, 213, 225, 0.45);
-  --s-skeleton-lt:  rgba(203, 213, 225, 0.3);
-  --s-chip:         rgba(26, 139, 191, 0.08);
-  --s-chip-dark:    rgba(26, 139, 191, 0.1);
-  --s-pill:         rgba(26, 139, 191, 0.1);
-  --s-pill-lt:      rgba(26, 139, 191, 0.08);
-  --s-pill-sub:     rgba(26, 139, 191, 0.09);
+  /* Fundo: cinza-azulado suave, não branco puro */
+  --s-body-from:    #E4EEF6;
+  --s-body-to:      #D2E5F0;
+  --s-header:       rgba(228, 238, 246, 0.95);
+  --s-track:        rgba(180, 205, 222, 0.55);
+  --s-content:      rgba(255, 255, 255, 0.88);
+  --s-section:      rgba(255, 255, 255, 0.85);
+  --s-skeleton:     rgba(150, 180, 200, 0.35);
+  --s-skeleton-lt:  rgba(150, 180, 200, 0.22);
+  --s-chip:         rgba(26, 112, 168, 0.09);
+  --s-chip-dark:    rgba(26, 112, 168, 0.13);
+  --s-pill:         rgba(26, 112, 168, 0.1);
+  --s-pill-lt:      rgba(26, 112, 168, 0.08);
+  --s-pill-sub:     rgba(26, 112, 168, 0.09);
 
-  --b-ghost:   rgba(26, 139, 191, 0.08);
-  --b-subtle:  rgba(26, 139, 191, 0.1);
-  --b-card:    rgba(26, 139, 191, 0.13);
-  --b-normal:  rgba(26, 139, 191, 0.16);
-  --b-strong:  rgba(26, 139, 191, 0.22);
-  --b-header:  rgba(26, 139, 191, 0.12);
-  --b-divider: rgba(26, 139, 191, 0.1);
+  /* Bordas um pouco mais visíveis no claro */
+  --b-ghost:   rgba(15, 80, 130, 0.07);
+  --b-subtle:  rgba(15, 80, 130, 0.12);
+  --b-card:    rgba(15, 80, 130, 0.15);
+  --b-normal:  rgba(15, 80, 130, 0.19);
+  --b-strong:  rgba(15, 80, 130, 0.26);
+  --b-header:  rgba(15, 80, 130, 0.13);
+  --b-divider: rgba(15, 80, 130, 0.11);
 
-  --t-sub:     rgba(71, 85, 105, 0.55);
-  --t-muted:   rgba(71, 85, 105, 0.45);
-  --t-muted2:  rgba(71, 85, 105, 0.65);
-  --t-faint:   rgba(71, 85, 105, 0.3);
-  --t-faint2:  rgba(71, 85, 105, 0.4);
-  --t-ghost:   rgba(71, 85, 105, 0.2);
-  --t-divider: rgba(71, 85, 105, 0.15);
-  --t-score:   rgba(71, 85, 105, 0.4);
+  /* Textos: base slate-800 (#1E293B) → opacidades muito mais legíveis no fundo claro */
+  --t-sub:     rgba(30, 41, 59, 0.72);
+  --t-muted:   rgba(30, 41, 59, 0.62);
+  --t-muted2:  rgba(30, 41, 59, 0.82);
+  --t-faint:   rgba(30, 41, 59, 0.50);
+  --t-faint2:  rgba(30, 41, 59, 0.60);
+  --t-ghost:   rgba(30, 41, 59, 0.35);
+  --t-divider: rgba(30, 41, 59, 0.18);
+  --t-score:   rgba(30, 41, 59, 0.50);
 
-  --badge-green-bg: rgba(16,185,129,0.1);    --badge-green-text: #065F46;  --badge-green-dot: #059669;  --badge-green-border: rgba(16,185,129,0.25);
-  --badge-amber-bg: rgba(245,158,11,0.12);   --badge-amber-text: #92400E;  --badge-amber-dot: #D97706;  --badge-amber-border: rgba(245,158,11,0.25);
-  --badge-red-bg:   rgba(239,68,68,0.1);     --badge-red-text:   #991B1B;  --badge-red-dot:   #DC2626;  --badge-red-border:   rgba(239,68,68,0.2);
-  --badge-blue-bg:  rgba(26,139,191,0.12);   --badge-blue-text:  #1565A0;  --badge-blue-dot:  #1A8BBF;  --badge-blue-border:  rgba(26,139,191,0.25);
-  --badge-gray-bg:  rgba(100,116,139,0.08);  --badge-gray-text:  #475569;  --badge-gray-dot:  #94A3B8;  --badge-gray-border:  rgba(100,116,139,0.18);
-  --badge-purple-bg:rgba(139,92,246,0.1);    --badge-purple-text:#5B21B6;  --badge-purple-dot:#7C3AED;  --badge-purple-border:rgba(139,92,246,0.2);
+  --badge-green-bg: rgba(4,120,87,0.1);      --badge-green-text: #065F46;  --badge-green-dot: #047857;  --badge-green-border: rgba(4,120,87,0.25);
+  --badge-amber-bg: rgba(180,83,9,0.1);      --badge-amber-text: #78350F;  --badge-amber-dot: #B45309;  --badge-amber-border: rgba(180,83,9,0.25);
+  --badge-red-bg:   rgba(185,28,28,0.1);     --badge-red-text:   #7F1D1D;  --badge-red-dot:   #B91C1C;  --badge-red-border:   rgba(185,28,28,0.22);
+  --badge-blue-bg:  rgba(18,112,168,0.12);   --badge-blue-text:  #0C4A88;  --badge-blue-dot:  #1270A8;  --badge-blue-border:  rgba(18,112,168,0.26);
+  --badge-gray-bg:  rgba(30,41,59,0.08);     --badge-gray-text:  #334155;  --badge-gray-dot:  #64748B;  --badge-gray-border:  rgba(30,41,59,0.18);
+  --badge-purple-bg:rgba(109,40,217,0.1);    --badge-purple-text:#4C1D95;  --badge-purple-dot:#6D28D9;  --badge-purple-border:rgba(109,40,217,0.22);
 
-  --score-high:      #059669;
-  --score-mid:       #D97706;
-  --score-low:       #DC2626;
-  --score-high-grad: linear-gradient(90deg, #059669, #34D399);
-  --score-mid-grad:  linear-gradient(90deg, #D97706, #FBBF24);
-  --score-low-grad:  linear-gradient(90deg, #DC2626, #F87171);
+  --score-high:      #047857;
+  --score-mid:       #B45309;
+  --score-low:       #B91C1C;
+  --score-high-grad: linear-gradient(90deg, #047857, #059669);
+  --score-mid-grad:  linear-gradient(90deg, #B45309, #D97706);
+  --score-low-grad:  linear-gradient(90deg, #B91C1C, #DC2626);
 }
 
 @theme {
@@ -214,7 +217,37 @@ html.light {
     border-color: var(--b-strong);
   }
   html.light .card-interactive:hover {
-    box-shadow: 0 2px 8px rgba(26,139,191,0.1);
+    box-shadow: 0 2px 10px rgba(15,80,130,0.12);
+  }
+
+  /* Textos com opacidade sobre o brand-pale do @theme (azul claro):
+     no light mode o brand-pale vira slate-800, mas o @theme não muda.
+     Estes overrides garantem legibilidade para as classes mais usadas. */
+  html.light .text-brand-pale\/45 { color: rgba(30,41,59,0.62) !important; }
+  html.light .text-brand-pale\/40 { color: rgba(30,41,59,0.56) !important; }
+  html.light .text-brand-pale\/35 { color: rgba(30,41,59,0.50) !important; }
+  html.light .text-brand-pale\/30 { color: rgba(30,41,59,0.44) !important; }
+  html.light .text-brand-pale\/55 { color: rgba(30,41,59,0.70) !important; }
+  html.light .text-brand-pale\/70 { color: rgba(30,41,59,0.82) !important; }
+  html.light .text-brand-pale\/80 { color: rgba(30,41,59,0.90) !important; }
+
+  html.light .text-brand-sky { color: #1270A8 !important; }
+  html.light .text-brand-cloud { color: #0D1B2A !important; }
+  html.light .text-brand-mint\/70 { color: rgba(4,120,87,0.85) !important; }
+  html.light .text-brand-mint\/60 { color: rgba(4,120,87,0.75) !important; }
+
+  /* Inputs e textareas ficam com fundo branco e texto escuro no light */
+  html.light input,
+  html.light textarea,
+  html.light select {
+    background: rgba(255, 255, 255, 0.92);
+    color: #0D1B2A;
+    border-color: rgba(15, 80, 130, 0.2);
+  }
+
+  html.light input::placeholder,
+  html.light textarea::placeholder {
+    color: rgba(30, 41, 59, 0.42);
   }
 
   .card-inner {

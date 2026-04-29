@@ -125,7 +125,7 @@ function VerCurriculoBtn({ candidaturaId }) {
 
 
 // ── Seção upload currículo ───────────────────────────────────────────────────
-function UploadCurriculo({ candidaturaId, status, curriculo, onAtualizado }) {
+function UploadCurriculo({ candidaturaId, status, curriculo, podeUpload, onAtualizado }) {
   const [enviando, setEnviando]   = useState(false)
   const [erro, setErro]           = useState(null)
   const [arquivo, setArquivo]     = useState(null)
@@ -133,7 +133,9 @@ function UploadCurriculo({ candidaturaId, status, curriculo, onAtualizado }) {
   const inputRef                  = useRef(null)
 
   const jaProcessado  = curriculo?.score_curriculo != null
-  const processando   = PROCESSANDO.has(status)
+  // processando: status em fila OU texto já chegou mas score ainda não foi calculado
+  const processando   = PROCESSANDO.has(status) ||
+    (curriculo?.texto_extraido != null && curriculo?.score_curriculo == null)
 
   async function enviar(file) {
     if (!file || !file.name.toLowerCase().endsWith(".pdf")) {
@@ -175,10 +177,8 @@ function UploadCurriculo({ candidaturaId, status, curriculo, onAtualizado }) {
     <div className="card-glass rounded-2xl p-5 space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">Currículo</h2>
-        <div className="flex items-center gap-2">
-          <span className="text-xs px-2.5 py-1 rounded-lg font-semibold"
-            style={{ background: "rgba(26,170,128,0.18)", color: "#2EE8B4" }}>✓ Processado</span>
-        </div>
+        <span className="text-xs px-2.5 py-1 rounded-lg font-semibold"
+          style={{ background: "rgba(26,170,128,0.18)", color: "#2EE8B4" }}>✓ Processado</span>
       </div>
       <ScoreBar score={curriculo.score_rh}       label="Aderência aos requisitos da vaga" />
       <ScoreBar score={curriculo.score_mercado}  label="Aderência ao mercado" />
@@ -196,15 +196,22 @@ function UploadCurriculo({ candidaturaId, status, curriculo, onAtualizado }) {
       )}
       <div className="flex items-center gap-3 pt-1">
         <VerCurriculoBtn candidaturaId={candidaturaId} />
-        <button onClick={() => inputRef.current?.click()}
-          className="text-xs text-brand-pale/35 hover:text-brand-sky transition-colors">
-          Substituir PDF ↑
-        </button>
+        {podeUpload && (
+          <>
+            <button onClick={() => inputRef.current?.click()}
+              className="text-xs text-brand-pale/35 hover:text-brand-sky transition-colors">
+              Substituir PDF ↑
+            </button>
+            <input ref={inputRef} type="file" accept=".pdf" className="hidden"
+              onChange={e => e.target.files[0] && enviar(e.target.files[0])} />
+          </>
+        )}
       </div>
-      <input ref={inputRef} type="file" accept=".pdf" className="hidden"
-        onChange={e => e.target.files[0] && enviar(e.target.files[0])} />
     </div>
   )
+
+  // Sem currículo e sem permissão de upload → não mostrar nada
+  if (!podeUpload) return null
 
   return (
     <div className="card-glass rounded-2xl p-5 space-y-3">
@@ -636,9 +643,15 @@ export function EntrevistaDetalhe({ usuario }) {
   const podeAgendarRH  = !rhFeita && !rhAgendada && status === "aprovado_triagem" && ehRhAutorizado
   const podeAgendarTec = rhFeita && !tecFeita && !tecAgendada && status === "entrevista_rh_realizada" &&
     (ehRhAutorizado || (usuario?.papel === "gestor" && ehGestorDaVaga))
-  const podeDecisao    = status === "decisao_pendente" && ehRhAutorizado
+  // RH pode reprovar após entrevista de RH realizada (antes de agendar técnica)
+  const podeReprovarRH = rhFeita && !tecAgendada && !tecFeita &&
+    status === "entrevista_rh_realizada" && ehRhAutorizado
+  // Gestor também pode tomar a decisão final nas suas vagas
+  const podeDecisao    = status === "decisao_pendente" &&
+    (ehRhAutorizado || (usuario?.papel === "gestor" && ehGestorDaVaga))
 
-  const podeUpload     = ehRhAutorizado
+  const podeUpload         = ehRhAutorizado
+  const podeMostrarCurriculo = podeUpload || curriculo != null
 
   return (
     <div className="space-y-6">
@@ -689,12 +702,13 @@ export function EntrevistaDetalhe({ usuario }) {
         )}
       </div>
 
-      {/* Upload / Status currículo */}
-      {podeUpload && (
+      {/* Currículo — scores e upload para RH autorizado; só leitura para gestor */}
+      {podeMostrarCurriculo && (
         <UploadCurriculo
           candidaturaId={candidaturaId}
           status={status}
           curriculo={curriculo}
+          podeUpload={podeUpload}
           onAtualizado={c => setCandidatura(c)}
         />
       )}
@@ -722,14 +736,31 @@ export function EntrevistaDetalhe({ usuario }) {
         </div>
       )}
 
-      {/* Agendar entrevista técnica */}
-      {podeAgendarTec && (
-        <div className="card-glass rounded-2xl p-5 space-y-3">
+      {/* Decisão pós entrevista RH: agendar técnica ou reprovar */}
+      {(podeAgendarTec || podeReprovarRH) && (
+        <div className="card-glass rounded-2xl p-5 space-y-4">
           <h2 className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">
-            Agendar Entrevista Técnica
+            Decisão pós Entrevista RH
           </h2>
-          <FormAgendar candidaturaId={candidaturaId} tipo="tecnica" usuario={usuario}
-            candidatura={candidatura} onAgendado={onAgendado} />
+          {podeAgendarTec && (
+            <div className="space-y-2">
+              <p className="text-xs text-brand-pale/40">Aprovado — agendar entrevista técnica:</p>
+              <FormAgendar candidaturaId={candidaturaId} tipo="tecnica" usuario={usuario}
+                candidatura={candidatura} onAgendado={onAgendado} />
+            </div>
+          )}
+          {podeReprovarRH && (
+            <div className="flex items-center gap-4 pt-1"
+              style={{ borderTop: podeAgendarTec ? "1px solid var(--b-subtle)" : "none" }}>
+              {podeAgendarTec && <span className="text-xs text-brand-pale/30 flex-shrink-0">ou</span>}
+              <button onClick={() => tomarDecisao("reprovado_rh")}
+                className="px-4 py-2 rounded-xl text-sm font-bold"
+                style={{ background: "rgba(252,165,165,0.12)", border: "1px solid rgba(252,165,165,0.25)", color: "#FCA5A5" }}>
+                Reprovar entrevista RH
+              </button>
+            </div>
+          )}
+          {decisaoErr && <p className="text-xs text-red-400">{decisaoErr}</p>}
         </div>
       )}
 
@@ -746,10 +777,15 @@ export function EntrevistaDetalhe({ usuario }) {
         </div>
       )}
 
-      {/* Decisão final */}
+      {/* Decisão final — RH autorizado ou Gestor da vaga */}
       {podeDecisao && (
         <div className="card-glass rounded-2xl p-5 space-y-3">
-          <h2 className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">Decisão Final</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">Decisão Final</h2>
+            <span className="text-xs text-brand-pale/30">
+              {usuario?.papel === "gestor" ? "como gestor técnico" : "como analista de RH"}
+            </span>
+          </div>
           <div className="flex flex-wrap gap-3">
             <button onClick={() => tomarDecisao("contratado")}
               className="px-5 py-2.5 rounded-xl text-sm font-bold text-brand-black"

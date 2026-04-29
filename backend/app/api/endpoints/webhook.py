@@ -231,6 +231,9 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
                     db.flush()
                 else:
                     curriculo.texto_extraido = cd.curriculo_texto
+                # Avança status para ativar o spinner no frontend enquanto a task roda
+                if candidatura.status == StatusCandidatura.NOVO:
+                    candidatura.status = StatusCandidatura.AGUARDANDO_PROC
                 processar_curriculo_texto.delay(str(candidatura.id), cd.curriculo_texto)
                 resultado.curriculos_processados += 1
 

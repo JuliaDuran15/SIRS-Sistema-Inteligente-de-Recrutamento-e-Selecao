@@ -1,8 +1,11 @@
 from app.api.deps import DB
-from app.core.auth import QUALQUER_PAPEL, RH_OU_ADMIN
+from app.core.auth import QUALQUER_PAPEL, RH_OU_ADMIN, get_usuario_atual
 from app.models.candidato import Candidato
+from app.models.candidatura import Candidatura
+from app.models.usuario import PapelUsuario
+from app.models.vaga import Vaga
 from app.schemas.candidato import CandidatoCreate, CandidatoResponse, CandidatoUpdate
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 router = APIRouter()
@@ -38,7 +41,21 @@ def webhook_candidato(dados: CandidatoCreate, db: Session = DB):
 
 
 @router.get("/", response_model=list[CandidatoResponse])
-def listar_candidatos(db: Session = DB, _=QUALQUER_PAPEL):
+def listar_candidatos(db: Session = DB, usuario=Depends(get_usuario_atual)):
+    if usuario.papel == PapelUsuario.GESTOR:
+        uid = str(usuario.id)
+        vaga_ids = (
+            db.query(Vaga.id)
+            .filter(Vaga.gestores_ids.contains([uid]))
+            .scalar_subquery()
+        )
+        candidato_ids = (
+            db.query(Candidatura.candidato_id)
+            .filter(Candidatura.vaga_id.in_(vaga_ids))
+            .distinct()
+            .scalar_subquery()
+        )
+        return db.query(Candidato).filter(Candidato.id.in_(candidato_ids)).all()
     return db.query(Candidato).all()
 
 

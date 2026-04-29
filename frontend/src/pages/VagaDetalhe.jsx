@@ -435,32 +435,34 @@ export function VagaDetalhe({ usuario }) {
           </div>
         )}
 
-        {/* RHs autorizados — visível apenas para o criador ou admin */}
-        {ehCriadorOuAdmin && (
+        {/* RHs autorizados — visível para qualquer RH autorizado ou admin */}
+        {podeEditarPesos && (
           <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--b-divider)" }}>
             <div className="flex items-start justify-between gap-4 flex-wrap">
               <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
-                <span className="text-xs text-brand-pale/40 font-medium flex-shrink-0">RHs autorizados:</span>
+                <span className="text-xs text-brand-pale/40 font-medium flex-shrink-0">
+                  Analistas autorizados:
+                </span>
                 {(vaga.rhs_autorizados?.length > 0) ? (
                   vaga.rhs_autorizados.map(uid => {
                     const rh = rhsList.find(u => String(u.id) === String(uid))
                     const ehCriador = String(uid) === String(vaga.criado_por_id)
                     return (
                       <span key={uid} className="text-xs font-semibold px-2.5 py-1 rounded-lg"
-                        style={{ background: "rgba(26,170,128,0.15)", color: "#2EE8B4" }}>
+                        style={{ background: "rgba(26,139,191,0.15)", color: "#4DC8E8" }}>
                         {rh?.nome ?? uid}{ehCriador ? " (criador)" : ""}
                       </span>
                     )
                   })
                 ) : (
-                  <span className="text-xs text-brand-pale/30 italic">Qualquer RH pode editar</span>
+                  <span className="text-xs text-brand-pale/30 italic">Qualquer analista de RH pode visualizar e editar</span>
                 )}
               </div>
-              {!editandoRhsAutorizados && (
+              {!editandoRhsAutorizados && ehCriadorOuAdmin && (
                 <button onClick={abrirEdicaoRhsAutorizados}
                   className="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
-                  style={{ background: "rgba(26,170,128,0.12)", border: "1px solid rgba(26,170,128,0.25)", color: "#2EE8B4" }}>
-                  Gerenciar acesso
+                  style={{ background: "rgba(26,139,191,0.12)", border: "1px solid rgba(26,139,191,0.25)", color: "#4DC8E8" }}>
+                  Editar analistas
                 </button>
               )}
             </div>
@@ -468,7 +470,8 @@ export function VagaDetalhe({ usuario }) {
             {editandoRhsAutorizados && (
               <div className="mt-3 space-y-3">
                 <p className="text-xs text-brand-pale/40">
-                  Selecione os analistas de RH com acesso exclusivo a esta vaga. O criador sempre permanece autorizado.
+                  Selecione os analistas de RH que podem <strong>visualizar e editar</strong> esta vaga
+                  e suas candidaturas. O criador sempre permanece autorizado.
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {rhsList.map(rh => {
@@ -480,7 +483,7 @@ export function VagaDetalhe({ usuario }) {
                         disabled={ehCriador}
                         className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-60 disabled:cursor-default"
                         style={sel
-                          ? { background: "rgba(26,170,128,0.25)", color: "#2EE8B4", border: "1px solid rgba(26,170,128,0.4)" }
+                          ? { background: "rgba(26,139,191,0.25)", color: "#4DC8E8", border: "1px solid rgba(26,139,191,0.4)" }
                           : { background: "var(--s-chip)", color: "var(--t-muted2)", border: "1px solid var(--b-subtle)" }}>
                         {sel ? "✓ " : ""}{rh.nome}{ehCriador ? " (criador)" : ""}
                       </button>
@@ -499,8 +502,8 @@ export function VagaDetalhe({ usuario }) {
                   </button>
                   <button onClick={handleSalvarRhsAutorizados} disabled={salvandoRhsAutorizados}
                     className="px-4 py-2 rounded-xl text-xs font-bold text-brand-black disabled:opacity-50"
-                    style={{ background: "linear-gradient(135deg, #1AAA80, #2EE8B4)" }}>
-                    {salvandoRhsAutorizados ? "Salvando..." : "Salvar acesso"}
+                    style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}>
+                    {salvandoRhsAutorizados ? "Salvando..." : "Salvar analistas"}
                   </button>
                 </div>
               </div>
