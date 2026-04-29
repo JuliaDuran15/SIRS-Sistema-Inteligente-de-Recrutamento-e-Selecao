@@ -1,6 +1,129 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
+/* ── Design tokens (dark default) ────────────────────────────────────────── */
+:root {
+  /* Tailwind brand palette */
+  --color-brand-black:   #07111A;
+  --color-brand-teal:    #0E5068;
+  --color-brand-ocean:   #1A8BBF;
+  --color-brand-sky:     #4DC8E8;
+  --color-brand-pale:    #7DD8F0;
+  --color-brand-emerald: #1AAA80;
+  --color-brand-mint:    #2EE8B4;
+  --color-brand-cloud:   #DFF0F6;
+
+  /* Surface backgrounds */
+  --s-body-from:    #07111A;
+  --s-body-to:      #0E5068;
+  --s-header:       rgba(7, 17, 26, 0.88);
+  --s-track:        rgba(7, 17, 26, 0.5);
+  --s-content:      rgba(7, 17, 26, 0.4);
+  --s-section:      rgba(14, 80, 104, 0.25);
+  --s-skeleton:     rgba(14, 80, 104, 0.3);
+  --s-skeleton-lt:  rgba(14, 80, 104, 0.2);
+  --s-chip:         rgba(14, 80, 104, 0.4);
+  --s-chip-dark:    rgba(14, 80, 104, 0.5);
+  --s-pill:         rgba(26, 139, 191, 0.15);
+  --s-pill-lt:      rgba(26, 139, 191, 0.12);
+  --s-pill-sub:     rgba(26, 139, 191, 0.14);
+
+  /* Borders */
+  --b-ghost:   rgba(77, 200, 232, 0.08);
+  --b-subtle:  rgba(77, 200, 232, 0.1);
+  --b-card:    rgba(77, 200, 232, 0.12);
+  --b-normal:  rgba(77, 200, 232, 0.15);
+  --b-strong:  rgba(77, 200, 232, 0.2);
+  --b-header:  rgba(77, 200, 232, 0.12);
+  --b-divider: rgba(77, 200, 232, 0.1);
+
+  /* Text */
+  --t-sub:     rgba(125, 216, 240, 0.45);
+  --t-muted:   rgba(125, 216, 240, 0.35);
+  --t-muted2:  rgba(125, 216, 240, 0.6);
+  --t-faint:   rgba(125, 216, 240, 0.25);
+  --t-faint2:  rgba(125, 216, 240, 0.3);
+  --t-ghost:   rgba(125, 216, 240, 0.15);
+  --t-divider: rgba(125, 216, 240, 0.2);
+  --t-score:   rgba(125, 216, 240, 0.3);
+
+  /* Badge colors */
+  --badge-green-bg: rgba(26,170,128,0.18);   --badge-green-text: #2EE8B4;  --badge-green-dot: #1AAA80;  --badge-green-border: rgba(26,170,128,0.35);
+  --badge-amber-bg: rgba(245,158,11,0.15);   --badge-amber-text: #FCD34D;  --badge-amber-dot: #F59E0B;  --badge-amber-border: rgba(245,158,11,0.3);
+  --badge-red-bg:   rgba(239,68,68,0.15);    --badge-red-text:   #FCA5A5;  --badge-red-dot:   #EF4444;  --badge-red-border:   rgba(239,68,68,0.25);
+  --badge-blue-bg:  rgba(26,139,191,0.2);    --badge-blue-text:  #4DC8E8;  --badge-blue-dot:  #1A8BBF;  --badge-blue-border:  rgba(26,139,191,0.3);
+  --badge-gray-bg:  rgba(125,216,240,0.08);  --badge-gray-text:  rgba(125,216,240,0.6); --badge-gray-dot: #7DD8F0; --badge-gray-border: rgba(125,216,240,0.15);
+  --badge-purple-bg:rgba(167,139,250,0.15);  --badge-purple-text:#C4B5FD;  --badge-purple-dot:#A78BFA;  --badge-purple-border:rgba(167,139,250,0.25);
+
+  /* Score text colors */
+  --score-high:      #2EE8B4;
+  --score-mid:       #FCD34D;
+  --score-low:       #FCA5A5;
+  --score-high-grad: linear-gradient(90deg, #1AAA80, #2EE8B4);
+  --score-mid-grad:  linear-gradient(90deg, #F59E0B, #FCD34D);
+  --score-low-grad:  linear-gradient(90deg, #EF4444, #FCA5A5);
+}
+
+/* ── Light theme overrides ────────────────────────────────────────────────── */
+html.light {
+  --color-brand-black:   #FFFFFF;
+  --color-brand-teal:    #E8F3FA;
+  --color-brand-ocean:   #1A8BBF;
+  --color-brand-sky:     #1270A8;   /* azul mais escuro — melhor contraste no claro */
+  --color-brand-pale:    #1E293B;   /* slate-800: base bem escura p/ opacidades legíveis */
+  --color-brand-emerald: #047857;
+  --color-brand-mint:    #065F46;
+  --color-brand-cloud:   #0D1B2A;   /* quase preto azulado para títulos */
+
+  /* Fundo: cinza-azulado suave, não branco puro */
+  --s-body-from:    #E4EEF6;
+  --s-body-to:      #D2E5F0;
+  --s-header:       rgba(228, 238, 246, 0.95);
+  --s-track:        rgba(180, 205, 222, 0.55);
+  --s-content:      rgba(255, 255, 255, 0.88);
+  --s-section:      rgba(255, 255, 255, 0.85);
+  --s-skeleton:     rgba(150, 180, 200, 0.35);
+  --s-skeleton-lt:  rgba(150, 180, 200, 0.22);
+  --s-chip:         rgba(26, 112, 168, 0.09);
+  --s-chip-dark:    rgba(26, 112, 168, 0.13);
+  --s-pill:         rgba(26, 112, 168, 0.1);
+  --s-pill-lt:      rgba(26, 112, 168, 0.08);
+  --s-pill-sub:     rgba(26, 112, 168, 0.09);
+
+  /* Bordas um pouco mais visíveis no claro */
+  --b-ghost:   rgba(15, 80, 130, 0.07);
+  --b-subtle:  rgba(15, 80, 130, 0.12);
+  --b-card:    rgba(15, 80, 130, 0.15);
+  --b-normal:  rgba(15, 80, 130, 0.19);
+  --b-strong:  rgba(15, 80, 130, 0.26);
+  --b-header:  rgba(15, 80, 130, 0.13);
+  --b-divider: rgba(15, 80, 130, 0.11);
+
+  /* Textos: base slate-800 (#1E293B) → opacidades muito mais legíveis no fundo claro */
+  --t-sub:     rgba(30, 41, 59, 0.72);
+  --t-muted:   rgba(30, 41, 59, 0.62);
+  --t-muted2:  rgba(30, 41, 59, 0.82);
+  --t-faint:   rgba(30, 41, 59, 0.50);
+  --t-faint2:  rgba(30, 41, 59, 0.60);
+  --t-ghost:   rgba(30, 41, 59, 0.35);
+  --t-divider: rgba(30, 41, 59, 0.18);
+  --t-score:   rgba(30, 41, 59, 0.50);
+
+  --badge-green-bg: rgba(4,120,87,0.1);      --badge-green-text: #065F46;  --badge-green-dot: #047857;  --badge-green-border: rgba(4,120,87,0.25);
+  --badge-amber-bg: rgba(180,83,9,0.1);      --badge-amber-text: #78350F;  --badge-amber-dot: #B45309;  --badge-amber-border: rgba(180,83,9,0.25);
+  --badge-red-bg:   rgba(185,28,28,0.1);     --badge-red-text:   #7F1D1D;  --badge-red-dot:   #B91C1C;  --badge-red-border:   rgba(185,28,28,0.22);
+  --badge-blue-bg:  rgba(18,112,168,0.12);   --badge-blue-text:  #0C4A88;  --badge-blue-dot:  #1270A8;  --badge-blue-border:  rgba(18,112,168,0.26);
+  --badge-gray-bg:  rgba(30,41,59,0.08);     --badge-gray-text:  #334155;  --badge-gray-dot:  #64748B;  --badge-gray-border:  rgba(30,41,59,0.18);
+  --badge-purple-bg:rgba(109,40,217,0.1);    --badge-purple-text:#4C1D95;  --badge-purple-dot:#6D28D9;  --badge-purple-border:rgba(109,40,217,0.22);
+
+  --score-high:      #047857;
+  --score-mid:       #B45309;
+  --score-low:       #B91C1C;
+  --score-high-grad: linear-gradient(90deg, #047857, #059669);
+  --score-mid-grad:  linear-gradient(90deg, #B45309, #D97706);
+  --score-low-grad:  linear-gradient(90deg, #B91C1C, #DC2626);
+}
+
 @theme {
   --color-brand-black:   #07111A;
   --color-brand-teal:    #0E5068;
@@ -17,6 +140,21 @@
   --shadow-gradient: 0 4px 14px 0 rgba(77, 200, 232, 0.4);
 }
 
+/* Força dark em páginas de autenticação independente do tema ativa */
+.auth-page {
+  --color-brand-black: #07111A !important;
+  --color-brand-teal:  #0E5068 !important;
+  --color-brand-sky:   #4DC8E8 !important;
+  --color-brand-pale:  #7DD8F0 !important;
+  --color-brand-cloud: #DFF0F6 !important;
+  --s-body-from: #07111A !important;
+  --s-body-to:   #0E5068 !important;
+
+  background-color: #07111A;
+  background-image: linear-gradient(160deg, #07111A 0%, #0E5068 100%);
+  min-height: 100dvh;
+}
+
 @layer base {
   * {
     -webkit-font-smoothing: antialiased;
@@ -28,27 +166,26 @@
 
   body {
     min-height: 100vh;
-    background-color: var(--color-brand-black);
-    background-image: linear-gradient(160deg, #07111A 0%, #0E5068 100%);
+    background-color: var(--s-body-from);
+    background-image: linear-gradient(160deg, var(--s-body-from) 0%, var(--s-body-to) 100%);
     background-attachment: fixed;
     color: var(--color-brand-cloud);
     font-family: var(--font-sans);
     margin: 0;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
-  h1, h2, h3 {
-    letter-spacing: -0.02em;
-  }
+  h1, h2, h3 { letter-spacing: -0.02em; }
 
-  /* Dark inputs globais */
   input, textarea, select {
-    background: rgba(7, 17, 26, 0.65);
+    background: var(--s-content);
     color: var(--color-brand-cloud);
-    border: 1px solid rgba(77, 200, 232, 0.2);
+    border: 1px solid var(--b-strong);
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
   }
 
   input::placeholder, textarea::placeholder {
-    color: rgba(125, 216, 240, 0.35);
+    color: var(--t-muted);
   }
 
   input:focus, textarea:focus, select:focus {
@@ -58,32 +195,64 @@
   }
 
   option {
-    background: #07111A;
+    background: var(--s-body-from);
     color: var(--color-brand-cloud);
   }
 }
 
 @layer components {
-  /* Card de vidro estático */
   .card-glass {
-    background: rgba(14, 80, 104, 0.25);
-    border: 1px solid rgba(77, 200, 232, 0.15);
-  }
-
-  /* Card clicável com hover */
-  .card-interactive {
-    background: rgba(14, 80, 104, 0.2);
-    border: 1px solid rgba(77, 200, 232, 0.12);
+    background: var(--s-section);
+    border: 1px solid var(--b-card);
     transition: background 0.2s ease, border-color 0.2s ease;
   }
+
+  .card-interactive {
+    background: var(--s-skeleton-lt);
+    border: 1px solid var(--b-card);
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  }
   .card-interactive:hover {
-    background: rgba(14, 80, 104, 0.42);
-    border-color: rgba(77, 200, 232, 0.28);
+    background: var(--s-section);
+    border-color: var(--b-strong);
+  }
+  html.light .card-interactive:hover {
+    box-shadow: 0 2px 10px rgba(15,80,130,0.12);
   }
 
-  /* Card interno (dentro de outro card) */
+  /* Textos com opacidade sobre o brand-pale do @theme (azul claro):
+     no light mode o brand-pale vira slate-800, mas o @theme não muda.
+     Estes overrides garantem legibilidade para as classes mais usadas. */
+  html.light .text-brand-pale\/45 { color: rgba(30,41,59,0.62) !important; }
+  html.light .text-brand-pale\/40 { color: rgba(30,41,59,0.56) !important; }
+  html.light .text-brand-pale\/35 { color: rgba(30,41,59,0.50) !important; }
+  html.light .text-brand-pale\/30 { color: rgba(30,41,59,0.44) !important; }
+  html.light .text-brand-pale\/55 { color: rgba(30,41,59,0.70) !important; }
+  html.light .text-brand-pale\/70 { color: rgba(30,41,59,0.82) !important; }
+  html.light .text-brand-pale\/80 { color: rgba(30,41,59,0.90) !important; }
+
+  html.light .text-brand-sky { color: #1270A8 !important; }
+  html.light .text-brand-cloud { color: #0D1B2A !important; }
+  html.light .text-brand-mint\/70 { color: rgba(4,120,87,0.85) !important; }
+  html.light .text-brand-mint\/60 { color: rgba(4,120,87,0.75) !important; }
+
+  /* Inputs e textareas ficam com fundo branco e texto escuro no light */
+  html.light input,
+  html.light textarea,
+  html.light select {
+    background: rgba(255, 255, 255, 0.92);
+    color: #0D1B2A;
+    border-color: rgba(15, 80, 130, 0.2);
+  }
+
+  html.light input::placeholder,
+  html.light textarea::placeholder {
+    color: rgba(30, 41, 59, 0.42);
+  }
+
   .card-inner {
-    background: rgba(7, 17, 26, 0.4);
-    border: 1px solid rgba(77, 200, 232, 0.1);
+    background: var(--s-content);
+    border: 1px solid var(--b-divider);
+    transition: background 0.2s ease, border-color 0.2s ease;
   }
 }

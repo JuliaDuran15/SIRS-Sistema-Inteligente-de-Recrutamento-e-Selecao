@@ -14,8 +14,6 @@ class Candidato(Base):
     nome      : Mapped[str]        = mapped_column(String(200), nullable=False)
     email     : Mapped[str]        = mapped_column(String(200), unique=True, nullable=False)
     telefone  : Mapped[str | None] = mapped_column(String(30))
-    origem    : Mapped[str]        = mapped_column(String(30), default="manual")     # "manual" = RH cadastrou | "externo" = veio via webhook
-    fonte     : Mapped[str | None] = mapped_column(String(100)) #"linkedin" "site_empresa"
 
     data_nascimento : Mapped[date | None] = mapped_column(Date)
 
@@ -30,15 +28,7 @@ class Candidato(Base):
 
 
     # Formação acadêmica — JSONB porque pode ter mais de uma
-    # [
-    #   {
-    #     "curso": "Análise e Desenvolvimento de Sistemas",
-    #     "instituicao": "FATEC",
-    #     "nivel": "tecnologo",
-    #     "status": "concluido",
-    #     "ano_conclusao": 2023
-    #   }
-    # ]
+
     formacao    : Mapped[dict | None] = mapped_column(JSONB, default=list)
 
     criado_em   : Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

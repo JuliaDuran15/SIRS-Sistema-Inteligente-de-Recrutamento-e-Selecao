@@ -115,6 +115,7 @@ from app.models.vaga import Vaga
 from app.models.candidato import Candidato
 from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.entrevista import Entrevista
+from app.models.curriculo import Curriculo  # garante que a tabela curriculos é criada no banco de testes
 from app.core.auth import hash_senha, criar_token
 from datetime import datetime, timedelta
 
@@ -145,6 +146,9 @@ def make_vaga(
     db,
     nome="Dev Python",
     requisitos="Python, FastAPI, PostgreSQL",
+    gestores_ids=None,
+    criado_por_id=None,
+    rhs_autorizados=None,
 ) -> Vaga:
     v = Vaga(
         nome=nome,
@@ -155,6 +159,9 @@ def make_vaga(
         peso_entrevista_rh=0.25,
         peso_entrevista_tec=0.25,
         status="aberta",
+        gestores_ids=gestores_ids or [],
+        criado_por_id=criado_por_id,
+        rhs_autorizados=rhs_autorizados,
     )
     db.add(v)
     db.flush()
@@ -166,7 +173,7 @@ def make_candidato(
     nome="João Silva",
     email="joao@teste.com",
 ) -> Candidato:
-    c = Candidato(nome=nome, email=email, origem="manual", formacao=[])
+    c = Candidato(nome=nome, email=email, formacao=[])
     db.add(c)
     db.flush()
     return c
@@ -177,12 +184,16 @@ def make_candidatura(
     candidato: Candidato,
     vaga: Vaga,
     status: StatusCandidatura = StatusCandidatura.NOVO,
+    origem: str = "manual",
+    fonte: str | None = None,
 ) -> Candidatura:
     c = Candidatura(
         candidato_id=candidato.id,
         vaga_id=vaga.id,
         status=status,
         historico=[],
+        origem=origem,
+        fonte=fonte,
     )
     db.add(c)
     db.flush()

@@ -1,8 +1,11 @@
 from app.api.deps import DB
-from app.core.auth import QUALQUER_PAPEL, RH_OU_ADMIN
+from app.core.auth import QUALQUER_PAPEL, RH_OU_ADMIN, get_usuario_atual
 from app.models.candidato import Candidato
+from app.models.candidatura import Candidatura
+from app.models.usuario import PapelUsuario
+from app.models.vaga import Vaga
 from app.schemas.candidato import CandidatoCreate, CandidatoResponse, CandidatoUpdate
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 router = APIRouter()
@@ -23,13 +26,13 @@ def criar_candidato(dados: CandidatoCreate, db: Session = DB, _=RH_OU_ADMIN):
 
 @router.post("/webhook", response_model=CandidatoResponse, status_code=201)
 def webhook_candidato(dados: CandidatoCreate, db: Session = DB):
-    """Recebe candidatos vindos de sistemas externos (ATS, HRIS) — sem autenticação."""
+    """Recebe candidatos vindos de sistemas externos (ATS, HRIS) — sem autenticação.
+    Para importação completa (com vagas e candidaturas), use POST /webhook/importar."""
     existe = db.query(Candidato).filter(Candidato.email == dados.email).first()
     if existe:
         raise HTTPException(status_code=400, detail="Email já cadastrado")
     payload = dados.model_dump()
     payload["formacao"] = [f.model_dump() for f in dados.formacao]
-    payload["origem"]   = "externo"
     candidato = Candidato(**payload)
     db.add(candidato)
     db.commit()
@@ -38,7 +41,21 @@ def webhook_candidato(dados: CandidatoCreate, db: Session = DB):
 
 
 @router.get("/", response_model=list[CandidatoResponse])
-def listar_candidatos(db: Session = DB, _=QUALQUER_PAPEL):
+def listar_candidatos(db: Session = DB, usuario=Depends(get_usuario_atual)):
+    if usuario.papel == PapelUsuario.GESTOR:
+        uid = str(usuario.id)
+        vaga_ids = (
+            db.query(Vaga.id)
+            .filter(Vaga.gestores_ids.contains([uid]))
+            .scalar_subquery()
+        )
+        candidato_ids = (
+            db.query(Candidatura.candidato_id)
+            .filter(Candidatura.vaga_id.in_(vaga_ids))
+            .distinct()
+            .scalar_subquery()
+        )
+        return db.query(Candidato).filter(Candidato.id.in_(candidato_ids)).all()
     return db.query(Candidato).all()
 
 

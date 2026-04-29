@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useParams, Link } from "react-router-dom"
-import { getVaga, getCandidaturas, analisarMercado, updatePesos } from "../api"
+import { getVaga, getCandidaturas, analisarMercado, updatePesos, updateGestores, updateRhsAutorizados, getUsuarios, atualizarStatusCandidatura } from "../api"
 import { ScoreBar } from "../components/ScoreBar"
 import { Badge } from "../components/Badge"
 
@@ -25,7 +25,7 @@ const labelStatus = {
 const rankStyle = [
   { background: "linear-gradient(135deg, #1AAA80, #2EE8B4)", color: "#07111A" },
   { background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)", color: "#07111A" },
-  { background: "rgba(77, 200, 232, 0.2)",                   color: "#4DC8E8" },
+  { background: "var(--b-strong)",                   color: "#4DC8E8" },
 ]
 
 export function VagaDetalhe({ usuario }) {
@@ -37,19 +37,102 @@ export function VagaDetalhe({ usuario }) {
   const [editandoPesos, setEditandoPesos] = useState(false)
   const [pesos, setPesos]               = useState(null)
   const [salvandoPesos, setSalvandoPesos] = useState(false)
-  const [erroPesos, setErroPesos]       = useState(null)
+  const [erroPesos, setErroPesos]           = useState(null)
+  const [editandoGestores, setEditandoGestores] = useState(false)
+  const [gestoresList, setGestoresList]     = useState([])
+  const [gestoresSelecionados, setGestoresSel] = useState([])
+  const [salvandoGestores, setSalvandoGestores] = useState(false)
+  const [erroGestores, setErroGestores]     = useState(null)
+  const [rhsList, setRhsList]               = useState([])
+  const [editandoRhsAutorizados, setEditandoRhsAutorizados] = useState(false)
+  const [rhsAutorizadosSel, setRhsAutorizadosSel] = useState([])
+  const [salvandoRhsAutorizados, setSalvandoRhsAutorizados] = useState(false)
+  const [erroRhsAutorizados, setErroRhsAutorizados] = useState(null)
 
-  const podeEditarPesos = usuario?.papel === "admin" || usuario?.papel === "rh"
+  // Calcula permissões após vaga carregada
+  const rhsAutorizados  = vaga?.rhs_autorizados ?? []
+  const podeEditarPesos = usuario?.papel === "admin" ||
+    (usuario?.papel === "rh" && (rhsAutorizados.length === 0 || rhsAutorizados.includes(String(usuario?.id))))
+  const podeTriagem     = podeEditarPesos
+  const ehCriadorOuAdmin = usuario?.papel === "admin" ||
+    (usuario?.papel === "rh" && String(vaga?.criado_por_id) === String(usuario?.id))
+  const [triagendo, setTriagendo] = useState({}) // { [candidaturaId]: true/false }
+
+  async function handleTriagem(candidaturaId, novoStatus) {
+    setTriagendo(t => ({ ...t, [candidaturaId]: true }))
+    try {
+      const r = await atualizarStatusCandidatura(candidaturaId, novoStatus, usuario?.nome ?? "rh")
+      setCandidaturas(prev => prev.map(c => c.id === candidaturaId ? r.data : c))
+    } catch {/* silent — a badge mostrará o status antigo se falhar */}
+    finally {
+      setTriagendo(t => ({ ...t, [candidaturaId]: false }))
+    }
+  }
 
   useEffect(() => {
-    Promise.all([
-      getVaga(id),
-      getCandidaturas(id),
-    ]).then(([rv, rc]) => {
+    const reqs = [getVaga(id), getCandidaturas(id)]
+    if (usuario?.papel === "rh" || usuario?.papel === "admin") reqs.push(getUsuarios())
+    Promise.all(reqs).then(([rv, rc, ru]) => {
       setVaga(rv.data)
       setCandidaturas(rc.data)
+      if (ru) {
+        setGestoresList(ru.data.filter(u => u.papel === "gestor"))
+        setRhsList(ru.data.filter(u => u.papel === "rh"))
+      }
     }).finally(() => setLoading(false))
   }, [id])
+
+  function abrirEdicaoGestores() {
+    setGestoresSel(vaga.gestores_ids ? [...vaga.gestores_ids] : [])
+    setErroGestores(null)
+    setEditandoGestores(true)
+  }
+
+  function toggleGestorSel(id) {
+    setGestoresSel(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+  }
+
+  async function handleSalvarGestores() {
+    setSalvandoGestores(true); setErroGestores(null)
+    try {
+      const r = await updateGestores(id, gestoresSelecionados)
+      setVaga(r.data)
+      setEditandoGestores(false)
+    } catch (err) {
+      setErroGestores(err.response?.data?.detail ?? "Erro ao salvar gestores")
+    } finally {
+      setSalvandoGestores(false)
+    }
+  }
+
+  function abrirEdicaoRhsAutorizados() {
+    setRhsAutorizadosSel(vaga.rhs_autorizados ? [...vaga.rhs_autorizados] : [])
+    setErroRhsAutorizados(null)
+    setEditandoRhsAutorizados(true)
+  }
+
+  function toggleRhSel(uid) {
+    const criadorId = String(vaga?.criado_por_id)
+    if (uid === criadorId) return // criador não pode ser removido
+    setRhsAutorizadosSel(prev =>
+      prev.includes(uid) ? prev.filter(x => x !== uid) : [...prev, uid]
+    )
+  }
+
+  async function handleSalvarRhsAutorizados() {
+    setSalvandoRhsAutorizados(true); setErroRhsAutorizados(null)
+    try {
+      const r = await updateRhsAutorizados(id, rhsAutorizadosSel)
+      setVaga(r.data)
+      setEditandoRhsAutorizados(false)
+    } catch (err) {
+      setErroRhsAutorizados(err.response?.data?.detail ?? "Erro ao salvar RHs autorizados")
+    } finally {
+      setSalvandoRhsAutorizados(false)
+    }
+  }
 
   function abrirEdicaoPesos() {
     setPesos({
@@ -108,8 +191,8 @@ export function VagaDetalhe({ usuario }) {
 
   if (loading) return (
     <div className="space-y-4">
-      <div className="h-8 w-64 rounded-xl animate-pulse" style={{ background: "rgba(14, 80, 104, 0.3)" }} />
-      <div className="h-4 w-96 rounded animate-pulse" style={{ background: "rgba(14, 80, 104, 0.2)" }} />
+      <div className="h-8 w-64 rounded-xl animate-pulse" style={{ background: "var(--s-skeleton)" }} />
+      <div className="h-4 w-96 rounded animate-pulse" style={{ background: "var(--s-skeleton-lt)" }} />
     </div>
   )
 
@@ -202,7 +285,7 @@ export function VagaDetalhe({ usuario }) {
                 `Entrev. Tec. ${Math.round(vaga.peso_entrevista_tec * 100)}%`,
               ].map(label => (
                 <span key={label} className="text-xs font-mono px-2.5 py-1 rounded-lg font-semibold"
-                  style={{ background: "rgba(14, 80, 104, 0.4)", color: "rgba(125, 216, 240, 0.6)" }}>
+                  style={{ background: "var(--s-chip)", color: "var(--t-muted2)" }}>
                   {label}
                 </span>
               ))}
@@ -284,6 +367,149 @@ export function VagaDetalhe({ usuario }) {
             </div>
           )}
         </div>
+
+        {/* Gestores técnicos */}
+        {podeEditarPesos && (
+          <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--b-divider)" }}>
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+                <span className="text-xs text-brand-pale/40 font-medium flex-shrink-0">Gestores:</span>
+                {(vaga.gestores_ids?.length > 0) ? (
+                  vaga.gestores_ids.map(gid => {
+                    const g = gestoresList.find(u => String(u.id) === String(gid))
+                    return g ? (
+                      <span key={gid} className="text-xs font-semibold px-2.5 py-1 rounded-lg"
+                        style={{ background: "rgba(167,139,250,0.15)", color: "#A78BFA" }}>
+                        {g.nome}
+                      </span>
+                    ) : null
+                  })
+                ) : (
+                  <span className="text-xs text-brand-pale/30 italic">Nenhum gestor atribuído</span>
+                )}
+              </div>
+              {!editandoGestores && (
+                <button onClick={abrirEdicaoGestores}
+                  className="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
+                  style={{ background: "rgba(26,139,191,0.12)", border: "1px solid rgba(26,139,191,0.25)", color: "#4DC8E8" }}>
+                  Editar gestores
+                </button>
+              )}
+            </div>
+
+            {editandoGestores && (
+              <div className="mt-3 space-y-3">
+                <p className="text-xs text-brand-pale/40">Selecione os gestores técnicos responsáveis por esta vaga:</p>
+                <div className="flex flex-wrap gap-2">
+                  {gestoresList.map(g => {
+                    const sel = gestoresSelecionados.includes(String(g.id))
+                    return (
+                      <button key={g.id} type="button" onClick={() => toggleGestorSel(String(g.id))}
+                        className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all"
+                        style={sel
+                          ? { background: "rgba(167,139,250,0.25)", color: "#A78BFA", border: "1px solid rgba(167,139,250,0.4)" }
+                          : { background: "var(--s-chip)", color: "var(--t-muted2)", border: "1px solid var(--b-subtle)" }}>
+                        {sel ? "✓ " : ""}{g.nome}
+                      </button>
+                    )
+                  })}
+                  {gestoresList.length === 0 && (
+                    <p className="text-xs text-brand-pale/30">Nenhum gestor cadastrado no sistema.</p>
+                  )}
+                </div>
+                {erroGestores && <p className="text-xs text-red-400">{erroGestores}</p>}
+                <div className="flex gap-3">
+                  <button onClick={() => setEditandoGestores(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-brand-pale/50 hover:text-brand-pale transition-colors"
+                    style={{ border: "1px solid var(--b-subtle)" }}>
+                    Cancelar
+                  </button>
+                  <button onClick={handleSalvarGestores} disabled={salvandoGestores}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-brand-black disabled:opacity-50"
+                    style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}>
+                    {salvandoGestores ? "Salvando..." : "Salvar gestores"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* RHs autorizados — visível para qualquer RH autorizado ou admin */}
+        {podeEditarPesos && (
+          <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--b-divider)" }}>
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+                <span className="text-xs text-brand-pale/40 font-medium flex-shrink-0">
+                  Analistas autorizados:
+                </span>
+                {(vaga.rhs_autorizados?.length > 0) ? (
+                  vaga.rhs_autorizados.map(uid => {
+                    const rh = rhsList.find(u => String(u.id) === String(uid))
+                    const ehCriador = String(uid) === String(vaga.criado_por_id)
+                    return (
+                      <span key={uid} className="text-xs font-semibold px-2.5 py-1 rounded-lg"
+                        style={{ background: "rgba(26,139,191,0.15)", color: "#4DC8E8" }}>
+                        {rh?.nome ?? uid}{ehCriador ? " (criador)" : ""}
+                      </span>
+                    )
+                  })
+                ) : (
+                  <span className="text-xs text-brand-pale/30 italic">Qualquer analista de RH pode visualizar e editar</span>
+                )}
+              </div>
+              {!editandoRhsAutorizados && ehCriadorOuAdmin && (
+                <button onClick={abrirEdicaoRhsAutorizados}
+                  className="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
+                  style={{ background: "rgba(26,139,191,0.12)", border: "1px solid rgba(26,139,191,0.25)", color: "#4DC8E8" }}>
+                  Editar analistas
+                </button>
+              )}
+            </div>
+
+            {editandoRhsAutorizados && (
+              <div className="mt-3 space-y-3">
+                <p className="text-xs text-brand-pale/40">
+                  Selecione os analistas de RH que podem <strong>visualizar e editar</strong> esta vaga
+                  e suas candidaturas. O criador sempre permanece autorizado.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {rhsList.map(rh => {
+                    const uid = String(rh.id)
+                    const ehCriador = uid === String(vaga.criado_por_id)
+                    const sel = rhsAutorizadosSel.includes(uid) || ehCriador
+                    return (
+                      <button key={rh.id} type="button" onClick={() => toggleRhSel(uid)}
+                        disabled={ehCriador}
+                        className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-60 disabled:cursor-default"
+                        style={sel
+                          ? { background: "rgba(26,139,191,0.25)", color: "#4DC8E8", border: "1px solid rgba(26,139,191,0.4)" }
+                          : { background: "var(--s-chip)", color: "var(--t-muted2)", border: "1px solid var(--b-subtle)" }}>
+                        {sel ? "✓ " : ""}{rh.nome}{ehCriador ? " (criador)" : ""}
+                      </button>
+                    )
+                  })}
+                  {rhsList.length === 0 && (
+                    <p className="text-xs text-brand-pale/30">Nenhum analista de RH cadastrado no sistema.</p>
+                  )}
+                </div>
+                {erroRhsAutorizados && <p className="text-xs text-red-400">{erroRhsAutorizados}</p>}
+                <div className="flex gap-3">
+                  <button onClick={() => setEditandoRhsAutorizados(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-brand-pale/50 hover:text-brand-pale transition-colors"
+                    style={{ border: "1px solid var(--b-subtle)" }}>
+                    Cancelar
+                  </button>
+                  <button onClick={handleSalvarRhsAutorizados} disabled={salvandoRhsAutorizados}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-brand-black disabled:opacity-50"
+                    style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}>
+                    {salvandoRhsAutorizados ? "Salvando..." : "Salvar analistas"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-3 gap-6">
@@ -301,7 +527,7 @@ export function VagaDetalhe({ usuario }) {
           {candidaturas.length === 0 ? (
             <div
               className="rounded-2xl p-10 text-center border-2 border-dashed"
-              style={{ borderColor: "rgba(77, 200, 232, 0.12)" }}
+              style={{ borderColor: "var(--b-card)" }}
             >
               <p className="text-brand-pale/40 text-sm font-medium">Nenhum candidato vinculado a esta vaga.</p>
             </div>
@@ -324,10 +550,13 @@ export function VagaDetalhe({ usuario }) {
                   scoreFinal >= 70 ? "#2EE8B4" :
                   scoreFinal >= 50 ? "#FCD34D" : "#FCA5A5"
 
+                const emTriagem = c.status === "triagem_pendente"
+
                 return (
                   <div
                     key={c.id}
                     className="card-interactive rounded-2xl p-5"
+                    style={emTriagem ? { borderColor: "rgba(245,158,11,0.35)" } : undefined}
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
@@ -335,8 +564,8 @@ export function VagaDetalhe({ usuario }) {
                         <div
                           className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
                           style={rankStyle[i] ?? {
-                            background: "rgba(14, 80, 104, 0.5)",
-                            color: "rgba(125, 216, 240, 0.6)",
+                            background: "var(--s-chip-dark)",
+                            color: "var(--t-muted2)",
                           }}
                         >
                           {i + 1}
@@ -369,7 +598,7 @@ export function VagaDetalhe({ usuario }) {
                       <div className="flex items-center gap-2 pl-11">
                         <span
                           className="w-3 h-3 border-2 rounded-full animate-spin"
-                          style={{ borderColor: "rgba(77,200,232,0.3)", borderTopColor: "#4DC8E8" }}
+                          style={{ borderColor: "var(--b-normal)", borderTopColor: "#4DC8E8" }}
                         />
                         <span className="text-xs text-brand-pale/40">Processando currículo...</span>
                       </div>
@@ -380,17 +609,44 @@ export function VagaDetalhe({ usuario }) {
                       </div>
                     ) : null}
 
-                    <div className="flex justify-end mt-2">
+                    <div className="flex items-center justify-between mt-3 pt-2.5"
+                      style={{ borderTop: "1px solid var(--b-subtle)" }}>
+
+                      {/* Botões de triagem rápida */}
+                      {podeTriagem && c.status === "triagem_pendente" ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-brand-pale/40 mr-1">Triagem:</span>
+                          <button
+                            onClick={() => handleTriagem(c.id, "aprovado_triagem")}
+                            disabled={triagendo[c.id]}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                            style={{ background: "rgba(26,170,128,0.15)", border: "1px solid rgba(26,170,128,0.3)", color: "#2EE8B4" }}
+                          >
+                            {triagendo[c.id] ? "..." : "✓ Aprovar"}
+                          </button>
+                          <button
+                            onClick={() => handleTriagem(c.id, "reprovado_triagem")}
+                            disabled={triagendo[c.id]}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                            style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)", color: "#FCA5A5" }}
+                          >
+                            {triagendo[c.id] ? "..." : "✕ Reprovar"}
+                          </button>
+                        </div>
+                      ) : (
+                        <span /> /* espaçador para manter o link à direita */
+                      )}
+
                       <Link
                         to={`/candidaturas/${c.id}/entrevistas`}
-                        className="text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
+                        className="text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex-shrink-0"
                         style={{
                           background: "rgba(26,139,191,0.12)",
                           border: "1px solid rgba(26,139,191,0.25)",
                           color: "#4DC8E8",
                         }}
                       >
-                        Ver entrevistas →
+                        Ver detalhes →
                       </Link>
                     </div>
                   </div>
@@ -435,7 +691,7 @@ export function VagaDetalhe({ usuario }) {
                       </div>
                       <div
                         className="w-full rounded-full h-1.5 overflow-hidden"
-                        style={{ background: "rgba(7, 17, 26, 0.5)" }}
+                        style={{ background: "var(--s-track)" }}
                       >
                         <div
                           className="h-full rounded-full transition-all duration-500"

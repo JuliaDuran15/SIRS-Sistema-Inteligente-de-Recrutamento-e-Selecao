@@ -18,8 +18,6 @@ class CandidatoCreate(BaseModel):
     nome            : str
     email           : EmailStr
     telefone        : str | None = None
-    origem          : str = "manual"
-    fonte           : str | None = None
     data_nascimento : date | None = None
     logradouro      : str | None = None
     numero          : str | None = None
@@ -35,8 +33,6 @@ class CandidatoResponse(BaseModel):
     nome            : str
     email           : str
     telefone        : str | None
-    origem          : str
-    fonte           : str | None
     data_nascimento : date | None
     logradouro      : str | None
     numero          : str | None

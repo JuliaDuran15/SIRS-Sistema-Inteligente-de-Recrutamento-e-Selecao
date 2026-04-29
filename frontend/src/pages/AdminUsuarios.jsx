@@ -87,7 +87,7 @@ function ModalNovoUsuario({ onSalvo, onFechar }) {
                   className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all"
                   style={form.papel === p
                     ? { background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)", color: "#07111A" }
-                    : { background: "rgba(14,80,104,0.4)", color: "rgba(125,216,240,0.6)",
+                    : { background: "var(--s-chip)", color: "var(--t-muted2)",
                         border: "1px solid rgba(77,200,232,0.15)" }}>
                   {PAPEL_LABEL[p]}
                 </button>
@@ -153,7 +153,7 @@ export function AdminUsuarios() {
     <div className="space-y-4">
       {[1,2,3].map(i => (
         <div key={i} className="h-16 rounded-2xl animate-pulse"
-          style={{ background: "rgba(14,80,104,0.3)" }} />
+          style={{ background: "var(--s-skeleton)" }} />
       ))}
     </div>
   )

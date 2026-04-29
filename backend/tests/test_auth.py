@@ -1,9 +1,18 @@
 """Testes do módulo de autenticação — /auth/login e /auth/me."""
 import pytest
+from unittest.mock import patch
 from tests.conftest import make_usuario, auth_header
 from app.models.usuario import PapelUsuario
 from app.core.auth import criar_token, hash_senha, verificar_senha, exigir_papel
 from fastapi import HTTPException
+
+# Garante que smtp_configurado() retorna False em todos os testes desta suite
+pytestmark = pytest.mark.usefixtures("_no_smtp")
+
+@pytest.fixture(autouse=True)
+def _no_smtp():
+    with patch("app.api.endpoints.auth.smtp_configurado", return_value=False):
+        yield
 
 
 # ── Funções puras de auth ─────────────────────────────────────────────────────
@@ -166,6 +175,84 @@ class TestAlterarSenha:
             "senha_nova": "novasenha456",
         })
         assert r.status_code == 401
+
+
+# ── Forgot / Reset password ──────────────────────────────────────────────────
+class TestEsqueceuSenha:
+    def test_email_valido_retorna_reset_url(self, client, db):
+        make_usuario(db, email="forgot@teste.com")
+        r = client.post("/auth/esqueceu-senha", json={"email": "forgot@teste.com"})
+        assert r.status_code == 200
+        body = r.json()
+        # Sem SMTP configurado em testes, devolve reset_url
+        assert body["reset_url"] is not None
+        assert "token=" in body["reset_url"]
+
+    def test_email_inexistente_retorna_404(self, client):
+        r = client.post("/auth/esqueceu-senha", json={"email": "nao_existe@teste.com"})
+        assert r.status_code == 404
+
+    def test_usuario_inativo_retorna_404(self, client, db):
+        u = make_usuario(db, email="inativo_forgot@teste.com")
+        u.ativo = False
+        db.flush()
+        r = client.post("/auth/esqueceu-senha", json={"email": "inativo_forgot@teste.com"})
+        assert r.status_code == 404
+
+
+class TestResetarSenha:
+    def _obter_token(self, client, db, email="reset_user@teste.com"):
+        make_usuario(db, email=email)
+        r = client.post("/auth/esqueceu-senha", json={"email": email})
+        url = r.json()["reset_url"]
+        return url.split("token=")[1]
+
+    def test_resetar_com_token_valido(self, client, db):
+        token = self._obter_token(client, db)
+        r = client.post("/auth/resetar-senha", json={
+            "reset_token": token,
+            "senha_nova": "novasenha456",
+        })
+        assert r.status_code == 204
+
+    def test_pode_logar_com_nova_senha(self, client, db):
+        make_usuario(db, email="reset_login@teste.com")
+        r = client.post("/auth/esqueceu-senha", json={"email": "reset_login@teste.com"})
+        token = r.json()["reset_url"].split("token=")[1]
+
+        client.post("/auth/resetar-senha", json={
+            "reset_token": token,
+            "senha_nova": "novasenha456",
+        })
+        r2 = client.post("/auth/login", data={
+            "username": "reset_login@teste.com",
+            "password": "novasenha456",
+        })
+        assert r2.status_code == 200
+
+    def test_token_invalido_retorna_400(self, client):
+        r = client.post("/auth/resetar-senha", json={
+            "reset_token": "token.invalido.aqui",
+            "senha_nova": "novasenha456",
+        })
+        assert r.status_code == 400
+
+    def test_senha_nova_curta_retorna_400(self, client, db):
+        token = self._obter_token(client, db, "reset_curta@teste.com")
+        r = client.post("/auth/resetar-senha", json={
+            "reset_token": token,
+            "senha_nova": "abc",
+        })
+        assert r.status_code == 400
+
+    def test_token_de_login_nao_funciona_para_reset(self, client, rh):
+        from tests.conftest import token_para
+        token_login = token_para(rh)
+        r = client.post("/auth/resetar-senha", json={
+            "reset_token": token_login,
+            "senha_nova": "novasenha456",
+        })
+        assert r.status_code == 400
 
 
 # ── Guards de permissão ───────────────────────────────────────────────────────

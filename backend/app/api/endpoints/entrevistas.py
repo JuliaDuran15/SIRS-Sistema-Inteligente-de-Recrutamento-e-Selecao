@@ -5,11 +5,13 @@ from app.core.auth import QUALQUER_PAPEL, get_usuario_atual
 from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.entrevista import Entrevista
 from app.models.usuario import PapelUsuario
-from app.schemas.entrevista import EntrevistaCreate, EntrevistaResponse, EntrevistaResultado
+from app.models.vaga import Vaga
+from app.schemas.entrevista import AnotacoesUpdate, EntrevistaCreate, EntrevistaResponse, EntrevistaResultado
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 router = APIRouter()
+
 
 STATUS_APOS_AGENDAR = {
     "rh":      StatusCandidatura.ENTREVISTA_RH_AGENDADA,
@@ -19,11 +21,6 @@ STATUS_APOS_REALIZAR = {
     "rh":      StatusCandidatura.ENTREVISTA_RH_REALIZADA,
     "tecnica": StatusCandidatura.ENTREVISTA_TEC_REALIZADA,
 }
-
-def _checar_agendamento(usuario):
-    """Só RH ou Admin podem agendar entrevistas."""
-    if usuario.papel not in (PapelUsuario.RH, PapelUsuario.ADMIN):
-        raise HTTPException(status_code=403, detail="Apenas RH ou Admin pode agendar entrevistas")
 
 
 def _checar_registro_resultado(tipo: str, usuario):
@@ -45,11 +42,38 @@ def agendar_entrevista(
     if dados.tipo not in ("rh", "tecnica"):
         raise HTTPException(status_code=400, detail="Tipo deve ser 'rh' ou 'tecnica'")
 
-    _checar_agendamento(usuario)
-
     candidatura = db.query(Candidatura).filter(Candidatura.id == dados.candidatura_id).first()
     if not candidatura:
         raise HTTPException(status_code=404, detail="Candidatura não encontrada")
+
+    vaga = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
+
+    if usuario.papel == PapelUsuario.ADMIN:
+        pass  # Admin pode sempre agendar qualquer tipo
+
+    elif usuario.papel == PapelUsuario.RH:
+        # RH precisa estar nos rhs_autorizados quando a vaga tem restrição
+        if vaga and vaga.rhs_autorizados and str(usuario.id) not in vaga.rhs_autorizados:
+            raise HTTPException(
+                status_code=403,
+                detail="Você não está autorizado a gerenciar candidaturas desta vaga",
+            )
+
+    elif usuario.papel == PapelUsuario.GESTOR:
+        # Gestor só pode agendar entrevista técnica na própria vaga
+        if dados.tipo != "tecnica":
+            raise HTTPException(
+                status_code=403,
+                detail="Gestor técnico só pode agendar entrevistas técnicas",
+            )
+        if not vaga or str(usuario.id) not in (vaga.gestores_ids or []):
+            raise HTTPException(
+                status_code=403,
+                detail="Você não é gestor desta vaga",
+            )
+
+    else:
+        raise HTTPException(status_code=403, detail="Acesso negado")
 
     entrevista = Entrevista(
         candidatura_id   = dados.candidatura_id,
@@ -78,26 +102,85 @@ def registrar_resultado(
     entrevista = db.query(Entrevista).filter(Entrevista.id == entrevista_id).first()
     if not entrevista:
         raise HTTPException(status_code=404, detail="Entrevista não encontrada")
-    if entrevista.status == "realizada":
-        raise HTTPException(status_code=400, detail="Entrevista já foi registrada")
+    if entrevista.status not in ("agendada", "realizada"):
+        raise HTTPException(status_code=400, detail="Entrevista não pode ser editada")
     if dados.score_manual < 0 or dados.score_manual > 10:
         raise HTTPException(status_code=400, detail="Score deve ser entre 0 e 10")
 
     _checar_registro_resultado(entrevista.tipo, usuario)
 
+    ja_realizada = entrevista.status == "realizada"
+
+    if ja_realizada:
+        # Re-edição: grava histórico completo, não avança candidatura
+        historico = list(entrevista.historico_edicoes or [])
+        historico.append({
+            "score_anterior": entrevista.score_manual,
+            "texto_anterior": entrevista.anotacoes,
+            "editado_em"    : datetime.utcnow().isoformat(),
+            "editado_por"   : usuario.nome,
+        })
+        entrevista.historico_edicoes = historico
+
     entrevista.score_manual  = dados.score_manual
     entrevista.anotacoes     = dados.anotacoes
     entrevista.pontos_fortes = dados.pontos_fortes
     entrevista.pontos_fracos = dados.pontos_fracos
-    entrevista.status        = "realizada"
-    entrevista.realizada_em  = datetime.utcnow()
 
-    candidatura = db.query(Candidatura).filter(
-        Candidatura.id == entrevista.candidatura_id
-    ).first()
+    if not ja_realizada:
+        # Primeira vez: define status e avança candidatura
+        entrevista.status       = "realizada"
+        entrevista.realizada_em = datetime.utcnow()
 
-    from app.api.endpoints.candidaturas import transicionar
-    transicionar(candidatura, STATUS_APOS_REALIZAR[entrevista.tipo], ator=usuario.nome)
+        candidatura = db.query(Candidatura).filter(
+            Candidatura.id == entrevista.candidatura_id
+        ).first()
+        from app.api.endpoints.candidaturas import transicionar
+        transicionar(candidatura, STATUS_APOS_REALIZAR[entrevista.tipo], ator=usuario.nome)
+
+    db.commit()
+    db.refresh(entrevista)
+    return entrevista
+
+
+@router.patch("/{entrevista_id}/anotacoes", response_model=EntrevistaResponse)
+def editar_anotacoes(
+    entrevista_id: str,
+    dados: AnotacoesUpdate,
+    db: Session = DB,
+    usuario=Depends(get_usuario_atual),
+):
+    """
+    RH edita anotações de entrevistas de RH.
+    Gestor atribuído à vaga edita anotações de entrevistas técnicas.
+    Admin edita qualquer entrevista.
+    Cada edição fica registrada no histórico.
+    """
+    entrevista = db.query(Entrevista).filter(Entrevista.id == entrevista_id).first()
+    if not entrevista:
+        raise HTTPException(status_code=404, detail="Entrevista não encontrada")
+    if entrevista.status != "realizada":
+        raise HTTPException(status_code=400, detail="Só é possível editar anotações de entrevistas realizadas")
+
+    if usuario.papel != PapelUsuario.ADMIN:
+        if entrevista.tipo == "rh" and usuario.papel != PapelUsuario.RH:
+            raise HTTPException(status_code=403, detail="Apenas RH ou Admin pode editar anotações de entrevistas de RH")
+        if entrevista.tipo == "tecnica" and usuario.papel != PapelUsuario.GESTOR:
+            raise HTTPException(status_code=403, detail="Apenas Gestor técnico ou Admin pode editar anotações de entrevistas técnicas")
+        if entrevista.tipo == "tecnica":
+            candidatura = db.query(Candidatura).filter(Candidatura.id == entrevista.candidatura_id).first()
+            vaga = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
+            if str(usuario.id) not in (vaga.gestores_ids or []):
+                raise HTTPException(status_code=403, detail="Você não é gestor desta vaga")
+
+    historico = list(entrevista.historico_edicoes or [])
+    historico.append({
+        "texto_anterior": entrevista.anotacoes,
+        "editado_em"    : datetime.utcnow().isoformat(),
+        "editado_por"   : usuario.nome,
+    })
+    entrevista.historico_edicoes = historico
+    entrevista.anotacoes = dados.anotacoes
 
     db.commit()
     db.refresh(entrevista)

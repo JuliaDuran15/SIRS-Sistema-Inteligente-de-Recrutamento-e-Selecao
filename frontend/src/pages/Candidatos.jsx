@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { Link } from "react-router-dom"
 import { getCandidatos, createCandidato, getVagas, createCandidatura } from "../api"
 import { Badge } from "../components/Badge"
 
@@ -131,14 +132,14 @@ export function Candidatos() {
             <div
               key={i}
               className="h-16 rounded-2xl animate-pulse"
-              style={{ background: "rgba(14, 80, 104, 0.2)" }}
+              style={{ background: "var(--s-skeleton-lt)" }}
             />
           ))}
         </div>
       ) : candidatos.length === 0 ? (
         <div
           className="text-center py-24 rounded-2xl border-2 border-dashed"
-          style={{ borderColor: "rgba(77, 200, 232, 0.14)" }}
+          style={{ borderColor: "var(--b-card)" }}
         >
           <div
             className="w-12 h-12 rounded-2xl mx-auto mb-4 flex items-center justify-center"
@@ -151,9 +152,10 @@ export function Candidatos() {
       ) : (
         <div className="space-y-2.5">
           {candidatos.map(c => (
-            <div
+            <Link
               key={c.id}
-              className="card-interactive rounded-2xl px-6 py-4 flex items-center justify-between"
+              to={`/candidatos/${c.id}`}
+              className="card-interactive rounded-2xl px-6 py-4 flex items-center justify-between group"
             >
               <div className="flex items-center gap-4">
                 <div
@@ -169,7 +171,9 @@ export function Candidatos() {
                   </span>
                 </div>
                 <div>
-                  <p className="font-bold text-brand-cloud">{c.nome}</p>
+                  <p className="font-bold text-brand-cloud group-hover:text-brand-sky transition-colors">
+                    {c.nome}
+                  </p>
                   <p className="text-xs text-brand-pale/45 font-mono">{c.email}</p>
                 </div>
               </div>
@@ -180,8 +184,9 @@ export function Candidatos() {
                 <Badge cor={c.origem === "externo" ? "blue" : "green"}>
                   {c.origem}
                 </Badge>
+                <span className="text-brand-pale/30 group-hover:text-brand-sky transition-colors">→</span>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       )}

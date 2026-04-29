@@ -57,3 +57,69 @@ Mais detalhadamente (verbose): docker compose exec api python -m pytest tests/ -
 
 Enche o banco de dados  
 docker compose exec api python tests/seed_full.py 2>&1
+
+Autenticação: header X-Webhook-Key. Sem chave configurada no .env (WEBHOOK_SECRET_KEY) → aberto (dev).
+
+Formatos aceitos: application/json ou application/xml / text/xml.
+
+O que importa:
+
+Entidade	Comportamento
+vagas	Busca por nome — cria se não existir, ignora se já existir. Dispara atualizar_mercado_vaga async.
+candidatos	Upsert por e-mail — atualiza campos não-nulos se já existir. origem="externo", fonte=<fonte do payload>.
+candidaturas	Vincula candidato à vaga via vaga_external_id ou vaga_nome. Não duplica se já existir.
+curriculo_texto	Cria registro de currículo e dispara a nova task processar_curriculo_texto (Celery) para vetorizar e calcular scores sem precisar de PDF.
+Isolamento de falhas: cada candidato roda dentro de um savepoint — um erro individual é reportado na lista erros, sem cancelar os demais.
+
+Exemplo de resposta:
+
+
+{
+  "importados": {
+    "vagas_criadas": 1,
+    "candidatos_criados": 2,
+    "candidatos_atualizados": 0,
+    "candidaturas_criadas": 2,
+    "curriculos_processados": 2
+  },
+  "erros": [],
+  "total_erros": 0
+}
+
+
+
+O webhook recebe tudo via HTTP POST direto — o sistema externo (Greenhouse, SAP, Gupy etc.) faz a chamada HTTP para POST /webhook/importar com o JSON ou XML no corpo. Não há arquivo salvo em disco: o conteúdo chega na memória, é processado e descartado.
+
+Como simular / demonstrar
+Rodar todos os demos de uma vez (precisa que o seed já tenha rodado):
+
+
+docker compose exec api python tests/demo_webhook.py
+Rodar um demo específico:
+
+
+docker compose exec api python tests/demo_webhook.py 1   # JSON completo
+docker compose exec api python tests/demo_webhook.py 2   # upsert
+docker compose exec api python tests/demo_webhook.py 3   # XML
+docker compose exec api python tests/demo_webhook.py 4   # erros parciais
+docker compose exec api python tests/demo_webhook.py 5   # vaga por nome
+curl direto (sem o script):
+
+
+# JSON mínimo — só candidato, sem vaga
+curl -s -X POST http://localhost:8000/webhook/importar \
+  -H "Content-Type: application/json" \
+  -d '{"fonte":"manual_test","candidatos":[{"nome":"Teste","email":"t@t.com"}]}' \
+  | python -m json.tool
+
+# XML
+curl -s -X POST http://localhost:8000/webhook/importar \
+  -H "Content-Type: application/xml" \
+  -d '<importacao fonte="sap"><candidatos><candidato><nome>Ana</nome><email>ana@ext.com</email></candidato></candidatos></importacao>' \
+  | python -m json.tool
+
+  Três correções:
+
+Schema — texto_extraido adicionado ao CurriculoInfo. Agora o frontend consegue detectar "texto importado mas score ainda calculando" → mostra spinner em vez do formulário de upload
+Dado no banco — status da Alice corrigido de NOVO para AGUARDANDO_PROC (o demo rodou antes do nosso fix do webhook)
+Task re-despachada — processar_curriculo_texto executou, calculou scores (67.6) e avançou status para TRIAGEM_PENDENTE
