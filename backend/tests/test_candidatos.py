@@ -28,7 +28,6 @@ class TestCriarCandidato:
         body = r.json()
         assert body["nome"] == "Maria Silva"
         assert body["email"] == "maria@candidato.com"
-        assert body["origem"] == "manual"
         assert "id" in body
 
     def test_gestor_nao_pode_criar_403(self, client, gestor):
@@ -64,10 +63,11 @@ class TestWebhookCandidato:
         r = client.post("/candidatos/webhook", json=payload)
         assert r.status_code == 201
 
-    def test_webhook_define_origem_externo(self, client):
+    def test_webhook_cria_candidato(self, client):
         payload = {**_CAND_PAYLOAD, "email": "webhook_ext@candidato.com"}
         r = client.post("/candidatos/webhook", json=payload)
-        assert r.json()["origem"] == "externo"
+        assert r.status_code == 201
+        assert r.json()["email"] == "webhook_ext@candidato.com"
 
     def test_webhook_email_duplicado_retorna_400(self, client, db):
         make_candidato(db, email="dup_webhook@candidato.com")

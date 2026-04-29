@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     ADZUNA_COUNTRY         : str = "br"
     MARKET_ANALYZER_SOURCE : str = "adzuna"
 
+    # Webhook — deixe vazio para desabilitar autenticação (dev)
+    WEBHOOK_SECRET_KEY : str = ""
+
     # SMTP — deixe vazio para desabilitar envio de e-mail
     SMTP_HOST    : str = ""
     SMTP_PORT    : int = 587

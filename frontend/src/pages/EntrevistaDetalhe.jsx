@@ -485,8 +485,14 @@ function CardEntrevista({ entrevista: initial, usuario, candidatura, onResultado
 }
 
 // ── Form agendar ─────────────────────────────────────────────────────────────
-function FormAgendar({ candidaturaId, tipo, usuario, onAgendado }) {
-  const podeAgendar = usuario?.papel === "admin" || usuario?.papel === "rh"
+function FormAgendar({ candidaturaId, tipo, usuario, candidatura, onAgendado }) {
+  const vaga            = candidatura?.vaga
+  const gestoresIds     = vaga?.gestores_ids ?? []
+  const rhsAutorizados  = vaga?.rhs_autorizados ?? []
+  const ehGestorDaVaga  = gestoresIds.includes(String(usuario?.id))
+  const ehRhAutorizado  = usuario?.papel === "admin" ||
+    (usuario?.papel === "rh" && (rhsAutorizados.length === 0 || rhsAutorizados.includes(String(usuario?.id))))
+  const podeAgendar     = ehRhAutorizado || (tipo === "tecnica" && usuario?.papel === "gestor" && ehGestorDaVaga)
 
   const [dt, setDt]       = useState("")
   const [ag, setAg]       = useState(false)
@@ -621,12 +627,18 @@ export function EntrevistaDetalhe({ usuario }) {
   const rhAgendada = entrevistas.find(e => e.tipo === "rh"      && e.status === "agendada")
   const tecAgendada= entrevistas.find(e => e.tipo === "tecnica" && e.status === "agendada")
 
-  const podeAgendarRH  = !rhFeita && !rhAgendada && status === "aprovado_triagem"
-  const podeAgendarTec = rhFeita && !tecFeita && !tecAgendada && status === "entrevista_rh_realizada"
-  const podeDecisao    = status === "decisao_pendente" &&
-    (usuario?.papel === "rh" || usuario?.papel === "admin")
+  const vagaRhsAutorizados = vaga?.rhs_autorizados ?? []
+  const vagaGestoresIds    = vaga?.gestores_ids ?? []
+  const ehRhAutorizado     = usuario?.papel === "admin" ||
+    (usuario?.papel === "rh" && (vagaRhsAutorizados.length === 0 || vagaRhsAutorizados.includes(String(usuario?.id))))
+  const ehGestorDaVaga     = vagaGestoresIds.includes(String(usuario?.id))
 
-  const podeUpload     = usuario?.papel === "rh" || usuario?.papel === "admin"
+  const podeAgendarRH  = !rhFeita && !rhAgendada && status === "aprovado_triagem" && ehRhAutorizado
+  const podeAgendarTec = rhFeita && !tecFeita && !tecAgendada && status === "entrevista_rh_realizada" &&
+    (ehRhAutorizado || (usuario?.papel === "gestor" && ehGestorDaVaga))
+  const podeDecisao    = status === "decisao_pendente" && ehRhAutorizado
+
+  const podeUpload     = ehRhAutorizado
 
   return (
     <div className="space-y-6">
@@ -706,7 +718,7 @@ export function EntrevistaDetalhe({ usuario }) {
             Agendar Entrevista RH
           </h2>
           <FormAgendar candidaturaId={candidaturaId} tipo="rh" usuario={usuario}
-            onAgendado={onAgendado} />
+            candidatura={candidatura} onAgendado={onAgendado} />
         </div>
       )}
 
@@ -717,7 +729,7 @@ export function EntrevistaDetalhe({ usuario }) {
             Agendar Entrevista Técnica
           </h2>
           <FormAgendar candidaturaId={candidaturaId} tipo="tecnica" usuario={usuario}
-            onAgendado={onAgendado} />
+            candidatura={candidatura} onAgendado={onAgendado} />
         </div>
       )}
 

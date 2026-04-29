@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime
 
 from app.db.session import Base
-from sqlalchemy import DateTime, Float, ForeignKey
+from sqlalchemy import DateTime, Float, ForeignKey, String
 from sqlalchemy import Enum as SAEnum
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -40,6 +40,11 @@ class Candidatura(Base):
     historico    : Mapped[dict | None]       = mapped_column(JSONB, default=list)
     # log de todas as transições de estado para auditoria
     # [{"de": "novo", "para": "aguardando_processamento", "em": "...", "ator": "sistema"}]
+
+    origem       : Mapped[str]               = mapped_column(String(30), default="manual")
+    # "manual" = RH cadastrou | "externo" = veio via webhook/importação
+    fonte        : Mapped[str | None]        = mapped_column(String(100))
+    # nome do sistema de origem: "greenhouse", "sap", "linkedin" etc.
 
     criado_em    : Mapped[datetime]          = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime]          = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

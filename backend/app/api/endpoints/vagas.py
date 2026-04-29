@@ -3,16 +3,16 @@ from app.ai.matching_engine import calcular_score_curriculo, calcular_score_fina
 from app.ai.resume_parser import vetorizar_texto
 from app.ai.tasks import atualizar_mercado_vaga
 from app.api.deps import DB
-from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL, RH_OU_ADMIN, get_usuario_atual
+from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL, get_usuario_atual
 from app.models.candidatura import Candidatura
 from app.models.curriculo import Curriculo
 from app.models.entrevista import Entrevista
 from app.models.usuario import PapelUsuario
 from app.models.vaga import Vaga
-from app.schemas.vaga import VagaCreate, VagaResponse, VagaUpdatePesos
+from app.schemas.vaga import RhsAutorizadosUpdate, VagaCreate, VagaResponse, VagaUpdatePesos
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from sqlalchemy import case
+from sqlalchemy import case, or_
 from sqlalchemy.orm import Session
 
 router = APIRouter()
@@ -31,10 +31,33 @@ def _ordenar_vagas(query):
     )
 
 
+def _pode_editar_vaga(usuario, vaga) -> bool:
+    """
+    Admin pode sempre.
+    RH pode se a vaga não tiver rhs_autorizados (vagas legadas / criadas por admin)
+    ou se estiver na lista.
+    """
+    if usuario.papel == PapelUsuario.ADMIN:
+        return True
+    if usuario.papel == PapelUsuario.RH:
+        if not vaga.rhs_autorizados:
+            return True
+        return str(usuario.id) in vaga.rhs_autorizados
+    return False
+
+
 @router.post("/", response_model=VagaResponse, status_code=201)
-def criar_vaga(dados: VagaCreate, db: Session = DB, _=RH_OU_ADMIN):
+def criar_vaga(dados: VagaCreate, db: Session = DB, usuario=Depends(get_usuario_atual)):
+    if usuario.papel not in (PapelUsuario.RH, PapelUsuario.ADMIN):
+        raise HTTPException(status_code=403, detail="Apenas RH ou Admin pode criar vagas")
+
     payload = dados.model_dump()
-    payload["vetor_vaga"] = vetorizar_texto(dados.requisitos_texto)
+    payload["vetor_vaga"]    = vetorizar_texto(dados.requisitos_texto)
+    payload["criado_por_id"] = usuario.id
+    if usuario.papel == PapelUsuario.RH:
+        payload["rhs_autorizados"] = [str(usuario.id)]
+    # Admin cria com rhs_autorizados=None → qualquer RH pode editar
+
     vaga = Vaga(**payload)
     db.add(vaga)
     db.commit()
@@ -44,10 +67,17 @@ def criar_vaga(dados: VagaCreate, db: Session = DB, _=RH_OU_ADMIN):
 
 
 @router.patch("/{vaga_id}/requisitos", response_model=VagaResponse)
-def atualizar_requisitos(vaga_id: str, requisitos_texto: str, db: Session = DB, _=RH_OU_ADMIN):
+def atualizar_requisitos(
+    vaga_id: str,
+    requisitos_texto: str,
+    db: Session = DB,
+    usuario=Depends(get_usuario_atual),
+):
     vaga = db.query(Vaga).filter(Vaga.id == vaga_id).first()
     if not vaga:
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
+    if not _pode_editar_vaga(usuario, vaga):
+        raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta vaga")
     vaga.requisitos_texto = requisitos_texto
     vaga.vetor_vaga       = vetorizar_texto(requisitos_texto)
     db.commit()
@@ -65,10 +95,19 @@ def listar_vagas(
     Gestor: somente vagas onde seu UUID está em gestores_ids, mesma ordenação.
     """
     query = db.query(Vaga)
+    uid = str(usuario.id)
 
     if usuario.papel == PapelUsuario.GESTOR:
-        uid = str(usuario.id)
         query = query.filter(Vaga.gestores_ids.contains([uid]))
+    elif usuario.papel == PapelUsuario.RH:
+        # Mostra vagas sem restrição (rhs_autorizados SQL NULL) ou onde o RH está autorizado.
+        # none_as_null=True garante que Python None → SQL NULL (não JSON null).
+        query = query.filter(
+            or_(
+                Vaga.rhs_autorizados == None,
+                Vaga.rhs_autorizados.contains([uid]),
+            )
+        )
 
     return _ordenar_vagas(query).all()
 
@@ -114,10 +153,17 @@ def _recalcular_scores_vaga(vaga: Vaga, db: Session) -> int:
 
 
 @router.patch("/{vaga_id}/pesos", response_model=VagaResponse)
-def atualizar_pesos(vaga_id: str, dados: VagaUpdatePesos, db: Session = DB, _=RH_OU_ADMIN):
+def atualizar_pesos(
+    vaga_id: str,
+    dados: VagaUpdatePesos,
+    db: Session = DB,
+    usuario=Depends(get_usuario_atual),
+):
     vaga = db.query(Vaga).filter(Vaga.id == vaga_id).first()
     if not vaga:
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
+    if not _pode_editar_vaga(usuario, vaga):
+        raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta vaga")
     vaga.peso_rh             = dados.peso_rh
     vaga.peso_mercado        = dados.peso_mercado
     vaga.peso_curriculo      = dados.peso_curriculo
@@ -130,12 +176,19 @@ def atualizar_pesos(vaga_id: str, dados: VagaUpdatePesos, db: Session = DB, _=RH
 
 
 @router.patch("/{vaga_id}/status", response_model=VagaResponse)
-def atualizar_status(vaga_id: str, status: str, db: Session = DB, _=RH_OU_ADMIN):
+def atualizar_status(
+    vaga_id: str,
+    status: str,
+    db: Session = DB,
+    usuario=Depends(get_usuario_atual),
+):
     if status not in ("aberta", "pausada", "fechada"):
         raise HTTPException(status_code=400, detail="Status inválido")
     vaga = db.query(Vaga).filter(Vaga.id == vaga_id).first()
     if not vaga:
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
+    if not _pode_editar_vaga(usuario, vaga):
+        raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta vaga")
     vaga.status = status
     db.commit()
     db.refresh(vaga)
@@ -147,11 +200,48 @@ class GestoresUpdate(BaseModel):
 
 
 @router.patch("/{vaga_id}/gestores", response_model=VagaResponse)
-def atualizar_gestores(vaga_id: str, dados: GestoresUpdate, db: Session = DB, _=RH_OU_ADMIN):
+def atualizar_gestores(
+    vaga_id: str,
+    dados: GestoresUpdate,
+    db: Session = DB,
+    usuario=Depends(get_usuario_atual),
+):
     vaga = db.query(Vaga).filter(Vaga.id == vaga_id).first()
     if not vaga:
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
+    if not _pode_editar_vaga(usuario, vaga):
+        raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta vaga")
     vaga.gestores_ids = dados.gestores_ids
+    db.commit()
+    db.refresh(vaga)
+    return vaga
+
+
+@router.patch("/{vaga_id}/rhs-autorizados", response_model=VagaResponse)
+def atualizar_rhs_autorizados(
+    vaga_id: str,
+    dados: RhsAutorizadosUpdate,
+    db: Session = DB,
+    usuario=Depends(get_usuario_atual),
+):
+    """
+    Somente o criador da vaga ou Admin pode gerenciar os RHs autorizados.
+    O criador é sempre mantido na lista (não pode se auto-remover).
+    """
+    vaga = db.query(Vaga).filter(Vaga.id == vaga_id).first()
+    if not vaga:
+        raise HTTPException(status_code=404, detail="Vaga não encontrada")
+
+    eh_criador = str(usuario.id) == str(vaga.criado_por_id)
+    if usuario.papel != PapelUsuario.ADMIN and not eh_criador:
+        raise HTTPException(status_code=403, detail="Apenas o criador da vaga ou Admin pode gerenciar os RHs autorizados")
+
+    # Garante que o criador sempre permanece na lista
+    nova_lista = list(dados.rhs_autorizados)
+    if vaga.criado_por_id and str(vaga.criado_por_id) not in nova_lista:
+        nova_lista.insert(0, str(vaga.criado_por_id))
+
+    vaga.rhs_autorizados = nova_lista
     db.commit()
     db.refresh(vaga)
     return vaga
@@ -167,10 +257,16 @@ def deletar_vaga(vaga_id: str, db: Session = DB, _=APENAS_ADMIN):
 
 
 @router.post("/{vaga_id}/analisar-mercado", response_model=VagaResponse)
-async def analisar_mercado_vaga(vaga_id: str, db: Session = DB, _=RH_OU_ADMIN):
+async def analisar_mercado_vaga(
+    vaga_id: str,
+    db: Session = DB,
+    usuario=Depends(get_usuario_atual),
+):
     vaga = db.query(Vaga).filter(Vaga.id == vaga_id).first()
     if not vaga:
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
+    if not _pode_editar_vaga(usuario, vaga):
+        raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta vaga")
     resultado = await analisar_mercado(vaga.nome)
     vaga.vetor_mercado   = resultado["vetor_mercado"]
     vaga.ranking_mercado = {

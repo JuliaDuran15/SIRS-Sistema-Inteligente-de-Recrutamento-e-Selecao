@@ -64,6 +64,7 @@ def criar_candidatura(dados: CandidaturaCreate, db: Session = DB, _=RH_OU_ADMIN)
         candidato_id=dados.candidato_id,
         vaga_id=dados.vaga_id,
         historico=[],
+        origem="manual",
     )
     db.add(candidatura)
     db.commit()

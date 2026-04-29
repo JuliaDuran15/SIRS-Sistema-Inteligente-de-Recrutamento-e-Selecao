@@ -30,6 +30,13 @@ class Vaga(Base):
     gestores_ids     : Mapped[list | None] = mapped_column(JSONB, default=list)
     # [str(uuid), ...] — gestores técnicos atribuídos a esta vaga
 
+    criado_por_id    : Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    # UUID do RH que criou a vaga; None para vagas criadas por Admin ou vagas legadas
+
+    rhs_autorizados  : Mapped[list | None] = mapped_column(JSONB(none_as_null=True), nullable=True)
+    # [str(uuid), ...] — RHs com permissão exclusiva de editar esta vaga.
+    # None (SQL NULL) = qualquer RH pode editar (vagas legadas e vagas criadas por Admin)
+
     criado_em        : Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     candidaturas: Mapped[list["Candidatura"]] = relationship(back_populates="vaga")

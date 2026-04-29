@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 router = APIRouter()
 
+
 STATUS_APOS_AGENDAR = {
     "rh":      StatusCandidatura.ENTREVISTA_RH_AGENDADA,
     "tecnica": StatusCandidatura.ENTREVISTA_TEC_AGENDADA,
@@ -20,11 +21,6 @@ STATUS_APOS_REALIZAR = {
     "rh":      StatusCandidatura.ENTREVISTA_RH_REALIZADA,
     "tecnica": StatusCandidatura.ENTREVISTA_TEC_REALIZADA,
 }
-
-def _checar_agendamento(usuario):
-    """Só RH ou Admin podem agendar entrevistas."""
-    if usuario.papel not in (PapelUsuario.RH, PapelUsuario.ADMIN):
-        raise HTTPException(status_code=403, detail="Apenas RH ou Admin pode agendar entrevistas")
 
 
 def _checar_registro_resultado(tipo: str, usuario):
@@ -46,11 +42,38 @@ def agendar_entrevista(
     if dados.tipo not in ("rh", "tecnica"):
         raise HTTPException(status_code=400, detail="Tipo deve ser 'rh' ou 'tecnica'")
 
-    _checar_agendamento(usuario)
-
     candidatura = db.query(Candidatura).filter(Candidatura.id == dados.candidatura_id).first()
     if not candidatura:
         raise HTTPException(status_code=404, detail="Candidatura não encontrada")
+
+    vaga = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
+
+    if usuario.papel == PapelUsuario.ADMIN:
+        pass  # Admin pode sempre agendar qualquer tipo
+
+    elif usuario.papel == PapelUsuario.RH:
+        # RH precisa estar nos rhs_autorizados quando a vaga tem restrição
+        if vaga and vaga.rhs_autorizados and str(usuario.id) not in vaga.rhs_autorizados:
+            raise HTTPException(
+                status_code=403,
+                detail="Você não está autorizado a gerenciar candidaturas desta vaga",
+            )
+
+    elif usuario.papel == PapelUsuario.GESTOR:
+        # Gestor só pode agendar entrevista técnica na própria vaga
+        if dados.tipo != "tecnica":
+            raise HTTPException(
+                status_code=403,
+                detail="Gestor técnico só pode agendar entrevistas técnicas",
+            )
+        if not vaga or str(usuario.id) not in (vaga.gestores_ids or []):
+            raise HTTPException(
+                status_code=403,
+                detail="Você não é gestor desta vaga",
+            )
+
+    else:
+        raise HTTPException(status_code=403, detail="Acesso negado")
 
     entrevista = Entrevista(
         candidatura_id   = dados.candidatura_id,

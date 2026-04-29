@@ -9,7 +9,7 @@ from app.ai.matching_engine import (
     calcular_score_rh,
     gerar_explicacao,
 )
-from app.ai.resume_parser import parsear_curriculo
+from app.ai.resume_parser import parsear_curriculo, vetorizar_texto
 from app.core.celery_app import celery_app
 from app.db.session import SessionLocal
 from app.models.candidatura import Candidatura, StatusCandidatura
@@ -97,6 +97,7 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
     finally:
         db.close()
 
+
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=120)
 def atualizar_mercado_vaga(self, vaga_id: str):
     """
@@ -132,6 +133,75 @@ def atualizar_mercado_vaga(self, vaga_id: str):
             "status"  : "ok",
             "vaga_id" : vaga_id,
             "termos"  : len(resultado["termos_frequentes"]),
+        }
+
+    except Exception as exc:
+        db.rollback()
+        raise self.retry(exc=exc)
+
+    finally:
+        db.close()
+
+@celery_app.task(bind=True, max_retries=3, default_retry_delay=60)
+def processar_curriculo_texto(self, candidatura_id: str, texto: str):
+    """
+    Processa currículo recebido como texto puro (via webhook).
+    Equivalente a processar_curriculo, mas sem extração de PDF.
+    """
+    db = SessionLocal()
+
+    try:
+        candidatura = db.query(Candidatura).filter(
+            Candidatura.id == candidatura_id
+        ).first()
+        if not candidatura:
+            raise ValueError(f"Candidatura {candidatura_id} não encontrada")
+
+        vaga = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
+        if not vaga:
+            raise ValueError(f"Vaga não encontrada para candidatura {candidatura_id}")
+        if vaga.vetor_vaga is None:
+            raise ValueError("Vaga não possui vetor — tente novamente após a vaga ser vetorizada")
+
+        vetor = vetorizar_texto(texto)
+
+        score_rh        = calcular_score_rh(vetor, vaga.vetor_vaga)
+        vetor_mercado   = vaga.vetor_mercado if vaga.vetor_mercado is not None else vaga.vetor_vaga
+        score_mercado   = calcular_score_mercado(vetor, vetor_mercado)
+        score_curriculo = calcular_score_curriculo(
+            score_rh, score_mercado, vaga.peso_rh, vaga.peso_mercado
+        )
+        explicacao = gerar_explicacao(
+            score_rh, score_mercado, score_curriculo,
+            vaga.peso_rh, vaga.peso_mercado,
+        )
+
+        curriculo = db.query(Curriculo).filter(
+            Curriculo.candidatura_id == candidatura_id
+        ).first()
+        if not curriculo:
+            curriculo = Curriculo(candidatura_id=candidatura_id)
+            db.add(curriculo)
+
+        curriculo.texto_extraido  = texto
+        curriculo.vetor_embedding = vetor
+        curriculo.score_rh        = round(score_rh * 100, 1)
+        curriculo.score_mercado   = round(score_mercado * 100, 1)
+        curriculo.score_curriculo = score_curriculo
+        curriculo.processado_em   = datetime.utcnow()
+
+        candidatura.historico = (candidatura.historico or []) + [{
+            "evento"    : "curriculo_processado",
+            "em"        : datetime.utcnow().isoformat(),
+            "explicacao": explicacao,
+        }]
+        candidatura.status = StatusCandidatura.TRIAGEM_PENDENTE
+
+        db.commit()
+        return {
+            "status"         : "ok",
+            "candidatura_id" : candidatura_id,
+            "score_curriculo": score_curriculo,
         }
 
     except Exception as exc:

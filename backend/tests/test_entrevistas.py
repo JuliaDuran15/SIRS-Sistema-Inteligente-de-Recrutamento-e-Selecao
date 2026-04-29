@@ -39,9 +39,24 @@ class TestAgendarEntrevista:
         }, headers=auth_header(rh))
         assert r.status_code == 201
 
-    def test_gestor_nao_pode_agendar_nenhuma_entrevista(self, client, gestor, db):
-        c = make_candidato(db, email="gestor_ag@teste.com")
-        v = make_vaga(db)
+    def test_rh_sem_permissao_nao_pode_agendar(self, client, rh, db):
+        """RH não autorizado na vaga recebe 403 ao tentar agendar entrevista."""
+        outro_rh = make_usuario(db, PapelUsuario.RH, "Outro RH Ag", "outro_rh_ag@teste.com")
+        c = make_candidato(db, email="rh_nao_aut_ag@teste.com")
+        v = make_vaga(db, rhs_autorizados=[str(outro_rh.id)])
+        cand = make_candidatura(db, c, v, StatusCandidatura.APROVADO_TRIAGEM)
+
+        r = client.post("/entrevistas/", json={
+            "candidatura_id": str(cand.id),
+            "tipo": "rh",
+            "agendada_para": _dt_futuro(),
+        }, headers=auth_header(rh))
+        assert r.status_code == 403
+
+    def test_gestor_nao_pode_agendar_entrevista_rh(self, client, gestor, db):
+        """Gestor nunca pode agendar entrevistas de RH, mesmo sendo da vaga."""
+        c = make_candidato(db, email="gestor_ag_rh@teste.com")
+        v = make_vaga(db, gestores_ids=[str(gestor.id)])
         cand = make_candidatura(db, c, v, StatusCandidatura.APROVADO_TRIAGEM)
 
         r = client.post("/entrevistas/", json={
@@ -51,9 +66,24 @@ class TestAgendarEntrevista:
         }, headers=auth_header(gestor))
         assert r.status_code == 403
 
-    def test_gestor_nao_pode_agendar_tecnica_tambem(self, client, gestor, db):
-        c = make_candidato(db, email="gestor_tec_ag@teste.com")
-        v = make_vaga(db)
+    def test_gestor_da_vaga_pode_agendar_tecnica(self, client, gestor, db):
+        """Gestor atribuído à vaga pode agendar entrevista técnica."""
+        c = make_candidato(db, email="gestor_tec_ok@teste.com")
+        v = make_vaga(db, gestores_ids=[str(gestor.id)])
+        cand = make_candidatura(db, c, v, StatusCandidatura.ENTREVISTA_RH_REALIZADA)
+
+        r = client.post("/entrevistas/", json={
+            "candidatura_id": str(cand.id),
+            "tipo": "tecnica",
+            "agendada_para": _dt_futuro(),
+        }, headers=auth_header(gestor))
+        assert r.status_code == 201
+        assert r.json()["tipo"] == "tecnica"
+
+    def test_gestor_sem_atribuicao_nao_pode_agendar_tecnica(self, client, gestor, db):
+        """Gestor não atribuído à vaga não pode agendar entrevista técnica."""
+        c = make_candidato(db, email="gestor_tec_nao@teste.com")
+        v = make_vaga(db)  # sem gestores_ids
         cand = make_candidatura(db, c, v, StatusCandidatura.ENTREVISTA_RH_REALIZADA)
 
         r = client.post("/entrevistas/", json={
@@ -111,6 +141,20 @@ class TestAgendarEntrevista:
 
         db.refresh(cand)
         assert cand.status == StatusCandidatura.ENTREVISTA_RH_AGENDADA
+
+    def test_gestor_agendar_tecnica_avanca_status_candidatura(self, client, gestor, db):
+        c = make_candidato(db, email="gestor_ag_status@teste.com")
+        v = make_vaga(db, gestores_ids=[str(gestor.id)])
+        cand = make_candidatura(db, c, v, StatusCandidatura.ENTREVISTA_RH_REALIZADA)
+
+        client.post("/entrevistas/", json={
+            "candidatura_id": str(cand.id),
+            "tipo": "tecnica",
+            "agendada_para": _dt_futuro(),
+        }, headers=auth_header(gestor))
+
+        db.refresh(cand)
+        assert cand.status == StatusCandidatura.ENTREVISTA_TEC_AGENDADA
 
     def test_candidatura_inexistente_retorna_404(self, client, rh):
         r = client.post("/entrevistas/", json={
@@ -184,7 +228,7 @@ class TestRegistrarResultado:
         assert r.status_code == 403
 
     def test_reeditar_entrevista_realizada_retorna_200(self, client, rh, db):
-        """Re-editar uma entrevista já realizada agora é permitido."""
+        """Re-editar uma entrevista já realizada é permitido."""
         c = make_candidato(db, email="ja_real@teste.com")
         v = make_vaga(db)
         cand = make_candidatura(db, c, v, StatusCandidatura.ENTREVISTA_RH_REALIZADA)

@@ -19,7 +19,7 @@ sys.path.insert(0, "/app")
 
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm import sessionmaker
-from app.db.session import engine
+from app.db.session import engine, Base
 import app.db.base  # noqa — registra todos os models
 
 from app.models.usuario    import Usuario, PapelUsuario
@@ -35,6 +35,11 @@ from app.ai.matching_engine import (
 )
 from app.core.auth import hash_senha
 from app.core.config import settings
+
+# Garante que a extensão pgvector e todas as tabelas existem antes de qualquer operação
+from app.db.init_extensions import criar_extensoes
+criar_extensoes()
+Base.metadata.create_all(engine)
 
 db = sessionmaker(autocommit=False, autoflush=False, bind=engine,
                   expire_on_commit=False)()
@@ -378,7 +383,7 @@ def criar_candidatos():
     for d in CANDIDATOS_DATA:
         c = Candidato(
             nome=d["nome"], email=d["email"], telefone=d["tel"],
-            origem="manual", data_nascimento=d["nasc"],
+            data_nascimento=d["nasc"],
             cidade=d["cidade"], estado=d["uf"],
             formacao=d["formacao"],
         )
@@ -601,9 +606,13 @@ def criar_candidaturas(vagas, candidatos, usuarios):
             historico.append({"de":"decisao_pendente","para":final_map[etapa],
                                "ator":rh.nome,"em":_ago(1).isoformat()})
 
+        # Alguns candidatos simulam ter chegado via integração externa
+        origem_ext = idx_c in (6, 7, 13, 22, 24)
         cand_obj = Candidatura(
             candidato_id=cand.id, vaga_id=vaga.id,
             status=status, historico=historico,
+            origem="externo" if origem_ext else "manual",
+            fonte="greenhouse" if origem_ext else None,
         )
         db.add(cand_obj)
         db.flush()

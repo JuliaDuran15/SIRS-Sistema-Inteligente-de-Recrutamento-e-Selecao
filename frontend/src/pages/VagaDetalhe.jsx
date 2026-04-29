@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { useParams, Link } from "react-router-dom"
-import { getVaga, getCandidaturas, analisarMercado, updatePesos, updateGestores, getUsuarios, atualizarStatusCandidatura } from "../api"
+import { getVaga, getCandidaturas, analisarMercado, updatePesos, updateGestores, updateRhsAutorizados, getUsuarios, atualizarStatusCandidatura } from "../api"
 import { ScoreBar } from "../components/ScoreBar"
 import { Badge } from "../components/Badge"
 
@@ -43,9 +43,19 @@ export function VagaDetalhe({ usuario }) {
   const [gestoresSelecionados, setGestoresSel] = useState([])
   const [salvandoGestores, setSalvandoGestores] = useState(false)
   const [erroGestores, setErroGestores]     = useState(null)
+  const [rhsList, setRhsList]               = useState([])
+  const [editandoRhsAutorizados, setEditandoRhsAutorizados] = useState(false)
+  const [rhsAutorizadosSel, setRhsAutorizadosSel] = useState([])
+  const [salvandoRhsAutorizados, setSalvandoRhsAutorizados] = useState(false)
+  const [erroRhsAutorizados, setErroRhsAutorizados] = useState(null)
 
-  const podeEditarPesos  = usuario?.papel === "admin" || usuario?.papel === "rh"
-  const podeTriagem      = usuario?.papel === "admin" || usuario?.papel === "rh"
+  // Calcula permissões após vaga carregada
+  const rhsAutorizados  = vaga?.rhs_autorizados ?? []
+  const podeEditarPesos = usuario?.papel === "admin" ||
+    (usuario?.papel === "rh" && (rhsAutorizados.length === 0 || rhsAutorizados.includes(String(usuario?.id))))
+  const podeTriagem     = podeEditarPesos
+  const ehCriadorOuAdmin = usuario?.papel === "admin" ||
+    (usuario?.papel === "rh" && String(vaga?.criado_por_id) === String(usuario?.id))
   const [triagendo, setTriagendo] = useState({}) // { [candidaturaId]: true/false }
 
   async function handleTriagem(candidaturaId, novoStatus) {
@@ -61,11 +71,14 @@ export function VagaDetalhe({ usuario }) {
 
   useEffect(() => {
     const reqs = [getVaga(id), getCandidaturas(id)]
-    if (podeEditarPesos) reqs.push(getUsuarios())
+    if (usuario?.papel === "rh" || usuario?.papel === "admin") reqs.push(getUsuarios())
     Promise.all(reqs).then(([rv, rc, ru]) => {
       setVaga(rv.data)
       setCandidaturas(rc.data)
-      if (ru) setGestoresList(ru.data.filter(u => u.papel === "gestor"))
+      if (ru) {
+        setGestoresList(ru.data.filter(u => u.papel === "gestor"))
+        setRhsList(ru.data.filter(u => u.papel === "rh"))
+      }
     }).finally(() => setLoading(false))
   }, [id])
 
@@ -91,6 +104,33 @@ export function VagaDetalhe({ usuario }) {
       setErroGestores(err.response?.data?.detail ?? "Erro ao salvar gestores")
     } finally {
       setSalvandoGestores(false)
+    }
+  }
+
+  function abrirEdicaoRhsAutorizados() {
+    setRhsAutorizadosSel(vaga.rhs_autorizados ? [...vaga.rhs_autorizados] : [])
+    setErroRhsAutorizados(null)
+    setEditandoRhsAutorizados(true)
+  }
+
+  function toggleRhSel(uid) {
+    const criadorId = String(vaga?.criado_por_id)
+    if (uid === criadorId) return // criador não pode ser removido
+    setRhsAutorizadosSel(prev =>
+      prev.includes(uid) ? prev.filter(x => x !== uid) : [...prev, uid]
+    )
+  }
+
+  async function handleSalvarRhsAutorizados() {
+    setSalvandoRhsAutorizados(true); setErroRhsAutorizados(null)
+    try {
+      const r = await updateRhsAutorizados(id, rhsAutorizadosSel)
+      setVaga(r.data)
+      setEditandoRhsAutorizados(false)
+    } catch (err) {
+      setErroRhsAutorizados(err.response?.data?.detail ?? "Erro ao salvar RHs autorizados")
+    } finally {
+      setSalvandoRhsAutorizados(false)
     }
   }
 
@@ -388,6 +428,79 @@ export function VagaDetalhe({ usuario }) {
                     className="px-4 py-2 rounded-xl text-xs font-bold text-brand-black disabled:opacity-50"
                     style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}>
                     {salvandoGestores ? "Salvando..." : "Salvar gestores"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* RHs autorizados — visível apenas para o criador ou admin */}
+        {ehCriadorOuAdmin && (
+          <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--b-divider)" }}>
+            <div className="flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+                <span className="text-xs text-brand-pale/40 font-medium flex-shrink-0">RHs autorizados:</span>
+                {(vaga.rhs_autorizados?.length > 0) ? (
+                  vaga.rhs_autorizados.map(uid => {
+                    const rh = rhsList.find(u => String(u.id) === String(uid))
+                    const ehCriador = String(uid) === String(vaga.criado_por_id)
+                    return (
+                      <span key={uid} className="text-xs font-semibold px-2.5 py-1 rounded-lg"
+                        style={{ background: "rgba(26,170,128,0.15)", color: "#2EE8B4" }}>
+                        {rh?.nome ?? uid}{ehCriador ? " (criador)" : ""}
+                      </span>
+                    )
+                  })
+                ) : (
+                  <span className="text-xs text-brand-pale/30 italic">Qualquer RH pode editar</span>
+                )}
+              </div>
+              {!editandoRhsAutorizados && (
+                <button onClick={abrirEdicaoRhsAutorizados}
+                  className="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
+                  style={{ background: "rgba(26,170,128,0.12)", border: "1px solid rgba(26,170,128,0.25)", color: "#2EE8B4" }}>
+                  Gerenciar acesso
+                </button>
+              )}
+            </div>
+
+            {editandoRhsAutorizados && (
+              <div className="mt-3 space-y-3">
+                <p className="text-xs text-brand-pale/40">
+                  Selecione os analistas de RH com acesso exclusivo a esta vaga. O criador sempre permanece autorizado.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {rhsList.map(rh => {
+                    const uid = String(rh.id)
+                    const ehCriador = uid === String(vaga.criado_por_id)
+                    const sel = rhsAutorizadosSel.includes(uid) || ehCriador
+                    return (
+                      <button key={rh.id} type="button" onClick={() => toggleRhSel(uid)}
+                        disabled={ehCriador}
+                        className="px-3 py-1.5 rounded-xl text-xs font-semibold transition-all disabled:opacity-60 disabled:cursor-default"
+                        style={sel
+                          ? { background: "rgba(26,170,128,0.25)", color: "#2EE8B4", border: "1px solid rgba(26,170,128,0.4)" }
+                          : { background: "var(--s-chip)", color: "var(--t-muted2)", border: "1px solid var(--b-subtle)" }}>
+                        {sel ? "✓ " : ""}{rh.nome}{ehCriador ? " (criador)" : ""}
+                      </button>
+                    )
+                  })}
+                  {rhsList.length === 0 && (
+                    <p className="text-xs text-brand-pale/30">Nenhum analista de RH cadastrado no sistema.</p>
+                  )}
+                </div>
+                {erroRhsAutorizados && <p className="text-xs text-red-400">{erroRhsAutorizados}</p>}
+                <div className="flex gap-3">
+                  <button onClick={() => setEditandoRhsAutorizados(false)}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-brand-pale/50 hover:text-brand-pale transition-colors"
+                    style={{ border: "1px solid var(--b-subtle)" }}>
+                    Cancelar
+                  </button>
+                  <button onClick={handleSalvarRhsAutorizados} disabled={salvandoRhsAutorizados}
+                    className="px-4 py-2 rounded-xl text-xs font-bold text-brand-black disabled:opacity-50"
+                    style={{ background: "linear-gradient(135deg, #1AAA80, #2EE8B4)" }}>
+                    {salvandoRhsAutorizados ? "Salvando..." : "Salvar acesso"}
                   </button>
                 </div>
               </div>

@@ -40,9 +40,11 @@ class CandidatoMin(BaseModel):
 
 
 class VagaMin(BaseModel):
-    id           : UUID
-    nome         : str
-    gestores_ids : Any
+    id               : UUID
+    nome             : str
+    gestores_ids     : Any
+    criado_por_id    : UUID | None
+    rhs_autorizados  : Any
 
     model_config = {"from_attributes": True}
 
@@ -59,6 +61,8 @@ class CandidaturaResponse(BaseModel):
     status       : StatusCandidatura
     score_total  : float | None
     historico    : list | None
+    origem       : str
+    fonte        : str | None
     criado_em    : datetime
     atualizado_em: datetime
 

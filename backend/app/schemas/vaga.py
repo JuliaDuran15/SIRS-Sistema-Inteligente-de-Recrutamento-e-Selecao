@@ -51,9 +51,15 @@ class VagaResponse(BaseModel):
     status           : str
     ranking_mercado  : Any
     gestores_ids     : Any
+    criado_por_id    : UUID | None
+    rhs_autorizados  : Any
     criado_em        : datetime
 
     model_config = {"from_attributes": True}
+
+
+class RhsAutorizadosUpdate(BaseModel):
+    rhs_autorizados: list[str]
 
 
 class VagaUpdatePesos(BaseModel):

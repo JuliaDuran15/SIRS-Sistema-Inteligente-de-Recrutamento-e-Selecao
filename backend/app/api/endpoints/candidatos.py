@@ -23,13 +23,13 @@ def criar_candidato(dados: CandidatoCreate, db: Session = DB, _=RH_OU_ADMIN):
 
 @router.post("/webhook", response_model=CandidatoResponse, status_code=201)
 def webhook_candidato(dados: CandidatoCreate, db: Session = DB):
-    """Recebe candidatos vindos de sistemas externos (ATS, HRIS) — sem autenticação."""
+    """Recebe candidatos vindos de sistemas externos (ATS, HRIS) — sem autenticação.
+    Para importação completa (com vagas e candidaturas), use POST /webhook/importar."""
     existe = db.query(Candidato).filter(Candidato.email == dados.email).first()
     if existe:
         raise HTTPException(status_code=400, detail="Email já cadastrado")
     payload = dados.model_dump()
     payload["formacao"] = [f.model_dump() for f in dados.formacao]
-    payload["origem"]   = "externo"
     candidato = Candidato(**payload)
     db.add(candidato)
     db.commit()

@@ -24,6 +24,14 @@ export function Vagas({ usuario }) {
 
   const podeGerenciar = usuario?.papel === "rh" || usuario?.papel === "admin"
 
+  // Por vaga: admin sempre pode; RH só pode se estiver nos rhs_autorizados (ou vaga sem restrição)
+  function podeEditarVaga(v) {
+    if (usuario?.papel === "admin") return true
+    if (usuario?.papel !== "rh") return false
+    const rhs = v.rhs_autorizados ?? []
+    return rhs.length === 0 || rhs.includes(String(usuario?.id))
+  }
+
   useEffect(() => {
     const reqs = [getVagas()]
     if (podeGerenciar) reqs.push(getUsuarios())
@@ -243,8 +251,8 @@ export function Vagas({ usuario }) {
                   {STATUS_LABEL[v.status] ?? v.status}
                 </Badge>
 
-                {/* Botões de status para RH/Admin */}
-                {podeGerenciar && v.status !== "fechada" && (
+                {/* Botões de status — só para RHs autorizados nesta vaga ou admin */}
+                {podeEditarVaga(v) && v.status !== "fechada" && (
                   <div className="flex gap-1">
                     {v.status === "aberta" && (
                       <button onClick={() => handleStatus(v, "pausada")}
