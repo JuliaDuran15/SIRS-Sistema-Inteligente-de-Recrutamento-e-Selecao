@@ -5,6 +5,13 @@ from app.models.usuario import PapelUsuario
 from pydantic import BaseModel, EmailStr
 
 
+class UsuarioUpdate(BaseModel):
+    nome  : str | None = None
+    email : EmailStr | None = None
+    papel : PapelUsuario | None = None
+    senha : str | None = None   # se informada, substitui a senha atual
+
+
 class UsuarioCreate(BaseModel):
     nome  : str
     email : EmailStr

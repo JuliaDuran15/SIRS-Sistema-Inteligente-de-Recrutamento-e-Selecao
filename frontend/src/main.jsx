@@ -10,6 +10,7 @@ import { EntrevistaDetalhe } from "./pages/EntrevistaDetalhe"
 import { AdminUsuarios }     from "./pages/AdminUsuarios"
 import { CandidatoDetalhe } from "./pages/CandidatoDetalhe"
 import { Perfil }           from "./pages/Perfil"
+import { Dashboard }        from "./pages/Dashboard"
 import { EsqueceuSenha }   from "./pages/EsqueceuSenha"
 import { ResetarSenha }    from "./pages/ResetarSenha"
 import api                   from "./api"
@@ -64,6 +65,9 @@ function App() {
         }/>
         <Route path="/candidaturas/:candidaturaId/entrevistas" element={
           <Protegida><EntrevistaDetalhe usuario={usuario} /></Protegida>
+        }/>
+        <Route path="/dashboard" element={
+          <Protegida><Dashboard /></Protegida>
         }/>
         <Route path="/admin" element={
           <Protegida apenasAdmin><AdminUsuarios /></Protegida>

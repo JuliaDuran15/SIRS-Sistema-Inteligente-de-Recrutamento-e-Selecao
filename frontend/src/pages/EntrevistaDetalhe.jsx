@@ -26,6 +26,122 @@ const STATUS_COR_CAND = {
 
 const PROCESSANDO = new Set(["aguardando_processamento", "processando_curriculo"])
 
+const STATUS_LABEL_AUDIT = {
+  novo: "Candidatura criada",
+  aguardando_processamento: "Currículo enviado — aguardando processamento",
+  processando_curriculo: "Processando currículo",
+  triagem_pendente: "Triagem pendente",
+  aprovado_triagem: "Aprovado na triagem",
+  reprovado_triagem: "Reprovado na triagem",
+  entrevista_rh_agendada: "Entrevista RH agendada",
+  entrevista_rh_realizada: "Entrevista RH realizada",
+  reprovado_rh: "Reprovado na entrevista RH",
+  entrevista_tec_agendada: "Entrevista Técnica agendada",
+  entrevista_tec_realizada: "Entrevista Técnica realizada",
+  reprovado_tecnico: "Reprovado na entrevista técnica",
+  decisao_pendente: "Aguardando decisão final",
+  contratado: "Contratado",
+  nao_aprovado: "Não aprovado",
+  banco_de_talentos: "Banco de talentos",
+  curriculo_processado: "Currículo processado pela IA",
+}
+
+const COR_EVENTO = {
+  contratado: "#2EE8B4",
+  aprovado_triagem: "#4DC8E8",
+  entrevista_rh_agendada: "#4DC8E8",
+  entrevista_tec_agendada: "#4DC8E8",
+  entrevista_rh_realizada: "#4DC8E8",
+  entrevista_tec_realizada: "#4DC8E8",
+  curriculo_processado: "#A78BFA",
+  decisao_pendente: "#FCD34D",
+  reprovado_triagem: "#FCA5A5",
+  reprovado_rh: "#FCA5A5",
+  reprovado_tecnico: "#FCA5A5",
+  nao_aprovado: "#FCA5A5",
+  banco_de_talentos: "#C4B5FD",
+}
+
+// ── Histórico de auditoria ────────────────────────────────────────────────────
+function HistoricoTimeline({ historico }) {
+  const [aberto, setAberto] = useState(false)
+  if (!historico?.length) return null
+
+  const eventos = [...historico].reverse()
+
+  return (
+    <div className="card-glass rounded-2xl overflow-hidden">
+      <button
+        onClick={() => setAberto(a => !a)}
+        className="w-full flex items-center justify-between px-5 py-4 text-left transition-colors"
+        style={{ borderBottom: aberto ? "1px solid var(--b-subtle)" : "none" }}>
+        <span className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">
+          Histórico de auditoria
+        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-brand-pale/35 font-mono">{historico.length} eventos</span>
+          <span className="text-brand-pale/35 text-sm">{aberto ? "▲" : "▼"}</span>
+        </div>
+      </button>
+
+      {aberto && (
+        <div className="p-5">
+          <div className="relative">
+            {/* Linha vertical */}
+            <div className="absolute left-2.5 top-0 bottom-0 w-px"
+              style={{ background: "var(--b-normal)" }} />
+
+            <div className="space-y-4">
+              {eventos.map((ev, i) => {
+                const chave  = ev.para ?? ev.evento ?? ""
+                const cor    = COR_EVENTO[chave] ?? "#7DD8F0"
+                const label  = STATUS_LABEL_AUDIT[chave] ?? chave.replace(/_/g, " ")
+                const data   = ev.em ? new Date(ev.em).toLocaleString("pt-BR", {
+                  day: "2-digit", month: "2-digit", year: "numeric",
+                  hour: "2-digit", minute: "2-digit",
+                }) : null
+
+                return (
+                  <div key={i} className="flex items-start gap-4 pl-1">
+                    {/* Ponto na timeline */}
+                    <div className="w-4 h-4 rounded-full flex-shrink-0 mt-0.5 border-2 z-10"
+                      style={{
+                        background: `${cor}22`,
+                        borderColor: cor,
+                      }} />
+
+                    <div className="flex-1 min-w-0 -mt-0.5">
+                      <p className="text-sm font-semibold" style={{ color: cor }}>{label}</p>
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                        {ev.ator && ev.ator !== "sistema" && (
+                          <span className="text-xs text-brand-pale/55 font-medium">{ev.ator}</span>
+                        )}
+                        {ev.ator === "sistema" && (
+                          <span className="text-xs text-brand-pale/35 italic">automático</span>
+                        )}
+                        {data && (
+                          <span className="text-xs text-brand-pale/30 font-mono">{data}</span>
+                        )}
+                        {/* Score quando é evento de currículo processado */}
+                        {ev.explicacao?.score_final && (
+                          <span className="text-xs font-mono px-2 py-0.5 rounded-lg"
+                            style={{ background: "rgba(167,139,250,0.15)", color: "#A78BFA" }}>
+                            score: {ev.explicacao.score_final}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Tag input ────────────────────────────────────────────────────────────────
 function TagInput({ tags, onChange, placeholder }) {
   const [input, setInput] = useState("")
@@ -640,6 +756,7 @@ export function EntrevistaDetalhe({ usuario }) {
     (usuario?.papel === "rh" && (vagaRhsAutorizados.length === 0 || vagaRhsAutorizados.includes(String(usuario?.id))))
   const ehGestorDaVaga     = vagaGestoresIds.includes(String(usuario?.id))
 
+  const podeTriagem    = status === "triagem_pendente" && ehRhAutorizado
   const podeAgendarRH  = !rhFeita && !rhAgendada && status === "aprovado_triagem" && ehRhAutorizado
   const podeAgendarTec = rhFeita && !tecFeita && !tecAgendada && status === "entrevista_rh_realizada" &&
     (ehRhAutorizado || (usuario?.papel === "gestor" && ehGestorDaVaga))
@@ -711,6 +828,42 @@ export function EntrevistaDetalhe({ usuario }) {
           podeUpload={podeUpload}
           onAtualizado={c => setCandidatura(c)}
         />
+      )}
+
+      {/* Decisão de triagem — aparece quando o currículo foi processado e aguarda avaliação */}
+      {podeTriagem && (
+        <div className="card-glass rounded-2xl p-5 space-y-4"
+          style={{ borderColor: "rgba(245,158,11,0.35)" }}>
+          <div>
+            <h2 className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">
+              Triagem Curricular
+            </h2>
+            <p className="text-sm text-brand-pale/55 mt-1">
+              Avalie se o candidato avança para entrevista de RH ou é reprovado nesta etapa.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => tomarDecisao("aprovado_triagem")}
+              className="px-5 py-2.5 rounded-xl text-sm font-bold text-brand-black"
+              style={{ background: "linear-gradient(135deg, #1AAA80, #2EE8B4)" }}>
+              ✓ Aprovar — agendar entrevista RH
+            </button>
+            <button
+              onClick={() => tomarDecisao("reprovado_triagem")}
+              className="px-5 py-2.5 rounded-xl text-sm font-bold"
+              style={{ background: "rgba(252,165,165,0.12)", border: "1px solid rgba(252,165,165,0.25)", color: "#FCA5A5" }}>
+              ✕ Reprovar na triagem
+            </button>
+            <button
+              onClick={() => tomarDecisao("banco_de_talentos")}
+              className="px-5 py-2.5 rounded-xl text-sm font-bold"
+              style={{ background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.25)", color: "#C4B5FD" }}>
+              Banco de talentos
+            </button>
+          </div>
+          {decisaoErr && <p className="text-xs text-red-400">{decisaoErr}</p>}
+        </div>
       )}
 
       {/* Entrevistas existentes */}
@@ -806,6 +959,9 @@ export function EntrevistaDetalhe({ usuario }) {
           {decisaoErr && <p className="text-xs text-red-400">{decisaoErr}</p>}
         </div>
       )}
+
+      {/* Histórico de auditoria — sempre visível, colapsável */}
+      <HistoricoTimeline historico={candidatura.historico} />
     </div>
   )
 }

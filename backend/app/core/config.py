@@ -19,6 +19,14 @@ class Settings(BaseSettings):
     ADZUNA_COUNTRY         : str = "br"
     MARKET_ANALYZER_SOURCE : str = "adzuna"
 
+    # ── Modelos de embedding e reranking ──────────────────────────────────────
+    # Troca de modelo exige: 1) reiniciar containers  2) rodar migração para
+    # alterar dimensão dos vetores  3) reprocessar todos os currículos/vagas.
+    EMBEDDING_MODEL : str = "all-MiniLM-L6-v2"   # ou "all-mpnet-base-v2" (768d)
+    EMBEDDING_DIM   : int = 384                    # mude junto com o modelo
+    RERANKER_MODEL  : str = "BAAI/bge-reranker-base"
+    RERANKER_TOP_N  : int = 20                     # quantos candidatos reordenar
+
     # Webhook — deixe vazio para desabilitar autenticação (dev)
     WEBHOOK_SECRET_KEY : str = ""
 

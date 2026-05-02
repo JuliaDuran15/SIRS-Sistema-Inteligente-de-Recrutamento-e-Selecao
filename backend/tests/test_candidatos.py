@@ -80,7 +80,9 @@ class TestListarCandidatos:
     def test_rh_pode_listar(self, client, rh):
         r = client.get("/candidatos/", headers=auth_header(rh))
         assert r.status_code == 200
-        assert isinstance(r.json(), list)
+        body = r.json()
+        assert "items" in body and "total" in body
+        assert isinstance(body["items"], list)
 
     def test_gestor_pode_listar(self, client, gestor):
         r = client.get("/candidatos/", headers=auth_header(gestor))
@@ -91,8 +93,22 @@ class TestListarCandidatos:
 
     def test_candidato_criado_aparece_na_lista(self, client, rh, candidato):
         nomes = [c["nome"] for c in client.get("/candidatos/",
-                                                headers=auth_header(rh)).json()]
+                                                headers=auth_header(rh)).json()["items"]]
         assert candidato.nome in nomes
+
+    def test_busca_por_nome(self, client, rh, db):
+        from tests.conftest import make_candidato
+        make_candidato(db, nome="Busca Especial", email="busca@teste.com")
+        r = client.get("/candidatos/?q=busca+especial", headers=auth_header(rh))
+        assert r.status_code == 200
+        assert any("Busca" in c["nome"] for c in r.json()["items"])
+
+    def test_paginacao(self, client, rh):
+        r = client.get("/candidatos/?limit=1&offset=0", headers=auth_header(rh))
+        assert r.status_code == 200
+        body = r.json()
+        assert len(body["items"]) <= 1
+        assert body["limit"] == 1
 
 
 class TestBuscarCandidato:

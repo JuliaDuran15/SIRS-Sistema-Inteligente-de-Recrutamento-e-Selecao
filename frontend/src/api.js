@@ -24,8 +24,9 @@ export const updateVagaStatus = (id, status)=> api.patch(`/vagas/${id}/status`, 
 export const updateGestores        = (id, ids)  => api.patch(`/vagas/${id}/gestores`, { gestores_ids: ids })
 export const updateRhsAutorizados  = (id, ids)  => api.patch(`/vagas/${id}/rhs-autorizados`, { rhs_autorizados: ids })
 export const analisarMercado  = (id)        => api.post(`/vagas/${id}/analisar-mercado`)
+export const rerankarVaga     = (id)        => api.post(`/vagas/${id}/rerankar`)
 
-export const getCandidatos   = ()         => api.get("/candidatos/")
+export const getCandidatos   = (params)   => api.get("/candidatos/", { params })
 export const createCandidato = (data)     => api.post("/candidatos/", data)
 export const getCandidato    = (id)       => api.get(`/candidatos/${id}`)
 
@@ -36,6 +37,8 @@ export const getCandidatura     = (id)          => api.get(`/candidaturas/${id}`
 export const getCurriculo       = (candidaturaId)=> api.get(`/candidaturas/${candidaturaId}/curriculo`)
 export const atualizarStatusCandidatura = (id, novoStatus, ator) =>
   api.patch(`/candidaturas/${id}/status?novo_status=${novoStatus}&ator=${encodeURIComponent(ator)}`)
+export const triagemEmLote = (candidatura_ids, novo_status, ator) =>
+  api.post("/candidaturas/triagem-em-lote", { candidatura_ids, novo_status, ator })
 
 export const getEntrevistas     = (candidaturaId) => api.get(`/entrevistas/candidatura/${candidaturaId}`)
 export const agendarEntrevista  = (data)           => api.post("/entrevistas/", data)
@@ -44,7 +47,12 @@ export const editarAnotacoes    = (id, anotacoes)  => api.patch(`/entrevistas/${
 
 export const getUsuarios    = ()         => api.get("/usuarios/")
 export const createUsuario  = (data)     => api.post("/usuarios/", data)
+export const updateUsuario  = (id, data) => api.patch(`/usuarios/${id}`, data)
 export const deleteUsuario  = (id)       => api.delete(`/usuarios/${id}`)
+export const getAnalyticsResumo  = ()         => api.get("/analytics/resumo")
+export const getAnalyticsFunil   = (vaga_id)  => api.get("/analytics/funil",  vaga_id ? { params: { vaga_id } } : {})
+export const getAnalyticsScores  = (vaga_id)  => api.get("/analytics/scores", { params: { vaga_id } })
+
 export const alterarSenha   = (data)     => api.patch("/auth/senha", data)
 export const esqueceuSenha  = (email)    => api.post("/auth/esqueceu-senha", { email })
 export const resetarSenha   = (data)     => api.post("/auth/resetar-senha", data)

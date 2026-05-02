@@ -42,9 +42,18 @@ class CandidatoResponse(BaseModel):
     estado          : str | None
     cep             : str | None
     formacao        : Any
+    tem_candidatura_externa : bool = False
     criado_em       : datetime
 
     model_config = {"from_attributes": True}
+
+class CandidatoListResponse(BaseModel):
+    """Resposta paginada para GET /candidatos/."""
+    items  : list[CandidatoResponse]
+    total  : int
+    limit  : int
+    offset : int
+
 
 class CandidatoUpdate(BaseModel):
     nome            : str | None = None

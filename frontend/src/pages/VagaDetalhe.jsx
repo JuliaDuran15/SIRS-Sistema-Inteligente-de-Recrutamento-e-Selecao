@@ -1,26 +1,56 @@
 import { useState, useEffect } from "react"
 import { useParams, Link } from "react-router-dom"
-import { getVaga, getCandidaturas, analisarMercado, updatePesos, updateGestores, updateRhsAutorizados, getUsuarios, atualizarStatusCandidatura } from "../api"
+import { getVaga, getCandidaturas, analisarMercado, rerankarVaga, updatePesos, updateGestores, updateRhsAutorizados, getUsuarios, atualizarStatusCandidatura, triagemEmLote } from "../api"
 import { ScoreBar } from "../components/ScoreBar"
 import { Badge } from "../components/Badge"
 
 const corStatus = {
   novo: "gray", triagem_pendente: "amber",
   aprovado_triagem: "green", reprovado_triagem: "red",
+  reprovado_rh: "red", reprovado_tecnico: "red",
   entrevista_rh_agendada: "blue", entrevista_rh_realizada: "blue",
   entrevista_tec_agendada: "blue", entrevista_tec_realizada: "blue",
   decisao_pendente: "amber", contratado: "green",
   nao_aprovado: "red", banco_de_talentos: "purple",
 }
 
+// Labels curtos para badge
 const labelStatus = {
-  novo: "Novo", triagem_pendente: "Triagem pendente",
-  aprovado_triagem: "Aprovado triagem", reprovado_triagem: "Reprovado triagem",
-  entrevista_rh_agendada: "Entrevista RH", entrevista_rh_realizada: "RH realizada",
-  entrevista_tec_agendada: "Entrev. técnica", entrevista_tec_realizada: "Técnica realizada",
-  decisao_pendente: "Decisão pendente", contratado: "Contratado",
-  nao_aprovado: "Não aprovado", banco_de_talentos: "Banco de talentos",
+  novo: "Novo",
+  triagem_pendente: "Triagem pendente",
+  aprovado_triagem: "Ag. Entrevista RH",   // context label
+  reprovado_triagem: "Reprovado triagem",
+  entrevista_rh_agendada: "Entrevista RH",
+  entrevista_rh_realizada: "Ag. Entrevista Téc.",
+  reprovado_rh: "Reprovado RH",
+  entrevista_tec_agendada: "Entrevista Téc.",
+  entrevista_tec_realizada: "Ag. decisão",
+  reprovado_tecnico: "Reprovado Téc.",
+  decisao_pendente: "Decisão pendente",
+  contratado: "Contratado",
+  nao_aprovado: "Não aprovado",
+  banco_de_talentos: "Banco de talentos",
 }
+
+// Grupos de status para o filtro
+const FILTROS = [
+  { label: "Todos",         value: "" },
+  { label: "Triagem",       value: "triagem_pendente" },
+  { label: "Em processo",   value: "_em_processo" },   // entrevistas em andamento
+  { label: "Contratados",   value: "contratado" },
+  { label: "Reprovados",    value: "_reprovados" },
+  { label: "Banco talentos",value: "banco_de_talentos" },
+]
+
+const STATUS_EM_PROCESSO = new Set([
+  "aprovado_triagem",
+  "entrevista_rh_agendada", "entrevista_rh_realizada",
+  "entrevista_tec_agendada", "entrevista_tec_realizada",
+  "decisao_pendente",
+])
+const STATUS_REPROVADOS = new Set([
+  "reprovado_triagem", "reprovado_rh", "reprovado_tecnico", "nao_aprovado",
+])
 
 const rankStyle = [
   { background: "linear-gradient(135deg, #1AAA80, #2EE8B4)", color: "#07111A" },
@@ -33,6 +63,8 @@ export function VagaDetalhe({ usuario }) {
   const [vaga, setVaga]                 = useState(null)
   const [candidaturas, setCandidaturas] = useState([])
   const [analisando, setAnalisando]     = useState(false)
+  const [reranking,  setReranking]      = useState(false)
+  const [rerankado,  setRerankado]      = useState(false)
   const [loading, setLoading]           = useState(true)
   const [editandoPesos, setEditandoPesos] = useState(false)
   const [pesos, setPesos]               = useState(null)
@@ -47,6 +79,21 @@ export function VagaDetalhe({ usuario }) {
   const [editandoRhsAutorizados, setEditandoRhsAutorizados] = useState(false)
   const [rhsAutorizadosSel, setRhsAutorizadosSel] = useState([])
   const [salvandoRhsAutorizados, setSalvandoRhsAutorizados] = useState(false)
+  const [selecionados, setSelecionados]   = useState(new Set())
+  const [aplicandoLote, setAplicandoLote] = useState(false)
+  const [filtroStatus, setFiltroStatus]   = useState("")
+
+  // Filtro aplicado à lista de candidaturas — computado fora do JSX para evitar IIFE
+  const candidaturasFiltradas = candidaturas.filter(c => {
+    if (!filtroStatus) return true
+    if (filtroStatus === "_em_processo") return STATUS_EM_PROCESSO.has(c.status)
+    if (filtroStatus === "_reprovados")  return STATUS_REPROVADOS.has(c.status)
+    return c.status === filtroStatus
+  }).sort((a, b) => {
+    const sa = a.curriculo?.score_curriculo ?? a.score_total ?? 0
+    const sb = b.curriculo?.score_curriculo ?? b.score_total ?? 0
+    return sb - sa
+  })
   const [erroRhsAutorizados, setErroRhsAutorizados] = useState(null)
 
   // Calcula permissões após vaga carregada
@@ -81,6 +128,26 @@ export function VagaDetalhe({ usuario }) {
       }
     }).finally(() => setLoading(false))
   }, [id])
+
+  function toggleSelecionado(id) {
+    setSelecionados(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  async function aplicarTriagemLote(novoStatus) {
+    setAplicandoLote(true)
+    try {
+      await triagemEmLote([...selecionados], novoStatus, usuario?.nome ?? "rh")
+      setCandidaturas(prev => prev.map(c =>
+        selecionados.has(c.id) ? { ...c, status: novoStatus } : c
+      ))
+      setSelecionados(new Set())
+    } catch {/* silent */}
+    finally { setAplicandoLote(false) }
+  }
 
   function abrirEdicaoGestores() {
     setGestoresSel(vaga.gestores_ids ? [...vaga.gestores_ids] : [])
@@ -189,6 +256,27 @@ export function VagaDetalhe({ usuario }) {
     }
   }
 
+  async function handleRerankar() {
+    setReranking(true)
+    try {
+      const r = await rerankarVaga(id)
+      // O endpoint retorna os candidatos reordenados — substitui a lista local
+      // preservando os dados completos dos que não estavam no top-N
+      const rerankIds = new Set(r.data.map(c => c.id))
+      const reranked  = r.data.map(c => ({
+        ...candidaturas.find(ca => ca.id === c.id),
+        score_rerank: c.score_rerank,
+      }))
+      const resto = candidaturas.filter(ca => !rerankIds.has(ca.id))
+      setCandidaturas([...reranked, ...resto])
+      setRerankado(true)
+    } catch {
+      /* silencioso — modelo pode não estar disponível */
+    } finally {
+      setReranking(false)
+    }
+  }
+
   if (loading) return (
     <div className="space-y-4">
       <div className="h-8 w-64 rounded-xl animate-pulse" style={{ background: "var(--s-skeleton)" }} />
@@ -230,6 +318,27 @@ export function VagaDetalhe({ usuario }) {
             </div>
             <p className="text-sm text-brand-pale/55 leading-relaxed">{vaga.requisitos_texto}</p>
           </div>
+          <div className="flex gap-2 flex-shrink-0">
+          {podeEditarPesos && (
+            <button
+              onClick={handleRerankar}
+              disabled={reranking}
+              title="Reordena candidatos com cross-encoder (mais preciso, ~5–15s na 1ª vez)"
+              className="flex-shrink-0 px-4 py-2 text-sm font-bold rounded-xl transition-all disabled:opacity-50"
+              style={{
+                background: rerankado ? "rgba(26,170,128,0.15)" : "rgba(167,139,250,0.12)",
+                border    : rerankado ? "1px solid rgba(26,170,128,0.3)" : "1px solid rgba(167,139,250,0.25)",
+                color     : rerankado ? "#2EE8B4" : "#C4B5FD",
+              }}>
+              {reranking ? (
+                <span className="flex items-center gap-2">
+                  <span className="w-3 h-3 border-2 rounded-full animate-spin"
+                    style={{ borderColor: "rgba(196,181,253,0.4)", borderTopColor: "#C4B5FD" }} />
+                  Reordenando...
+                </span>
+              ) : rerankado ? "✓ Reordenado" : "Reordenar (IA)"}
+            </button>
+          )}
           <button
             onClick={handleAnalisarMercado}
             disabled={analisando}
@@ -259,7 +368,8 @@ export function VagaDetalhe({ usuario }) {
               </span>
             ) : "Analisar mercado"}
           </button>
-        </div>
+          </div>{/* fim flex gap-2 */}
+        </div>{/* fim flex items-start */}
 
         {/* Pesos */}
         <div
@@ -519,26 +629,68 @@ export function VagaDetalhe({ usuario }) {
             <h2 className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">
               Candidatos
             </h2>
-            <span className="text-xs text-brand-pale/35 font-mono font-semibold">
-              {candidaturas.length} {candidaturas.length === 1 ? "candidato" : "candidatos"}
-            </span>
+            <div className="flex items-center gap-3">
+              {podeTriagem && selecionados.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-brand-pale/50 font-semibold">{selecionados.size} selecionado(s):</span>
+                  <button onClick={() => aplicarTriagemLote("aprovado_triagem")} disabled={aplicandoLote}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                    style={{ background: "rgba(26,170,128,0.18)", border: "1px solid rgba(26,170,128,0.3)", color: "#2EE8B4" }}>
+                    ✓ Aprovar todos
+                  </button>
+                  <button onClick={() => aplicarTriagemLote("reprovado_triagem")} disabled={aplicandoLote}
+                    className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                    style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)", color: "#FCA5A5" }}>
+                    ✕ Reprovar todos
+                  </button>
+                  <button onClick={() => setSelecionados(new Set())}
+                    className="text-brand-pale/30 hover:text-brand-pale transition-colors text-sm">×</button>
+                </div>
+              )}
+              <span className="text-xs text-brand-pale/35 font-mono font-semibold">
+                {candidaturas.length} {candidaturas.length === 1 ? "candidato" : "candidatos"}
+              </span>
+            </div>
           </div>
 
+          {/* Filtro de status */}
+          {candidaturas.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-1 mb-3">
+              {FILTROS.map(f => {
+                const count = f.value === ""
+                  ? candidaturas.length
+                  : f.value === "_em_processo"
+                    ? candidaturas.filter(c => STATUS_EM_PROCESSO.has(c.status)).length
+                    : f.value === "_reprovados"
+                      ? candidaturas.filter(c => STATUS_REPROVADOS.has(c.status)).length
+                      : candidaturas.filter(c => c.status === f.value).length
+                if (count === 0 && f.value !== "") return null
+                return (
+                  <button key={f.value}
+                    onClick={() => { setFiltroStatus(f.value); setSelecionados(new Set()) }}
+                    className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all"
+                    style={filtroStatus === f.value
+                      ? { background: "rgba(26,139,191,0.25)", color: "#4DC8E8", border: "1px solid rgba(26,139,191,0.4)" }
+                      : { background: "var(--s-chip)", color: "var(--t-muted2)", border: "1px solid var(--b-subtle)" }}>
+                    {f.label} <span className="opacity-60">({count})</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
           {candidaturas.length === 0 ? (
-            <div
-              className="rounded-2xl p-10 text-center border-2 border-dashed"
-              style={{ borderColor: "var(--b-card)" }}
-            >
+            <div className="rounded-2xl p-10 text-center border-2 border-dashed"
+              style={{ borderColor: "var(--b-card)" }}>
               <p className="text-brand-pale/40 text-sm font-medium">Nenhum candidato vinculado a esta vaga.</p>
             </div>
+          ) : candidaturasFiltradas.length === 0 ? (
+            <div className="rounded-2xl p-8 text-center border-2 border-dashed"
+              style={{ borderColor: "var(--b-card)" }}>
+              <p className="text-brand-pale/40 text-sm">Nenhum candidato nesta etapa.</p>
+            </div>
           ) : (
-            candidaturas
-              .sort((a, b) => {
-                const sa = a.curriculo?.score_curriculo ?? a.score_total ?? 0
-                const sb = b.curriculo?.score_curriculo ?? b.score_total ?? 0
-                return sb - sa
-              })
-              .map((c, i) => {
+            candidaturasFiltradas.map((c, i) => {
                 const curriculo   = c.curriculo
                 const scoreRH     = curriculo?.score_rh      ?? null
                 const scoreMkt    = curriculo?.score_mercado  ?? null
@@ -556,10 +708,20 @@ export function VagaDetalhe({ usuario }) {
                   <div
                     key={c.id}
                     className="card-interactive rounded-2xl p-5"
-                    style={emTriagem ? { borderColor: "rgba(245,158,11,0.35)" } : undefined}
+                    style={selecionados.has(c.id)
+                      ? { borderColor: "rgba(26,139,191,0.5)", background: "rgba(26,139,191,0.06)" }
+                      : emTriagem ? { borderColor: "rgba(245,158,11,0.35)" } : undefined}
                   >
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
+                        {/* Checkbox de seleção — visível só em triagem pendente */}
+                        {podeTriagem && emTriagem && (
+                          <input type="checkbox"
+                            checked={selecionados.has(c.id)}
+                            onChange={() => toggleSelecionado(c.id)}
+                            className="w-4 h-4 rounded cursor-pointer flex-shrink-0 accent-sky-400"
+                          />
+                        )}
                         {/* Rank badge */}
                         <div
                           className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"

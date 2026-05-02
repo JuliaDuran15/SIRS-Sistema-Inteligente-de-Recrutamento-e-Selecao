@@ -1,5 +1,5 @@
 import app.db.base  # noqa: F401 — importa todos os models antes de qualquer endpoint
-from app.api.endpoints import auth, candidatos, candidaturas, entrevistas, usuarios, vagas, webhook
+from app.api.endpoints import analytics, auth, candidatos, candidaturas, entrevistas, usuarios, vagas, webhook
 from app.db.ensure_admin import garantir_admin
 from app.db.init_extensions import criar_extensoes
 from fastapi import FastAPI
@@ -28,6 +28,7 @@ app.include_router(candidatos.router,   prefix="/candidatos",   tags=["candidato
 app.include_router(candidaturas.router, prefix="/candidaturas", tags=["candidaturas"])
 app.include_router(entrevistas.router,  prefix="/entrevistas",  tags=["entrevistas"])
 app.include_router(webhook.router,      prefix="/webhook",      tags=["webhook"])
+app.include_router(analytics.router,    prefix="/analytics",    tags=["analytics"])
 
 @app.get("/health")
 def health():

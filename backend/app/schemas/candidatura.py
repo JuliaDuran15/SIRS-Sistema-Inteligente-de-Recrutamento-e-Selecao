@@ -50,6 +50,21 @@ class VagaMin(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class CandidaturaRerankItem(BaseModel):
+    """Item retornado pelo endpoint de reranking — adiciona score_rerank ao response padrão."""
+    id              : UUID
+    candidato_id    : UUID
+    vaga_id         : UUID
+    status          : StatusCandidatura
+    score_total     : float | None
+    score_curriculo : float | None      # score bi-encoder
+    score_rerank    : float | None      # score cross-encoder (0–1)
+    candidato       : CandidatoMin | None
+    curriculo       : CurriculoInfo | None
+
+    model_config = {"from_attributes": True}
+
+
 class CandidaturaCreate(BaseModel):
     candidato_id : UUID
     vaga_id      : UUID

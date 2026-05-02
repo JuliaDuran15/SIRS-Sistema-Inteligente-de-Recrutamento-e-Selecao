@@ -7,9 +7,10 @@ from app.ai.matching_engine import (
     calcular_score_curriculo,
     calcular_score_mercado,
     calcular_score_rh,
+    calcular_score_rh_multi_secao,
     gerar_explicacao,
 )
-from app.ai.resume_parser import parsear_curriculo, vetorizar_texto
+from app.ai.resume_parser import parsear_curriculo, vetorizar_texto, vetorizar_secoes
 from app.core.celery_app import celery_app
 from app.db.session import SessionLocal
 from app.models.candidatura import Candidatura, StatusCandidatura
@@ -41,21 +42,38 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
         # 2. Parseia o currículo — extrai texto e gera vetor
         resultado = parsear_curriculo(caminho_pdf)
 
-        # 3. Calcula os scores
-        score_rh      = calcular_score_rh(resultado["vetor_embedding"], vaga.vetor_vaga)
+        # 3. Vetores de seção (experiência e habilidades)
+        vetor_exp    = resultado.get("vetor_secao_exp")
+        vetor_skills = resultado.get("vetor_secao_skills")
+
+        # 4. Calcula scores — multi-seção quando disponível, fallback holístico
+        termos        = (vaga.ranking_mercado or {}).get("termos")
         vetor_mercado = vaga.vetor_mercado if vaga.vetor_mercado is not None else vaga.vetor_vaga
-        score_mercado = calcular_score_mercado(
-            resultado["vetor_embedding"],
-            vetor_mercado,
+
+        score_rh = calcular_score_rh_multi_secao(
+            vetor_embedding    = resultado["vetor_embedding"],
+            vetor_vaga         = vaga.vetor_vaga,
+            vetor_mercado      = vetor_mercado,
+            vetor_secao_exp    = vetor_exp,
+            vetor_secao_skills = vetor_skills,
+            texto_curriculo    = resultado["texto_extraido"],
+            texto_vaga         = vaga.requisitos_texto,
+            termos_mercado     = termos,
         )
+        score_mercado   = calcular_score_mercado(resultado["vetor_embedding"], vetor_mercado)
         score_curriculo = calcular_score_curriculo(
             score_rh, score_mercado, vaga.peso_rh, vaga.peso_mercado
         )
 
-        # 4. Gera explicação XAI
+        # 5. Explicação XAI com sinais estruturais
+        from app.ai.feature_extractor import extrair_features_curriculo, extrair_features_vaga
+        feat_cv   = extrair_features_curriculo(resultado["texto_extraido"])
+        feat_vaga = extrair_features_vaga(vaga.requisitos_texto, termos)
         explicacao = gerar_explicacao(
             score_rh, score_mercado, score_curriculo,
             vaga.peso_rh, vaga.peso_mercado,
+            features_cv   = feat_cv,
+            features_vaga = feat_vaga,
         )
 
         # 5. Salva no banco
@@ -67,9 +85,11 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
             curriculo = Curriculo(candidatura_id=candidatura_id)
             db.add(curriculo)
 
-        curriculo.texto_extraido   = resultado["texto_extraido"]
-        curriculo.vetor_embedding  = resultado["vetor_embedding"]
-        curriculo.score_rh         = round(score_rh * 100, 1)
+        curriculo.texto_extraido      = resultado["texto_extraido"]
+        curriculo.vetor_embedding     = resultado["vetor_embedding"]
+        curriculo.vetor_secao_exp     = resultado.get("vetor_secao_exp")
+        curriculo.vetor_secao_skills  = resultado.get("vetor_secao_skills")
+        curriculo.score_rh            = round(score_rh * 100, 1)
         curriculo.score_mercado    = round(score_mercado * 100, 1)
         curriculo.score_curriculo  = score_curriculo
         curriculo.processado_em    = datetime.utcnow()
@@ -163,17 +183,34 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
         if vaga.vetor_vaga is None:
             raise ValueError("Vaga não possui vetor — tente novamente após a vaga ser vetorizada")
 
-        vetor = vetorizar_texto(texto)
+        vetor  = vetorizar_texto(texto)
+        secs   = vetorizar_secoes(texto)
+        termos = (vaga.ranking_mercado or {}).get("termos")
 
-        score_rh        = calcular_score_rh(vetor, vaga.vetor_vaga)
-        vetor_mercado   = vaga.vetor_mercado if vaga.vetor_mercado is not None else vaga.vetor_vaga
+        vetor_mercado = vaga.vetor_mercado if vaga.vetor_mercado is not None else vaga.vetor_vaga
+        score_rh = calcular_score_rh_multi_secao(
+            vetor_embedding    = vetor,
+            vetor_vaga         = vaga.vetor_vaga,
+            vetor_mercado      = vetor_mercado,
+            vetor_secao_exp    = secs["exp"],
+            vetor_secao_skills = secs["skills"],
+            texto_curriculo    = texto,
+            texto_vaga         = vaga.requisitos_texto,
+            termos_mercado     = termos,
+        )
         score_mercado   = calcular_score_mercado(vetor, vetor_mercado)
         score_curriculo = calcular_score_curriculo(
             score_rh, score_mercado, vaga.peso_rh, vaga.peso_mercado
         )
+
+        from app.ai.feature_extractor import extrair_features_curriculo, extrair_features_vaga
+        feat_cv   = extrair_features_curriculo(texto)
+        feat_vaga = extrair_features_vaga(vaga.requisitos_texto, termos)
         explicacao = gerar_explicacao(
             score_rh, score_mercado, score_curriculo,
             vaga.peso_rh, vaga.peso_mercado,
+            features_cv   = feat_cv,
+            features_vaga = feat_vaga,
         )
 
         curriculo = db.query(Curriculo).filter(
@@ -183,8 +220,10 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
             curriculo = Curriculo(candidatura_id=candidatura_id)
             db.add(curriculo)
 
-        curriculo.texto_extraido  = texto
-        curriculo.vetor_embedding = vetor
+        curriculo.texto_extraido      = texto
+        curriculo.vetor_embedding     = vetor
+        curriculo.vetor_secao_exp     = secs["exp"]
+        curriculo.vetor_secao_skills  = secs["skills"]
         curriculo.score_rh        = round(score_rh * 100, 1)
         curriculo.score_mercado   = round(score_mercado * 100, 1)
         curriculo.score_curriculo = score_curriculo

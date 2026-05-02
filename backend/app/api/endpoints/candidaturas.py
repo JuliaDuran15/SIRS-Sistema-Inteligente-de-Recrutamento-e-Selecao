@@ -10,7 +10,8 @@ from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.vaga import Vaga
 from app.models.curriculo import Curriculo
 from app.schemas.candidatura import CandidaturaCreate, CandidaturaResponse, CurriculoDetalhado
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 router = APIRouter()
@@ -140,6 +141,65 @@ def get_curriculo(candidatura_id: str, db: Session = DB, _=QUALQUER_PAPEL):
     if not curriculo:
         raise HTTPException(status_code=404, detail="Currículo não encontrado para esta candidatura")
     return curriculo
+
+
+_TRIAGEM_DESTINOS = {
+    StatusCandidatura.APROVADO_TRIAGEM,
+    StatusCandidatura.REPROVADO_TRIAGEM,
+    StatusCandidatura.BANCO_TALENTOS,
+}
+
+
+class TriagemEmLoteRequest(BaseModel):
+    candidatura_ids : list[str]
+    novo_status     : StatusCandidatura
+    ator            : str = "rh"
+
+
+class TriagemEmLoteResponse(BaseModel):
+    atualizadas : int
+    erros       : list[dict]
+
+
+@router.post("/triagem-em-lote", response_model=TriagemEmLoteResponse)
+def triagem_em_lote(
+    dados   : TriagemEmLoteRequest,
+    db      : Session = DB,
+    usuario = Depends(get_usuario_atual),
+):
+    """Aplica o mesmo status de triagem a múltiplas candidaturas de uma vez.
+    Só é permitido para transições de triagem:
+    triagem_pendente → aprovado_triagem | reprovado_triagem | banco_de_talentos."""
+    from app.models.usuario import PapelUsuario
+
+    if usuario.papel not in (PapelUsuario.RH, PapelUsuario.ADMIN):
+        raise HTTPException(status_code=403, detail="Apenas RH ou Admin pode fazer triagem em lote")
+    if dados.novo_status not in _TRIAGEM_DESTINOS:
+        raise HTTPException(
+            status_code=400,
+            detail="Ação em lote só disponível para triagem (aprovado_triagem / reprovado_triagem / banco_de_talentos)",
+        )
+
+    atualizadas = 0
+    erros: list[dict] = []
+
+    for cid in dados.candidatura_ids:
+        sp = db.begin_nested()
+        try:
+            candidatura = db.query(Candidatura).filter(Candidatura.id == cid).first()
+            if not candidatura:
+                erros.append({"id": cid, "detalhe": "Não encontrada"})
+                sp.rollback()
+                continue
+            transicionar(candidatura, dados.novo_status, ator=dados.ator)
+            sp.commit()
+            atualizadas += 1
+        except Exception as exc:
+            sp.rollback()
+            erros.append({"id": cid, "detalhe": str(exc)})
+
+    db.commit()
+    return TriagemEmLoteResponse(atualizadas=atualizadas, erros=erros)
 
 
 @router.patch("/{candidatura_id}/status", response_model=CandidaturaResponse)

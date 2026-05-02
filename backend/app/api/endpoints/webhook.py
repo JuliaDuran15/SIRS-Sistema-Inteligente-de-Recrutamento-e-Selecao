@@ -36,6 +36,7 @@ from app.schemas.webhook import (
     ImportacaoResultado,
     VagaImport,
 )
+from app.core.rate_limit import checar_rate_limit
 from fastapi import APIRouter, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
@@ -307,6 +308,7 @@ async def importar(
     ```
     """
     _checar_api_key(api_key)
+    await checar_rate_limit(request, max_por_hora=120, max_por_minuto=15)
 
     content_type = request.headers.get("content-type", "").lower()
     body = await request.body()

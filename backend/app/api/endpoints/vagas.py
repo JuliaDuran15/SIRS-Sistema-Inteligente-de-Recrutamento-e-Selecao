@@ -4,11 +4,12 @@ from app.ai.resume_parser import vetorizar_texto
 from app.ai.tasks import atualizar_mercado_vaga
 from app.api.deps import DB
 from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL, get_usuario_atual
-from app.models.candidatura import Candidatura
+from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.curriculo import Curriculo
 from app.models.entrevista import Entrevista
 from app.models.usuario import PapelUsuario
 from app.models.vaga import Vaga
+from app.schemas.candidatura import CandidaturaRerankItem
 from app.schemas.vaga import RhsAutorizadosUpdate, VagaCreate, VagaResponse, VagaUpdatePesos
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -254,6 +255,86 @@ def deletar_vaga(vaga_id: str, db: Session = DB, _=APENAS_ADMIN):
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
     vaga.status = "fechada"
     db.commit()
+
+
+@router.post("/{vaga_id}/rerankar", response_model=list[CandidaturaRerankItem])
+def rerankar_candidaturas(
+    vaga_id : str,
+    db      : Session = DB,
+    usuario = Depends(get_usuario_atual),
+):
+    """
+    Reordena os candidatos da vaga usando cross-encoder (mais preciso que bi-encoder).
+
+    Fluxo:
+      1. Carrega os top-N candidaturas ordenadas por score_curriculo (bi-encoder)
+      2. Aplica o cross-encoder sobre (vaga_requisitos, trecho_cv) de cada uma
+      3. Retorna a lista reordenada com score_rerank adicionado
+
+    O cross-encoder é carregado na primeira chamada (~2–5s) e fica em memória.
+    Chamadas subsequentes são mais rápidas.
+    """
+    from app.ai.reranker import rerankar
+    from app.core.config import settings
+    from app.models.curriculo import Curriculo
+
+    vaga = db.query(Vaga).filter(Vaga.id == vaga_id).first()
+    if not vaga:
+        raise HTTPException(status_code=404, detail="Vaga não encontrada")
+
+    # Carrega candidaturas com curriculo processado, ordenadas por score
+    candidaturas = (
+        db.query(Candidatura)
+        .filter(Candidatura.vaga_id == vaga_id)
+        .all()
+    )
+
+    top_n   = settings.RERANKER_TOP_N
+    cur_map = {
+        str(c.candidatura_id): c
+        for c in db.query(Curriculo)
+            .filter(Curriculo.candidatura_id.in_([str(ca.id) for ca in candidaturas]))
+            .all()
+    }
+
+    # Prepara lista para o reranker
+    items = []
+    for ca in candidaturas:
+        cur = cur_map.get(str(ca.id))
+        items.append({
+            "id"               : str(ca.id),
+            "candidatura"      : ca,
+            "curriculo"        : cur,
+            "texto_curriculo"  : (cur.texto_extraido or "") if cur else "",
+            "score_curriculo"  : (cur.score_curriculo or 0) if cur else 0,
+        })
+
+    # Ordena por score bi-encoder e pega top-N
+    items_sorted = sorted(items, key=lambda x: x["score_curriculo"], reverse=True)
+
+    reranked = rerankar(
+        texto_vaga   = vaga.requisitos_texto,
+        candidaturas = items_sorted,
+        top_n        = top_n,
+    )
+
+    resultado = []
+    for item in reranked:
+        ca  = item["candidatura"]
+        cur = item["curriculo"]
+        resultado.append(CandidaturaRerankItem(
+            id              = ca.id,
+            candidato_id    = ca.candidato_id,
+            vaga_id         = ca.vaga_id,
+            status          = ca.status,
+            score_total     = ca.score_total,
+            score_curriculo = (cur.score_curriculo if cur else None),
+            score_rerank    = item.get("score_rerank"),
+            candidato       = ca.candidato,
+            curriculo       = cur,
+        ))
+
+    return resultado
 
 
 @router.post("/{vaga_id}/analisar-mercado", response_model=VagaResponse)

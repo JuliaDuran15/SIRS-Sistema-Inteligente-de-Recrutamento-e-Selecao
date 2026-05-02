@@ -4,11 +4,15 @@ from app.models.candidato import Candidato
 from app.models.candidatura import Candidatura
 from app.models.usuario import PapelUsuario
 from app.models.vaga import Vaga
-from app.schemas.candidato import CandidatoCreate, CandidatoResponse, CandidatoUpdate
-from fastapi import APIRouter, Depends, HTTPException
+from app.schemas.candidato import (
+    CandidatoCreate, CandidatoListResponse, CandidatoResponse, CandidatoUpdate,
+)
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 router = APIRouter()
+
 
 @router.post("/", response_model=CandidatoResponse, status_code=201)
 def criar_candidato(dados: CandidatoCreate, db: Session = DB, _=RH_OU_ADMIN):
@@ -26,8 +30,8 @@ def criar_candidato(dados: CandidatoCreate, db: Session = DB, _=RH_OU_ADMIN):
 
 @router.post("/webhook", response_model=CandidatoResponse, status_code=201)
 def webhook_candidato(dados: CandidatoCreate, db: Session = DB):
-    """Recebe candidatos vindos de sistemas externos (ATS, HRIS) — sem autenticação.
-    Para importação completa (com vagas e candidaturas), use POST /webhook/importar."""
+    """Recebe candidatos vindos de sistemas externos — sem autenticação.
+    Para importação completa (vagas + candidaturas), use POST /webhook/importar."""
     existe = db.query(Candidato).filter(Candidato.email == dados.email).first()
     if existe:
         raise HTTPException(status_code=400, detail="Email já cadastrado")
@@ -40,8 +44,19 @@ def webhook_candidato(dados: CandidatoCreate, db: Session = DB):
     return candidato
 
 
-@router.get("/", response_model=list[CandidatoResponse])
-def listar_candidatos(db: Session = DB, usuario=Depends(get_usuario_atual)):
+@router.get("/", response_model=CandidatoListResponse)
+def listar_candidatos(
+    q      : str | None = Query(None, description="Busca por nome ou e-mail"),
+    cidade : str | None = Query(None),
+    origem : str | None = Query(None, description="manual | externo"),
+    limit  : int        = Query(50, ge=1, le=200),
+    offset : int        = Query(0,  ge=0),
+    db     : Session    = DB,
+    usuario             = Depends(get_usuario_atual),
+):
+    query = db.query(Candidato)
+
+    # Filtra por papel
     if usuario.papel == PapelUsuario.GESTOR:
         uid = str(usuario.id)
         vaga_ids = (
@@ -55,8 +70,58 @@ def listar_candidatos(db: Session = DB, usuario=Depends(get_usuario_atual)):
             .distinct()
             .scalar_subquery()
         )
-        return db.query(Candidato).filter(Candidato.id.in_(candidato_ids)).all()
-    return db.query(Candidato).all()
+        query = query.filter(Candidato.id.in_(candidato_ids))
+
+    # Busca por nome ou e-mail
+    if q:
+        termo = f"%{q.lower()}%"
+        query = query.filter(
+            or_(
+                Candidato.nome.ilike(termo),
+                Candidato.email.ilike(termo),
+            )
+        )
+
+    # Filtros adicionais
+    if cidade:
+        query = query.filter(Candidato.cidade.ilike(f"%{cidade}%"))
+    if origem:
+        from app.models.candidatura import Candidatura as Cand
+        candidato_ids_origem = (
+            db.query(Cand.candidato_id)
+            .filter(Cand.origem == origem)
+            .distinct()
+            .scalar_subquery()
+        )
+        query = query.filter(Candidato.id.in_(candidato_ids_origem))
+
+    total = query.count()
+    candidatos_raw = (
+        query.order_by(Candidato.criado_em.desc())
+             .limit(limit)
+             .offset(offset)
+             .all()
+    )
+
+    # Identifica quais candidatos têm pelo menos uma candidatura externa
+    ids = [str(c.id) for c in candidatos_raw]
+    externos = set(
+        str(cid) for (cid,) in db.query(Candidatura.candidato_id)
+            .filter(
+                Candidatura.candidato_id.in_(ids),
+                Candidatura.origem == "externo",
+            )
+            .distinct()
+            .all()
+    ) if ids else set()
+
+    items = []
+    for c in candidatos_raw:
+        d = CandidatoResponse.model_validate(c)
+        d.tem_candidatura_externa = str(c.id) in externos
+        items.append(d)
+
+    return CandidatoListResponse(items=items, total=total, limit=limit, offset=offset)
 
 
 @router.get("/{candidato_id}", response_model=CandidatoResponse)
