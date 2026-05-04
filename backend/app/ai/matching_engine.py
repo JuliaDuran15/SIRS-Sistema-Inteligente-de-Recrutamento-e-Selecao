@@ -8,45 +8,40 @@ def _cos(a: list[float], b: list[float]) -> float:
 def calcular_score_rh_multi_secao(
     vetor_embedding    : list[float],
     vetor_vaga         : list[float],
-    vetor_mercado      : list[float],
     vetor_secao_exp    : list[float] | None = None,
-    vetor_secao_skills : list[float] | None = None,
     texto_curriculo    : str | None = None,
     texto_vaga         : str | None = None,
     formacao           : list | None = None,
     termos_mercado     : list | None = None,
+    # mantido por compatibilidade — não mais usado no cálculo do score_rh
+    vetor_mercado      : list[float] | None = None,
+    vetor_secao_skills : list[float] | None = None,
 ) -> float:
     """
-    Score de aderência usando vetores de seção quando disponíveis.
+    Score de aderência à vaga usando vetores de seção quando disponíveis.
 
-    Com seções (CV bem estruturado):
-      45% × sim(exp_section, vaga_req)   ← compatibilidade direta
-      30% × sim(full_cv, vaga_req)       ← holística
-      25% × sim(skills_section, mercado) ← skills vs tendência mercado
+    Com seção de experiência (CV bem estruturado):
+      60% × sim(exp_section, vaga_req)  ← compatibilidade direta
+      40% × sim(full_cv, vaga_req)      ← holística
 
     Sem seções (fallback):
       Usa calcular_score_rh padrão + bônus estrutural.
+
+    Nota: a comparação skills vs mercado pertence a calcular_score_mercado,
+    não a este score — para que peso_mercado=0 a desative completamente.
     """
-    tem_secoes = vetor_secao_exp is not None or vetor_secao_skills is not None
-
-    if tem_secoes:
-        # Componente experiência
-        sim_exp = _cos(vetor_secao_exp, vetor_vaga) if vetor_secao_exp else _cos(vetor_embedding, vetor_vaga)
-        # Componente holístico
+    if vetor_secao_exp is not None:
+        sim_exp  = _cos(vetor_secao_exp, vetor_vaga)
         sim_full = _cos(vetor_embedding, vetor_vaga)
-        # Componente skills vs mercado
-        sim_skills = _cos(vetor_secao_skills, vetor_mercado) if vetor_secao_skills else _cos(vetor_embedding, vetor_mercado)
+        score    = 0.60 * sim_exp + 0.40 * sim_full
 
-        score = 0.45 * sim_exp + 0.30 * sim_full + 0.25 * sim_skills
-
-        # Bônus estrutural (menor peso quando já temos seções — seções são mais precisas)
         if texto_curriculo and texto_vaga:
             from app.ai.feature_extractor import (
                 extrair_features_curriculo, extrair_features_vaga, calcular_bonus_estrutural,
             )
             feat_cv   = extrair_features_curriculo(texto_curriculo, formacao)
             feat_vaga = extrair_features_vaga(texto_vaga, termos_mercado)
-            bonus     = calcular_bonus_estrutural(feat_cv, feat_vaga) * 0.6  # peso reduzido
+            bonus     = calcular_bonus_estrutural(feat_cv, feat_vaga) * 0.6
             score     = max(0.0, min(1.0, score + bonus))
 
         return score
@@ -93,9 +88,22 @@ def calcular_score_rh(
 
 
 def calcular_score_mercado(
-    vetor_curriculo: list[float],
-    vetor_mercado  : list[float],
+    vetor_curriculo    : list[float],
+    vetor_mercado      : list[float],
+    vetor_secao_skills : list[float] | None = None,
 ) -> float:
+    """
+    Score de aderência ao mercado.
+
+    Com seção de habilidades:
+      60% × sim(skills_section, mercado)  ← alinhamento técnico focado
+      40% × sim(full_cv, mercado)         ← contexto holístico
+
+    Sem seção:
+      100% × sim(full_cv, mercado)
+    """
+    if vetor_secao_skills is not None:
+        return 0.60 * _cos(vetor_secao_skills, vetor_mercado) + 0.40 * _cos(vetor_curriculo, vetor_mercado)
     return _cos(vetor_curriculo, vetor_mercado)
 
 

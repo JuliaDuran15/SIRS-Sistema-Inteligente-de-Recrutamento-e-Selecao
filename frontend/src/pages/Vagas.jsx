@@ -21,6 +21,7 @@ export function Vagas({ usuario }) {
   const [criando, setCriando] = useState(false)
   const [erro, setErro]       = useState("")
   const [loading, setLoading] = useState(true)
+  const [busca, setBusca]     = useState("")
 
   const podeGerenciar = usuario?.papel === "rh" || usuario?.papel === "admin"
 
@@ -72,13 +73,14 @@ export function Vagas({ usuario }) {
     }))
   }
 
-  // Ordena: aberta-recente > aberta-antiga > pausada > fechada
-  const vagasOrdenadas = [...vagas].sort((a, b) => {
-    const ordem = { aberta: 0, pausada: 1, fechada: 2 }
-    const so = (ordem[a.status] ?? 3) - (ordem[b.status] ?? 3)
-    if (so !== 0) return so
-    return new Date(b.criado_em) - new Date(a.criado_em)
-  })
+  const vagasOrdenadas = [...vagas]
+    .sort((a, b) => {
+      const ordem = { aberta: 0, pausada: 1, fechada: 2 }
+      const so = (ordem[a.status] ?? 3) - (ordem[b.status] ?? 3)
+      if (so !== 0) return so
+      return new Date(b.criado_em) - new Date(a.criado_em)
+    })
+    .filter(v => !busca || v.nome.toLowerCase().includes(busca.toLowerCase()))
 
   return (
     <div>
@@ -216,6 +218,25 @@ export function Vagas({ usuario }) {
         </div>
       )}
 
+      {/* Busca */}
+      {!loading && vagas.length > 0 && (
+        <div className="relative mb-2">
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-pale/35 text-sm select-none">⌕</span>
+          <input
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            placeholder="Buscar vaga por nome…"
+            className="w-full rounded-xl pl-9 pr-4 py-2.5 text-sm transition-all"
+          />
+          {busca && (
+            <button onClick={() => setBusca("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-pale/35 hover:text-brand-pale transition-colors text-lg leading-none">
+              ×
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Lista */}
       {loading ? (
         <div className="space-y-2.5">
@@ -225,9 +246,17 @@ export function Vagas({ usuario }) {
           ))}
         </div>
       ) : vagasOrdenadas.length === 0 ? (
-        <div className="text-center py-24 rounded-2xl border-2 border-dashed"
+        <div className="text-center py-20 rounded-2xl border-2 border-dashed"
           style={{ borderColor: "var(--b-card)" }}>
-          <p className="text-brand-pale/55 text-sm font-semibold">Nenhuma vaga</p>
+          <p className="text-brand-pale/55 text-sm font-semibold">
+            {busca ? `Nenhuma vaga encontrada para "${busca}"` : "Nenhuma vaga"}
+          </p>
+          {busca && (
+            <button onClick={() => setBusca("")}
+              className="mt-2 text-xs text-brand-sky hover:underline">
+              Limpar busca
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-2.5">

@@ -51,16 +51,16 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
         vetor_mercado = vaga.vetor_mercado if vaga.vetor_mercado is not None else vaga.vetor_vaga
 
         score_rh = calcular_score_rh_multi_secao(
-            vetor_embedding    = resultado["vetor_embedding"],
-            vetor_vaga         = vaga.vetor_vaga,
-            vetor_mercado      = vetor_mercado,
-            vetor_secao_exp    = vetor_exp,
-            vetor_secao_skills = vetor_skills,
-            texto_curriculo    = resultado["texto_extraido"],
-            texto_vaga         = vaga.requisitos_texto,
-            termos_mercado     = termos,
+            vetor_embedding = resultado["vetor_embedding"],
+            vetor_vaga      = vaga.vetor_vaga,
+            vetor_secao_exp = vetor_exp,
+            texto_curriculo = resultado["texto_extraido"],
+            texto_vaga      = vaga.requisitos_texto,
+            termos_mercado  = termos,
         )
-        score_mercado   = calcular_score_mercado(resultado["vetor_embedding"], vetor_mercado)
+        score_mercado = calcular_score_mercado(
+            resultado["vetor_embedding"], vetor_mercado, vetor_secao_skills=vetor_skills
+        )
         score_curriculo = calcular_score_curriculo(
             score_rh, score_mercado, vaga.peso_rh, vaga.peso_mercado
         )
@@ -189,16 +189,16 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
 
         vetor_mercado = vaga.vetor_mercado if vaga.vetor_mercado is not None else vaga.vetor_vaga
         score_rh = calcular_score_rh_multi_secao(
-            vetor_embedding    = vetor,
-            vetor_vaga         = vaga.vetor_vaga,
-            vetor_mercado      = vetor_mercado,
-            vetor_secao_exp    = secs["exp"],
-            vetor_secao_skills = secs["skills"],
-            texto_curriculo    = texto,
-            texto_vaga         = vaga.requisitos_texto,
-            termos_mercado     = termos,
+            vetor_embedding = vetor,
+            vetor_vaga      = vaga.vetor_vaga,
+            vetor_secao_exp = secs["exp"],
+            texto_curriculo = texto,
+            texto_vaga      = vaga.requisitos_texto,
+            termos_mercado  = termos,
         )
-        score_mercado   = calcular_score_mercado(vetor, vetor_mercado)
+        score_mercado = calcular_score_mercado(
+            vetor, vetor_mercado, vetor_secao_skills=secs["skills"]
+        )
         score_curriculo = calcular_score_curriculo(
             score_rh, score_mercado, vaga.peso_rh, vaga.peso_mercado
         )
