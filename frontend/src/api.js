@@ -25,6 +25,7 @@ export const updateGestores        = (id, ids)  => api.patch(`/vagas/${id}/gesto
 export const updateRhsAutorizados  = (id, ids)  => api.patch(`/vagas/${id}/rhs-autorizados`, { rhs_autorizados: ids })
 export const analisarMercado  = (id)        => api.post(`/vagas/${id}/analisar-mercado`)
 export const rerankarVaga     = (id)        => api.post(`/vagas/${id}/rerankar`)
+export const exportarVaga     = (id)        => api.get(`/vagas/${id}/exportar`, { responseType: "blob" })
 
 export const getCandidatos   = (params)   => api.get("/candidatos/", { params })
 export const createCandidato = (data)     => api.post("/candidatos/", data)
@@ -35,6 +36,7 @@ export const getCandidaturasPorCandidato = (cid)=> api.get(`/candidaturas/?candi
 export const createCandidatura  = (data)        => api.post("/candidaturas/", data)
 export const getCandidatura     = (id)          => api.get(`/candidaturas/${id}`)
 export const getCurriculo       = (candidaturaId)=> api.get(`/candidaturas/${candidaturaId}/curriculo`)
+export const getCurriculoPdf    = (candidaturaId)=> api.get(`/candidaturas/${candidaturaId}/curriculo/pdf`, { responseType: "blob" })
 export const atualizarStatusCandidatura = (id, novoStatus, ator) =>
   api.patch(`/candidaturas/${id}/status?novo_status=${novoStatus}&ator=${encodeURIComponent(ator)}`)
 export const triagemEmLote = (candidatura_ids, novo_status, ator) =>

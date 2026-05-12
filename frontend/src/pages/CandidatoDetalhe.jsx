@@ -9,6 +9,7 @@ import {
 } from "../api"
 import { Badge } from "../components/Badge"
 import { ScoreBar } from "../components/ScoreBar"
+import { CvPreview } from "../components/CvPreview"
 
 const STATUS_COR = {
   novo: "gray", aguardando_processamento: "gray", processando_curriculo: "amber",
@@ -227,6 +228,17 @@ export function CandidatoDetalhe({ usuario }) {
                   <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(77,200,232,0.08)" }}>
                     <ScoreBar score={c.curriculo.score_curriculo}
                       label={`Score currículo: ${c.curriculo.score_curriculo}`} />
+                  </div>
+                )}
+
+                {/* Preview do CV */}
+                {(c.curriculo?.arquivo_pdf || c.curriculo?.texto_extraido) && (
+                  <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(77,200,232,0.08)" }}>
+                    <CvPreview
+                      candidaturaId={c.id}
+                      temPdf={!!c.curriculo?.arquivo_pdf}
+                      textoExtraido={c.curriculo?.texto_extraido}
+                    />
                   </div>
                 )}
 

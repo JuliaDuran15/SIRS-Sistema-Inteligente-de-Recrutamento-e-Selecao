@@ -12,13 +12,91 @@ from app.ai.matching_engine import (
 )
 from app.ai.resume_parser import parsear_curriculo, vetorizar_texto, vetorizar_secoes
 from app.core.celery_app import celery_app
+from app.core.email import email_cv_processado
 from app.core.logger import get_logger
 from app.db.session import SessionLocal
 from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.curriculo import Curriculo
+from app.models.usuario import Usuario
 from app.models.vaga import Vaga
 
 logger = get_logger("TASKS")
+
+
+def _recalcular_scores_mercado(db, vaga: Vaga) -> int:
+    """
+    Recalcula score_mercado e score_curriculo para todos os CVs processados
+    de uma vaga, usando o vetor_mercado atual.
+    Retorna a quantidade de currículos atualizados.
+    """
+    from app.models.candidatura import Candidatura as _Cand
+    from app.ai.feature_extractor import extrair_features_curriculo, extrair_features_vaga
+
+    novo_vetor = vaga.vetor_mercado
+    if novo_vetor is None:
+        return 0
+
+    termos = [t["termo"] for t in (vaga.ranking_mercado or {}).get("termos", [])]
+
+    curriculos = (
+        db.query(Curriculo)
+        .join(_Cand, Curriculo.candidatura_id == _Cand.id)
+        .filter(
+            _Cand.vaga_id == vaga.id,
+            Curriculo.vetor_embedding.isnot(None),
+            Curriculo.score_rh.isnot(None),
+        )
+        .all()
+    )
+
+    count = 0
+    for cur in curriculos:
+        try:
+            novo_mkt  = calcular_score_mercado(cur.vetor_embedding, novo_vetor,
+                                               vetor_secao_skills=cur.vetor_secao_skills)
+            s_rh_raw  = (cur.score_rh or 0) / 100
+            novo_final = calcular_score_curriculo(s_rh_raw, novo_mkt, vaga.peso_rh, vaga.peso_mercado)
+
+            # Regenera explicação com os novos valores
+            feat_cv   = extrair_features_curriculo(cur.texto_extraido or "")
+            feat_vaga = extrair_features_vaga(vaga.requisitos_texto, termos)
+            nova_expl = gerar_explicacao(
+                s_rh_raw, novo_mkt, novo_final,
+                vaga.peso_rh, vaga.peso_mercado,
+                features_cv=feat_cv, features_vaga=feat_vaga,
+            )
+
+            cur.score_mercado   = round(novo_mkt * 100, 1)
+            cur.score_curriculo = novo_final
+            cur.explicacao      = nova_expl
+            count += 1
+        except Exception:
+            pass
+
+    if count:
+        db.commit()
+    return count
+
+
+def _notificar_rh(db, vaga: Vaga, candidatura: Candidatura, score: float, explicacao: dict | None) -> None:
+    """Envia e-mail ao RH criador da vaga informando que o CV foi processado."""
+    if not vaga.criado_por_id:
+        return
+    try:
+        rh = db.query(Usuario).filter(Usuario.id == vaga.criado_por_id).first()
+        if rh and rh.email:
+            enviado = email_cv_processado(
+                destinatario   = rh.email,
+                nome_rh        = rh.nome,
+                candidato_nome = candidatura.candidato.nome if candidatura.candidato else "Candidato",
+                vaga_nome      = vaga.nome,
+                score          = score,
+                explicacao     = explicacao,
+            )
+            if enviado:
+                logger.info(f"e-mail enviado para {rh.email} | score={score}")
+    except Exception as exc:
+        logger.warning(f"falha ao enviar e-mail de notificação: {exc}")
 
 
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=60)
@@ -93,17 +171,12 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
         curriculo.vetor_embedding     = resultado["vetor_embedding"]
         curriculo.vetor_secao_exp     = resultado.get("vetor_secao_exp")
         curriculo.vetor_secao_skills  = resultado.get("vetor_secao_skills")
-        curriculo.score_rh            = round(score_rh * 100, 1)
-        curriculo.score_mercado    = round(score_mercado * 100, 1)
-        curriculo.score_curriculo  = score_curriculo
-        curriculo.processado_em    = datetime.utcnow()
+        curriculo.score_rh        = round(score_rh * 100, 1)
+        curriculo.score_mercado   = round(score_mercado * 100, 1)
+        curriculo.score_curriculo = score_curriculo
+        curriculo.explicacao      = explicacao
+        curriculo.processado_em   = datetime.utcnow()
 
-        # Salva a explicação XAI na candidatura
-        candidatura.historico = (candidatura.historico or []) + [{
-            "evento"    : "curriculo_processado",
-            "em"        : datetime.utcnow().isoformat(),
-            "explicacao": explicacao,
-        }]
         candidatura.status = StatusCandidatura.TRIAGEM_PENDENTE
 
         db.commit()
@@ -112,6 +185,8 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
             f"score_rh={round(score_rh*100,1)} score_mercado={round(score_mercado*100,1)} "
             f"score_curriculo={score_curriculo}"
         )
+
+        _notificar_rh(db, vaga, candidatura, score_curriculo, explicacao)
 
         return {
             "status"        : "ok",
@@ -162,10 +237,16 @@ def atualizar_mercado_vaga(self, vaga_id: str):
             f"fonte={resultado['fonte']}"
         )
 
+        # Recalcula score_mercado de todos os CVs já processados desta vaga
+        atualizados = _recalcular_scores_mercado(db, vaga)
+        if atualizados:
+            logger.info(f"vaga={vaga_id} | {atualizados} CVs recalculados com novo vetor de mercado")
+
         return {
-            "status"  : "ok",
-            "vaga_id" : vaga_id,
-            "termos"  : len(resultado["termos_frequentes"]),
+            "status"    : "ok",
+            "vaga_id"   : vaga_id,
+            "termos"    : len(resultado["termos_frequentes"]),
+            "cvs_recalc": atualizados,
         }
 
     except Exception as exc:
@@ -242,13 +323,9 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
         curriculo.score_rh        = round(score_rh * 100, 1)
         curriculo.score_mercado   = round(score_mercado * 100, 1)
         curriculo.score_curriculo = score_curriculo
+        curriculo.explicacao      = explicacao
         curriculo.processado_em   = datetime.utcnow()
 
-        candidatura.historico = (candidatura.historico or []) + [{
-            "evento"    : "curriculo_processado",
-            "em"        : datetime.utcnow().isoformat(),
-            "explicacao": explicacao,
-        }]
         candidatura.status = StatusCandidatura.TRIAGEM_PENDENTE
 
         db.commit()
@@ -257,6 +334,9 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
             f"score_rh={round(score_rh*100,1)} score_mercado={round(score_mercado*100,1)} "
             f"score_curriculo={score_curriculo}"
         )
+
+        _notificar_rh(db, vaga, candidatura, score_curriculo, explicacao)
+
         return {
             "status"         : "ok",
             "candidatura_id" : candidatura_id,

@@ -11,6 +11,7 @@ from app.models.vaga import Vaga
 from app.models.curriculo import Curriculo
 from app.schemas.candidatura import CandidaturaCreate, CandidaturaResponse, CurriculoDetalhado
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -116,6 +117,13 @@ def upload_curriculo(candidatura_id: str, arquivo: UploadFile = File(...),
     with caminho.open("wb") as f:
         shutil.copyfileobj(arquivo.file, f)
 
+    # Registra o nome do arquivo no curriculo para poder servir depois
+    curriculo = db.query(Curriculo).filter(Curriculo.candidatura_id == candidatura_id).first()
+    if not curriculo:
+        curriculo = Curriculo(candidatura_id=candidatura_id)
+        db.add(curriculo)
+    curriculo.arquivo_pdf = nome_arquivo
+
     historico = candidatura.historico or []
     historico.append({
         "de"  : candidatura.status,
@@ -142,6 +150,23 @@ def get_curriculo(candidatura_id: str, db: Session = DB, _=QUALQUER_PAPEL):
     if not curriculo:
         raise HTTPException(status_code=404, detail="Currículo não encontrado para esta candidatura")
     return curriculo
+
+
+@router.get("/{candidatura_id}/curriculo/pdf")
+def servir_pdf(candidatura_id: str, db: Session = DB, _=QUALQUER_PAPEL):
+    curriculo = db.query(Curriculo).filter(
+        Curriculo.candidatura_id == candidatura_id
+    ).first()
+    if not curriculo or not curriculo.arquivo_pdf:
+        raise HTTPException(status_code=404, detail="PDF não disponível para esta candidatura")
+    caminho = UPLOAD_DIR / curriculo.arquivo_pdf
+    if not caminho.exists():
+        raise HTTPException(status_code=404, detail="Arquivo PDF não encontrado no servidor")
+    return FileResponse(
+        path=str(caminho),
+        media_type="application/pdf",
+        headers={"Content-Disposition": "inline"},
+    )
 
 
 _TRIAGEM_DESTINOS = {

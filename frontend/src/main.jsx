@@ -5,6 +5,7 @@ import { Layout }            from "./components/Layout"
 import { Login }             from "./pages/Login"
 import { Vagas }             from "./pages/Vagas"
 import { VagaDetalhe }       from "./pages/VagaDetalhe"
+import { KanbanVaga }        from "./pages/KanbanVaga"
 import { Candidatos }        from "./pages/Candidatos"
 import { EntrevistaDetalhe } from "./pages/EntrevistaDetalhe"
 import { AdminUsuarios }     from "./pages/AdminUsuarios"
@@ -56,6 +57,9 @@ function App() {
         }/>
         <Route path="/vagas/:id" element={
           <Protegida><VagaDetalhe usuario={usuario} /></Protegida>
+        }/>
+        <Route path="/vagas/:id/kanban" element={
+          <Protegida><KanbanVaga usuario={usuario} /></Protegida>
         }/>
         <Route path="/candidatos" element={
           <Protegida><Candidatos /></Protegida>

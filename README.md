@@ -712,6 +712,7 @@ docker compose exec api python -m pytest tests/ -v
 docker compose exec api python -m pytest tests/test_vagas.py -v
 docker compose exec api python -m pytest tests/test_feature_extractor.py -v
 docker compose exec api python -m pytest tests/test_webhook.py -v
+docker compose exec api python -m pytest tests/test_analytics.py tests/test_fluxo_completo.py tests/test_candidaturas.py::TestTriagemEmLote -v
 ```
 
 ### Cobertura por módulo

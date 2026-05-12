@@ -368,3 +368,28 @@ Coletar N candidaturas com label binário (contratado / não contratado)
 Extrair o vetor de features: [sim_exp, sim_full, bonus_exp, bonus_nivel, bonus_overlap]
 Treinar uma regressão logística — os coeficientes aprenderão os pesos ótimos para o seu domínio específico
 Validar com NDCG@10 e MRR (métricas padrão de ranking)
+
+
+
+Funcionalidades faltando
+Alta prioridade
+
+Notificação de e-mail — a config SMTP já existe mas parece não estar sendo usada. Notificar candidatos quando aprovados/reprovados e RH quando um CV é processado seria um diferencial grande
+Preview de CV inline — hoje o RH precisa baixar o PDF para ver. Renderizar direto na página do candidato seria muito mais rápido no fluxo de triagem
+Status de processamento em tempo real — quando um CV está sendo processado (status processando_curriculo), o frontend não atualiza sozinho. Um polling simples ou WebSocket mostraria o progresso sem precisar recarregar
+Export CSV/Excel — lista de candidatos de uma vaga com scores, para compartilhar com o time
+Média prioridade
+
+Kanban do pipeline — visualizar candidatos como cards arrastáveis entre colunas (triagem → entrevista RH → técnica) seria mais natural que a lista atual
+Busca por score mínimo — "mostre só candidatos com score > 70" na VagaDetalhe
+Comentários internos — thread de discussão por candidatura (RH e Gestor podem anotar)
+
+IA / Scoring
+Explicabilidade do score — mostrar ao RH por que o candidato pontuou assim: "forte em Python (+15), fraco em Docker (-8), 3 anos de experiência relevante (+12)". O feature_extractor.py já calcula os componentes, só falta expor isso na UI
+Score de viés — verificar se candidatos de certos grupos estão sendo sistematicamente penalizados por viés no embedding (importante para compliance)
+Threshold configurável por vaga — "aprovar automaticamente todos com score > 85" para vagas de alto volume
+
+
+Export CSV/Excel — lista de candidatos de uma vaga com scores, para compartilhar com o time
+e fazer a adicção (pagina adicional)
+Kanban do pipeline — visualizar candidatos como cards arrastáveis entre colunas (triagem → entrevista RH → técnica) seria mais natural que a lista atual

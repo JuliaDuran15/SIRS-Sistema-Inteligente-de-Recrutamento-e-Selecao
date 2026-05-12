@@ -137,6 +137,7 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
     resultado = ImportacaoResultado()
     erros: list[ErroImportacao] = []
     vagas_map: dict[str, Vaga] = {}  # external_id → instância Vaga
+    tasks_pendentes: list = []       # (func, args) — despachadas após db.commit()
 
     # ── 1. Vagas ──────────────────────────────────────────────────────────────
     for vd in dados.vagas:
@@ -151,7 +152,7 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
                 )
                 db.add(vaga)
                 db.flush()
-                atualizar_mercado_vaga.delay(str(vaga.id))
+                tasks_pendentes.append((atualizar_mercado_vaga, [str(vaga.id)]))
                 resultado.vagas_criadas += 1
             if vd.external_id:
                 vagas_map[vd.external_id] = vaga
@@ -242,7 +243,7 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
                 # Avança status para ativar o spinner no frontend enquanto a task roda
                 if candidatura.status == StatusCandidatura.NOVO:
                     candidatura.status = StatusCandidatura.AGUARDANDO_PROC
-                processar_curriculo_texto.delay(str(candidatura.id), cd.curriculo_texto)
+                tasks_pendentes.append((processar_curriculo_texto, [str(candidatura.id), cd.curriculo_texto]))
                 resultado.curriculos_processados += 1
 
             sp.commit()
@@ -256,6 +257,12 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
             ))
 
     db.commit()
+
+    # Despacha tasks somente após commit — evita race condition onde o worker
+    # tenta ler registros que ainda não foram visíveis para outras sessões.
+    for task_fn, task_args in tasks_pendentes:
+        task_fn.delay(*task_args)
+
     if erros:
         logger.warning(
             f"fonte={dados.fonte or 'sem-fonte'} | {len(erros)} erro(s): "

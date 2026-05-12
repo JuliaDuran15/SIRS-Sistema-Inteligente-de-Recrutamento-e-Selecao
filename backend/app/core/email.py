@@ -111,3 +111,104 @@ def email_reset_senha(destinatario: str, nome: str, reset_url: str) -> bool:
 </html>
 """
     return enviar_email(destinatario, assunto, corpo)
+
+
+def _cor_score(score: float) -> str:
+    if score >= 70: return "#2EE8B4"
+    if score >= 50: return "#FCD34D"
+    return "#FCA5A5"
+
+
+def email_cv_processado(
+    destinatario   : str,
+    nome_rh        : str,
+    candidato_nome : str,
+    vaga_nome      : str,
+    score          : float,
+    explicacao     : dict | None = None,
+) -> bool:
+    cor   = _cor_score(score)
+    comp  = (explicacao or {}).get("componentes", {})
+    vaga_c = comp.get("aderencia_vaga",    {})
+    mkt_c  = comp.get("aderencia_mercado", {})
+    skills = (explicacao or {}).get("sinais_estruturais", {}).get("habilidades_em_comum", [])
+
+    # Construir blocos HTML separadamente para evitar f-strings aninhados
+    skills_html = "".join(
+        '<span style="display:inline-block;margin:2px 4px 2px 0;padding:2px 8px;'
+        'border-radius:6px;background:rgba(26,170,128,0.18);color:#2EE8B4;'
+        'font-size:11px;font-family:monospace">' + s + '</span>'
+        for s in skills[:8]
+    )
+
+    bloco_componentes = ""
+    if vaga_c:
+        bloco_componentes = (
+            '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px"><tr>'
+            '<td width="48%" style="padding:12px 16px;background:rgba(26,139,191,0.12);'
+            'border-radius:10px;border:1px solid rgba(26,139,191,0.2)">'
+            '<p style="margin:0 0 2px;font-size:10px;color:rgba(125,216,240,0.4);'
+            'text-transform:uppercase;letter-spacing:0.8px">Aderência à vaga</p>'
+            '<p style="margin:0;font-size:18px;font-weight:700;color:#4DC8E8;font-family:monospace">'
+            + str(vaga_c.get("score", 0)) + '/100</p>'
+            '<p style="margin:2px 0 0;font-size:11px;color:rgba(125,216,240,0.35)">Peso '
+            + str(vaga_c.get("peso", "—")) + " · " + str(vaga_c.get("classificacao", "")).capitalize() + '</p>'
+            '</td><td width="4%"></td>'
+            '<td width="48%" style="padding:12px 16px;background:rgba(26,139,191,0.08);'
+            'border-radius:10px;border:1px solid rgba(26,139,191,0.15)">'
+            '<p style="margin:0 0 2px;font-size:10px;color:rgba(125,216,240,0.4);'
+            'text-transform:uppercase;letter-spacing:0.8px">Aderência ao mercado</p>'
+            '<p style="margin:0;font-size:18px;font-weight:700;color:#4DC8E8;font-family:monospace">'
+            + str(mkt_c.get("score", 0)) + '/100</p>'
+            '<p style="margin:2px 0 0;font-size:11px;color:rgba(125,216,240,0.35)">Peso '
+            + str(mkt_c.get("peso", "—")) + " · " + str(mkt_c.get("classificacao", "")).capitalize() + '</p>'
+            '</td></tr></table>'
+        )
+
+    bloco_skills = ""
+    if skills:
+        bloco_skills = (
+            '<div style="margin-bottom:16px">'
+            '<p style="margin:0 0 6px;font-size:11px;color:rgba(125,216,240,0.4);'
+            'text-transform:uppercase;letter-spacing:0.8px">Skills em comum</p>'
+            + skills_html + '</div>'
+        )
+
+    corpo = (
+        '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"></head>'
+        '<body style="margin:0;padding:0;background:#07111A;font-family:\'Segoe UI\',sans-serif">'
+        '<table width="100%" cellpadding="0" cellspacing="0">'
+        '<tr><td align="center" style="padding:40px 16px">'
+        '<table width="520" cellpadding="0" cellspacing="0" style="background:#0E2030;'
+        'border-radius:16px;overflow:hidden;border:1px solid rgba(77,200,232,0.15)">'
+        '<tr><td style="background:linear-gradient(135deg,#1A8BBF,#4DC8E8);padding:24px 32px">'
+        '<p style="margin:0;font-size:20px;font-weight:700;color:#07111A">SIRS</p>'
+        '<p style="margin:2px 0 0;font-size:11px;color:rgba(7,17,26,0.6)">'
+        'Sistema Inteligente de Recrutamento e Seleção</p></td></tr>'
+        '<tr><td style="padding:28px 32px">'
+        '<p style="margin:0 0 4px;font-size:15px;font-weight:600;color:#DFF0F6">Olá, ' + nome_rh + '</p>'
+        '<p style="margin:0 0 20px;font-size:13px;color:rgba(125,216,240,0.55);line-height:1.6">'
+        'O currículo de <strong style="color:#4DC8E8">' + candidato_nome + '</strong>'
+        ' para a vaga <strong style="color:#4DC8E8">' + vaga_nome + '</strong> foi processado.</p>'
+        '<table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(14,80,104,0.3);'
+        'border-radius:12px;margin-bottom:20px"><tr><td style="padding:18px 24px">'
+        '<p style="margin:0 0 4px;font-size:11px;font-weight:700;color:rgba(125,216,240,0.4);'
+        'text-transform:uppercase;letter-spacing:1px">Score curricular</p>'
+        '<p style="margin:0;font-size:36px;font-weight:700;color:' + cor + ';font-family:monospace">'
+        + str(score) + '<span style="font-size:16px;color:rgba(125,216,240,0.35)">/100</span></p>'
+        '</td></tr></table>'
+        + bloco_componentes
+        + bloco_skills
+        + '<a href="' + settings.FRONTEND_URL + '" style="display:inline-block;padding:12px 24px;'
+        'border-radius:10px;background:linear-gradient(135deg,#1A8BBF,#4DC8E8);'
+        'color:#07111A;font-weight:700;font-size:13px;text-decoration:none">'
+        'Ver candidato no SIRS →</a>'
+        '</td></tr>'
+        '<tr><td style="padding:14px 32px 20px;border-top:1px solid rgba(77,200,232,0.08)">'
+        '<p style="margin:0;font-size:10px;color:rgba(125,216,240,0.2)">'
+        'SIRS — Sistema Inteligente de Recrutamento e Seleção</p></td></tr>'
+        '</table></td></tr></table></body></html>'
+    )
+
+    assunto = f"SIRS — CV processado: {candidato_nome} → {vaga_nome} ({score}/100)"
+    return enviar_email(destinatario, assunto, corpo)

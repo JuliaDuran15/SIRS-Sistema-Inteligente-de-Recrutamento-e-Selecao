@@ -13,10 +13,13 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
 
-# ── URLs ──────────────────────────────────────────────────────────────────────
-_BASE = "postgresql://sirs:sirs123@db:5432"
-TEST_DB_URL = f"{_BASE}/sirs_test_db"
-ADMIN_DB_URL = f"{_BASE}/sirs_db"
+# ── URLs ─────────────────────────────────────────────────────────────────────
+# Derivadas de DATABASE_URL para funcionar tanto no Docker (host=db)
+# quanto no CI do GitHub Actions (host=localhost).
+from app.core.config import settings as _settings
+_base = _settings.DATABASE_URL.rsplit("/", 1)[0]   # strip nome do banco
+ADMIN_DB_URL = _settings.DATABASE_URL
+TEST_DB_URL  = f"{_base}/sirs_test_db"
 
 # ── Criação/destruição da base de teste (escopo de sessão) ────────────────────
 @pytest.fixture(scope="session", autouse=True)

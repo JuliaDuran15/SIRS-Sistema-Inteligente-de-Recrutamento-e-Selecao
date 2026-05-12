@@ -7,10 +7,12 @@ from pydantic import BaseModel
 
 
 class CurriculoInfo(BaseModel):
-    texto_extraido : str | None    # necessário para o frontend detectar "aguardando processamento"
+    texto_extraido : str | None
+    arquivo_pdf    : str | None
     score_rh       : float | None
     score_mercado  : float | None
     score_curriculo: float | None
+    explicacao     : Any | None
     processado_em  : datetime | None
 
     model_config = {"from_attributes": True}
@@ -20,9 +22,11 @@ class CurriculoDetalhado(BaseModel):
     id              : UUID
     candidatura_id  : UUID
     texto_extraido  : str | None
+    arquivo_pdf     : str | None
     score_rh        : float | None
     score_mercado   : float | None
     score_curriculo : float | None
+    explicacao      : Any | None
     processado_em   : datetime | None
 
     model_config = {"from_attributes": True}

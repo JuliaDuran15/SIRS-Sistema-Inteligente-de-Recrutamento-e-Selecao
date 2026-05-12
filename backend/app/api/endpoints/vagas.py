@@ -1,7 +1,10 @@
 from app.ai.market_analyzer import analisar_mercado
+from app.core.logger import get_logger
+
+logger = get_logger("VAGAS")
 from app.ai.matching_engine import calcular_score_curriculo, calcular_score_final
 from app.ai.resume_parser import vetorizar_texto
-from app.ai.tasks import atualizar_mercado_vaga
+from app.ai.tasks import atualizar_mercado_vaga, _recalcular_scores_mercado
 from app.api.deps import DB
 from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL, get_usuario_atual
 from app.models.candidatura import Candidatura, StatusCandidatura
@@ -11,7 +14,10 @@ from app.models.usuario import PapelUsuario
 from app.models.vaga import Vaga
 from app.schemas.candidatura import CandidaturaRerankItem
 from app.schemas.vaga import RhsAutorizadosUpdate, VagaCreate, VagaResponse, VagaUpdatePesos
+import csv
+import io
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import case, or_
 from sqlalchemy.orm import Session
@@ -354,7 +360,93 @@ async def analisar_mercado_vaga(
         "termos"                : resultado["termos_frequentes"],
         "total_vagas_analisadas": resultado["total_vagas_analisadas"],
         "fonte"                 : resultado["fonte"],
+        "atualizado_em"         : __import__("datetime").datetime.utcnow().isoformat(),
     }
     db.commit()
+    logger.info(
+        f"vaga={vaga_id} nome='{vaga.nome}' | mercado atualizado | "
+        f"{resultado['total_vagas_analisadas']} vagas analisadas | fonte={resultado['fonte']}"
+    )
+
+    # Recalcula scores de mercado dos CVs já processados com o novo vetor
+    recalculados = _recalcular_scores_mercado(db, vaga)
+    if recalculados:
+        logger.info(f"vaga={vaga_id} | {recalculados} CVs recalculados com novo vetor de mercado")
+    else:
+        logger.info(f"vaga={vaga_id} | nenhum CV processado para recalcular")
+
     db.refresh(vaga)
     return vaga
+
+
+@router.get("/{vaga_id}/exportar")
+def exportar_candidatos(
+    vaga_id: str,
+    db: Session = DB,
+    _=QUALQUER_PAPEL,
+):
+    """Exporta candidatos da vaga como CSV com scores e skills."""
+    vaga = db.query(Vaga).filter(Vaga.id == vaga_id).first()
+    if not vaga:
+        raise HTTPException(status_code=404, detail="Vaga não encontrada")
+
+    candidaturas = (
+        db.query(Candidatura)
+        .filter(Candidatura.vaga_id == vaga_id)
+        .order_by(
+            Candidatura.score_total.desc().nullslast(),
+        )
+        .all()
+    )
+
+    buf = io.StringIO()
+    w   = csv.writer(buf)
+    w.writerow([
+        "Nome", "E-mail", "Telefone", "Cidade", "Estado",
+        "Status", "Score currículo", "Score RH", "Score mercado",
+        "Score total", "Anos experiência", "Skills em comum",
+    ])
+
+    STATUS_PT = {
+        "novo": "Novo", "triagem_pendente": "Triagem pendente",
+        "aprovado_triagem": "Aprovado triagem", "reprovado_triagem": "Reprovado triagem",
+        "entrevista_rh_agendada": "Entrevista RH agendada",
+        "entrevista_rh_realizada": "Entrevista RH realizada",
+        "reprovado_rh": "Reprovado RH",
+        "entrevista_tec_agendada": "Entrevista técnica agendada",
+        "entrevista_tec_realizada": "Entrevista técnica realizada",
+        "reprovado_tecnico": "Reprovado técnico",
+        "decisao_pendente": "Decisão pendente",
+        "contratado": "Contratado", "nao_aprovado": "Não aprovado",
+        "banco_de_talentos": "Banco de talentos",
+    }
+
+    for cand in candidaturas:
+        c   = cand.candidato
+        cur = cand.curriculo
+        expl = cur.explicacao if cur else None
+        sinais = (expl or {}).get("sinais_estruturais", {})
+        skills = ", ".join(sinais.get("habilidades_em_comum", []))
+        anos   = sinais.get("anos_experiencia", "")
+        w.writerow([
+            c.nome if c else "",
+            c.email if c else "",
+            c.telefone or "" if c else "",
+            c.cidade or "" if c else "",
+            c.estado or "" if c else "",
+            STATUS_PT.get(str(cand.status.value if hasattr(cand.status, "value") else cand.status), str(cand.status)),
+            cur.score_curriculo if cur else "",
+            cur.score_rh        if cur else "",
+            cur.score_mercado   if cur else "",
+            cand.score_total or "",
+            anos,
+            skills,
+        ])
+
+    buf.seek(0)
+    nome_arquivo = vaga.nome.replace(" ", "_").lower()[:40]
+    return StreamingResponse(
+        iter([buf.getvalue().encode("utf-8-sig")]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{nome_arquivo}_candidatos.csv"'},
+    )

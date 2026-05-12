@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react"
-import { useParams, Link } from "react-router-dom"
-import { getVaga, getCandidaturas, analisarMercado, rerankarVaga, updatePesos, updateGestores, updateRhsAutorizados, getUsuarios, atualizarStatusCandidatura, triagemEmLote } from "../api"
+import { useParams, Link, useNavigate } from "react-router-dom"
+import { getVaga, getCandidaturas, analisarMercado, rerankarVaga, updatePesos, updateGestores, updateRhsAutorizados, getUsuarios, atualizarStatusCandidatura, triagemEmLote, exportarVaga } from "../api"
 import { ScoreBar } from "../components/ScoreBar"
 import { Badge } from "../components/Badge"
+import { CvPreview } from "../components/CvPreview"
 
 const corStatus = {
   novo: "gray", triagem_pendente: "amber",
@@ -58,6 +59,115 @@ const rankStyle = [
   { background: "var(--b-strong)",                   color: "#4DC8E8" },
 ]
 
+const CLASS_COR = {
+  excelente: { bg: "rgba(26,170,128,0.15)", text: "#2EE8B4", border: "rgba(26,170,128,0.3)" },
+  bom:       { bg: "rgba(26,139,191,0.15)", text: "#4DC8E8", border: "rgba(26,139,191,0.3)" },
+  regular:   { bg: "rgba(245,158,11,0.12)", text: "#FCD34D", border: "rgba(245,158,11,0.25)" },
+  baixo:     { bg: "rgba(239,68,68,0.12)",  text: "#FCA5A5", border: "rgba(239,68,68,0.25)" },
+}
+
+function MiniBar({ valor, cor }) {
+  return (
+    <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--s-track)" }}>
+      <div className="h-full rounded-full transition-all" style={{ width: `${valor}%`, background: cor }} />
+    </div>
+  )
+}
+
+function ExplicacaoScore({ explicacao, expandido, onToggle }) {
+  if (!explicacao) return null
+  const { componentes, sinais_estruturais: sinais } = explicacao
+  const vaga_c  = componentes?.aderencia_vaga    ?? {}
+  const mkt_c   = componentes?.aderencia_mercado ?? {}
+  const skills  = sinais?.habilidades_em_comum   ?? []
+  const anosExp = sinais?.anos_experiencia        ?? 0
+  const nivEduc = sinais?.nivel_educacao          ?? 0
+
+  // Cor da barra conforme classificação
+  const corComp = (cls) =>
+    cls === "excelente" ? "#2EE8B4" : cls === "bom" ? "#4DC8E8" :
+    cls === "regular"   ? "#FCD34D" : "#FCA5A5"
+
+  return (
+    <div>
+      <button
+        onClick={onToggle}
+        className="flex items-center gap-2 text-xs text-brand-pale/40 hover:text-brand-pale/70 transition-colors mt-1"
+      >
+        <span>{expandido ? "▾" : "▸"}</span>
+        <span>Por que esse score?</span>
+      </button>
+
+      {expandido && (
+        <div className="mt-2 rounded-xl p-3 space-y-3"
+          style={{ background: "var(--s-content)", border: "1px solid var(--b-ghost)" }}>
+
+          {/* Componente: aderência à vaga */}
+          {vaga_c.score != null && (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-brand-pale/50">Aderência aos requisitos da vaga</span>
+                <span className="text-xs font-mono font-bold" style={{ color: corComp(vaga_c.classificacao) }}>
+                  {vaga_c.score}/100
+                  <span className="text-brand-pale/30 font-normal ml-1">· peso {vaga_c.peso}</span>
+                </span>
+              </div>
+              <MiniBar valor={vaga_c.score} cor={corComp(vaga_c.classificacao)} />
+              <p className="text-xs text-brand-pale/30">
+                Contribui com <strong style={{ color: corComp(vaga_c.classificacao) }}>{vaga_c.contribuicao} pts</strong> no score final
+                {anosExp > 0 && ` · ${anosExp} ${anosExp === 1 ? "ano" : "anos"} de experiência detectados`}
+                {nivEduc > 0 && ` · educação ${Math.round(nivEduc * 100)}%`}
+              </p>
+            </div>
+          )}
+
+          {/* Componente: aderência ao mercado */}
+          {mkt_c.score != null && (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-brand-pale/50">Aderência ao mercado de trabalho</span>
+                <span className="text-xs font-mono font-bold" style={{ color: corComp(mkt_c.classificacao) }}>
+                  {mkt_c.score}/100
+                  <span className="text-brand-pale/30 font-normal ml-1">· peso {mkt_c.peso}</span>
+                </span>
+              </div>
+              <MiniBar valor={mkt_c.score} cor={corComp(mkt_c.classificacao)} />
+              <p className="text-xs text-brand-pale/30">
+                Contribui com <strong style={{ color: corComp(mkt_c.classificacao) }}>{mkt_c.contribuicao} pts</strong> no score final
+                · compara skills do CV com demanda real de vagas do mercado
+              </p>
+            </div>
+          )}
+
+          {/* Skills em comum com a vaga */}
+          {skills.length > 0 && (
+            <div className="space-y-1.5 pt-1 border-t" style={{ borderColor: "var(--b-ghost)" }}>
+              <span className="text-xs text-brand-pale/35">
+                {skills.length} {skills.length === 1 ? "skill detectada" : "skills detectadas"} nos requisitos da vaga:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {skills.map(s => (
+                  <span key={s} className="text-xs px-2 py-0.5 rounded-lg font-mono"
+                    style={{ background: "rgba(26,170,128,0.12)", color: "#2EE8B4" }}>
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Nota sobre anos de experiência (quando skills vazias) */}
+          {skills.length === 0 && anosExp === 0 && (
+            <p className="text-xs text-brand-pale/25 italic">
+              Nenhuma skill específica detectada — score baseado em similaridade semântica do texto.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function VagaDetalhe({ usuario }) {
   const { id }                          = useParams()
   const [vaga, setVaga]                 = useState(null)
@@ -82,6 +192,8 @@ export function VagaDetalhe({ usuario }) {
   const [selecionados, setSelecionados]   = useState(new Set())
   const [aplicandoLote, setAplicandoLote] = useState(false)
   const [filtroStatus, setFiltroStatus]   = useState("")
+  const [exportando, setExportando]       = useState(false)
+  const navigate = useNavigate()
 
   // Filtro aplicado à lista de candidaturas — computado fora do JSX para evitar IIFE
   const candidaturasFiltradas = candidaturas.filter(c => {
@@ -103,7 +215,13 @@ export function VagaDetalhe({ usuario }) {
   const podeTriagem     = podeEditarPesos
   const ehCriadorOuAdmin = usuario?.papel === "admin" ||
     (usuario?.papel === "rh" && String(vaga?.criado_por_id) === String(usuario?.id))
-  const [triagendo, setTriagendo] = useState({}) // { [candidaturaId]: true/false }
+  const [triagendo, setTriagendo] = useState({})
+  const [expandidos, setExpandidos] = useState(new Set())
+  const toggleExpandido = id => setExpandidos(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
 
   async function handleTriagem(candidaturaId, novoStatus) {
     setTriagendo(t => ({ ...t, [candidaturaId]: true }))
@@ -115,6 +233,19 @@ export function VagaDetalhe({ usuario }) {
       setTriagendo(t => ({ ...t, [candidaturaId]: false }))
     }
   }
+
+  // Polling automático enquanto algum CV está sendo processado
+  useEffect(() => {
+    const EM_PROC = new Set(["aguardando_processamento", "processando_curriculo"])
+    const temProcessando = candidaturas.some(c => EM_PROC.has(c.status))
+    if (!temProcessando) return
+
+    const timer = setInterval(() => {
+      getCandidaturas(id).then(r => setCandidaturas(r.data))
+    }, 5000)
+
+    return () => clearInterval(timer)
+  }, [candidaturas, id])
 
   useEffect(() => {
     const reqs = [getVaga(id), getCandidaturas(id)]
@@ -147,6 +278,20 @@ export function VagaDetalhe({ usuario }) {
       setSelecionados(new Set())
     } catch {/* silent */}
     finally { setAplicandoLote(false) }
+  }
+
+  async function handleExportar() {
+    setExportando(true)
+    try {
+      const r = await exportarVaga(id)
+      const url = URL.createObjectURL(new Blob([r.data], { type: "text/csv;charset=utf-8" }))
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${vaga.nome.replace(/\s+/g, "_").toLowerCase()}_candidatos.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {/* silent */}
+    finally { setExportando(false) }
   }
 
   function abrirEdicaoGestores() {
@@ -308,8 +453,8 @@ export function VagaDetalhe({ usuario }) {
 
       {/* Header da vaga */}
       <div className="card-glass rounded-2xl p-6 mb-6">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
+        <div className="flex flex-wrap items-start gap-4">
+          <div className="flex-1 min-w-0" style={{ minWidth: "200px" }}>
             <div className="flex items-center gap-3 mb-2">
               <h1 className="text-xl font-bold text-brand-cloud">{vaga.nome}</h1>
               <Badge cor={{ aberta: "green", pausada: "amber", fechada: "gray" }[vaga.status]}>
@@ -318,13 +463,13 @@ export function VagaDetalhe({ usuario }) {
             </div>
             <p className="text-sm text-brand-pale/55 leading-relaxed">{vaga.requisitos_texto}</p>
           </div>
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex flex-wrap gap-2">
           {podeEditarPesos && (
             <button
               onClick={handleRerankar}
               disabled={reranking}
               title="Reordena candidatos com cross-encoder (mais preciso, ~5–15s na 1ª vez)"
-              className="flex-shrink-0 px-4 py-2 text-sm font-bold rounded-xl transition-all disabled:opacity-50"
+              className="px-4 py-2 text-sm font-bold rounded-xl transition-all disabled:opacity-50"
               style={{
                 background: rerankado ? "rgba(26,170,128,0.15)" : "rgba(167,139,250,0.12)",
                 border    : rerankado ? "1px solid rgba(26,170,128,0.3)" : "1px solid rgba(167,139,250,0.25)",
@@ -342,7 +487,7 @@ export function VagaDetalhe({ usuario }) {
           <button
             onClick={handleAnalisarMercado}
             disabled={analisando}
-            className="flex-shrink-0 px-4 py-2 text-brand-sky text-sm font-bold rounded-xl transition-all disabled:opacity-50"
+            className="px-4 py-2 text-brand-sky text-sm font-bold rounded-xl transition-all disabled:opacity-50"
             style={{
               background: "rgba(26, 139, 191, 0.14)",
               border: "1px solid rgba(26, 139, 191, 0.3)",
@@ -367,6 +512,25 @@ export function VagaDetalhe({ usuario }) {
                 Analisando...
               </span>
             ) : "Analisar mercado"}
+          </button>
+
+          {/* Kanban */}
+          <button
+            onClick={() => navigate(`/vagas/${id}/kanban`)}
+            className="px-4 py-2 text-sm font-bold rounded-xl transition-all"
+            style={{ background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.25)", color: "#C4B5FD" }}
+          >
+            Kanban
+          </button>
+
+          {/* Exportar CSV */}
+          <button
+            onClick={handleExportar}
+            disabled={exportando || candidaturas.length === 0}
+            className="px-4 py-2 text-sm font-bold rounded-xl transition-all disabled:opacity-40"
+            style={{ background: "rgba(46,232,180,0.1)", border: "1px solid rgba(46,232,180,0.25)", color: "#2EE8B4" }}
+          >
+            {exportando ? "Exportando..." : "↓ CSV"}
           </button>
           </div>{/* fim flex gap-2 */}
         </div>{/* fim flex items-start */}
@@ -768,6 +932,24 @@ export function VagaDetalhe({ usuario }) {
                       <div className="pl-11 space-y-2.5">
                         <ScoreBar score={scoreRH}  label="Aderência aos requisitos da vaga" />
                         <ScoreBar score={scoreMkt} label="Aderência ao mercado" />
+                        <ExplicacaoScore
+                          explicacao={curriculo?.explicacao}
+                          expandido={expandidos.has(c.id)}
+                          onToggle={() => toggleExpandido(c.id)}
+                        />
+                        <CvPreview
+                          candidaturaId={c.id}
+                          temPdf={!!curriculo?.arquivo_pdf}
+                          textoExtraido={curriculo?.texto_extraido}
+                        />
+                      </div>
+                    ) : curriculo?.texto_extraido ? (
+                      <div className="pl-11">
+                        <CvPreview
+                          candidaturaId={c.id}
+                          temPdf={!!curriculo?.arquivo_pdf}
+                          textoExtraido={curriculo?.texto_extraido}
+                        />
                       </div>
                     ) : null}
 
