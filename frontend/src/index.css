@@ -255,4 +255,66 @@ html.light {
     border: 1px solid var(--b-divider);
     transition: background 0.2s ease, border-color 0.2s ease;
   }
+
+  /* ── Sidebar: botão de logout ─────────────────────────────────────────────── */
+  .btn-sidebar-logout {
+    color: rgba(252,165,165,0.6);
+  }
+  html.light .btn-sidebar-logout {
+    color: #B91C1C;
+  }
+
+  /* ── Vagas: pesos e botões de status ──────────────────────────────────────── */
+  .vaga-peso-pill {
+    background: rgba(26,139,191,0.15);
+    color: #4DC8E8;
+  }
+  html.light .vaga-peso-pill {
+    background: rgba(18,112,168,0.14);
+    color: #0C5E96;
+  }
+
+  .btn-vaga-pausar {
+    background: rgba(252,211,77,0.15);
+    color: #FCD34D;
+    border: 1px solid rgba(252,211,77,0.25);
+  }
+  html.light .btn-vaga-pausar {
+    background: rgba(180,83,9,0.12);
+    color: #92400E;
+    border: 1px solid rgba(180,83,9,0.35);
+  }
+
+  .btn-vaga-reabrir {
+    background: rgba(46,232,180,0.15);
+    color: #2EE8B4;
+    border: 1px solid rgba(46,232,180,0.25);
+  }
+  html.light .btn-vaga-reabrir {
+    background: rgba(4,120,87,0.12);
+    color: #065F46;
+    border: 1px solid rgba(4,120,87,0.35);
+  }
+
+  .btn-vaga-encerrar {
+    background: rgba(252,165,165,0.10);
+    color: #FCA5A5;
+    border: 1px solid rgba(252,165,165,0.20);
+  }
+  html.light .btn-vaga-encerrar {
+    background: rgba(185,28,28,0.10);
+    color: #991B1B;
+    border: 1px solid rgba(185,28,28,0.30);
+  }
+
+  /* Sidebar layout: empurra o conteúdo principal para a direita no desktop */
+  .sidebar-layout-main {
+    margin-left: 0;
+  }
+
+  @media (min-width: 1024px) {
+    .sidebar-layout-main {
+      margin-left: 240px;
+    }
+  }
 }

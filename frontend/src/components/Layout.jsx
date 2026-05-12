@@ -1,6 +1,12 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Link, useLocation } from "react-router-dom"
 import logo from "../assets/logo.png"
+import {
+  IconBriefcase, IconUsers, IconBarChart, IconCog,
+  IconLogOut, IconSun, IconMoon, IconMenu,
+} from "./Icons"
+
+const SIDEBAR_W = 240
 
 function useTheme() {
   const [light, setLight] = useState(
@@ -18,200 +24,235 @@ function useTheme() {
   return [light, setLight]
 }
 
+function NavItem({ path, label, Icon, active }) {
+  return (
+    <Link
+      to={path}
+      className="flex items-center gap-3 rounded-xl text-sm font-semibold transition-all group"
+      style={active ? {
+        background: "linear-gradient(135deg, rgba(26,139,191,0.2), rgba(77,200,232,0.1))",
+        color: "#4DC8E8",
+        borderLeft: "2px solid #4DC8E8",
+        padding: "10px 12px 10px 10px",
+      } : {
+        color: "var(--t-muted2)",
+        borderLeft: "2px solid transparent",
+        padding: "10px 12px 10px 10px",
+      }}
+    >
+      <span
+        className="flex-shrink-0 transition-colors"
+        style={{ color: active ? "#4DC8E8" : "var(--t-faint2)" }}
+      >
+        <Icon size={17} />
+      </span>
+      <span className={active ? "" : "group-hover:text-brand-cloud transition-colors"}>
+        {label}
+      </span>
+    </Link>
+  )
+}
+
+function SidebarContent({ nav, usuario, onLogout, light, setLight, currentPath }) {
+  return (
+    <div className="flex flex-col h-full overflow-hidden">
+
+      {/* Logo */}
+      <div className="px-5 py-4 border-b flex-shrink-0" style={{ borderColor: "var(--b-subtle)" }}>
+        <Link to="/" className="flex items-center gap-3">
+          <img src={logo} alt="SIRS" className="h-9 w-auto object-contain rounded-lg flex-shrink-0" />
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-brand-cloud leading-tight">SIRS</p>
+            <p className="text-xs leading-tight" style={{ color: "var(--t-sub)" }}>
+              Recrutamento Inteligente
+            </p>
+          </div>
+        </Link>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 p-3 pt-4 space-y-0.5 overflow-y-auto">
+        <p
+          className="text-xs font-bold uppercase tracking-widest px-3 mb-3"
+          style={{ color: "var(--t-sub)" }}
+        >
+          Menu
+        </p>
+        {nav.map(n => (
+          <NavItem key={n.path} {...n} active={currentPath === n.path} />
+        ))}
+      </nav>
+
+      {/* Bottom actions */}
+      <div className="p-3 border-t space-y-0.5 flex-shrink-0" style={{ borderColor: "var(--b-subtle)" }}>
+
+        {/* Theme toggle */}
+        <button
+          onClick={() => setLight(v => !v)}
+          className="w-full flex items-center gap-3 rounded-xl text-sm font-semibold transition-all hover:bg-white/5"
+          style={{ color: "var(--t-muted2)", borderLeft: "2px solid transparent", padding: "10px 12px 10px 10px" }}
+        >
+          <span className="flex-shrink-0" style={{ color: "var(--t-faint2)" }}>
+            {light ? <IconMoon size={17} /> : <IconSun size={17} />}
+          </span>
+          {light ? "Tema escuro" : "Tema claro"}
+        </button>
+
+        {/* User info */}
+        {usuario && (
+          <>
+            <Link
+              to="/perfil"
+              className="w-full flex items-center gap-3 rounded-xl text-sm font-semibold transition-all hover:bg-white/5 group"
+              style={{ color: "var(--t-muted2)", borderLeft: "2px solid transparent", padding: "10px 12px 10px 10px" }}
+            >
+              <div
+                className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}
+              >
+                <span className="text-xs font-bold" style={{ color: "#07111A", fontSize: "10px" }}>
+                  {usuario.nome.charAt(0).toUpperCase()}
+                </span>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-brand-cloud truncate group-hover:text-brand-sky transition-colors">
+                  {usuario.nome}
+                </p>
+                <p className="text-xs capitalize leading-tight" style={{ color: "var(--t-sub)" }}>
+                  {usuario.papel}
+                </p>
+              </div>
+            </Link>
+            <button
+              onClick={onLogout}
+              className="btn-sidebar-logout w-full flex items-center gap-3 rounded-xl text-sm font-semibold transition-all hover:bg-red-500/10"
+              style={{ borderLeft: "2px solid transparent", padding: "10px 12px 10px 10px" }}
+            >
+              <span className="flex-shrink-0">
+                <IconLogOut size={17} />
+              </span>
+              Sair da conta
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function Layout({ children, usuario, onLogout }) {
-  const loc              = useLocation()
-  const [light, setLight] = useTheme()
-  const [menuAberto, setMenuAberto] = useState(false)
-  const menuRef          = useRef(null)
+  const loc                       = useLocation()
+  const [light, setLight]         = useTheme()
+  const [mobileOpen, setMobileOpen] = useState(false)
 
   const nav = [
-    { path: "/",           label: "Vagas"      },
-    { path: "/candidatos", label: "Candidatos" },
-    { path: "/dashboard",  label: "Dashboard"  },
-    ...(usuario?.papel === "admin" ? [{ path: "/admin", label: "Usuários" }] : []),
+    { path: "/",           label: "Vagas",      Icon: IconBriefcase },
+    { path: "/candidatos", label: "Candidatos", Icon: IconUsers      },
+    { path: "/dashboard",  label: "Dashboard",  Icon: IconBarChart   },
+    ...(usuario?.papel === "admin"
+      ? [{ path: "/admin", label: "Usuários", Icon: IconCog }]
+      : []),
   ]
 
-  // Fecha ao clicar fora
-  useEffect(() => {
-    function onClick(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setMenuAberto(false)
-      }
-    }
-    document.addEventListener("mousedown", onClick)
-    return () => document.removeEventListener("mousedown", onClick)
-  }, [])
+  useEffect(() => { setMobileOpen(false) }, [loc.pathname])
 
-  // Fecha ao navegar
-  useEffect(() => { setMenuAberto(false) }, [loc.pathname])
-
-  const navLinkClass = (path) =>
-    `block px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-      loc.pathname === path
-        ? "text-brand-black"
-        : "text-brand-pale/70 hover:text-brand-cloud hover:bg-white/5"
-    }`
-
-  const navLinkStyle = (path) =>
-    loc.pathname === path
-      ? { background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }
-      : undefined
+  const sidebarProps = { nav, usuario, onLogout, light, setLight, currentPath: loc.pathname }
 
   return (
-    <div className="min-h-screen">
-      <header
-        className="sticky top-0 z-20 border-b"
+    <div className="min-h-screen flex">
+
+      {/* Desktop sidebar — fixed */}
+      <aside
+        className="hidden lg:flex flex-col fixed top-0 left-0 h-screen z-10"
         style={{
-          background    : "var(--s-header)",
-          borderColor   : "var(--b-card)",
-          backdropFilter: "blur(18px)",
+          width           : SIDEBAR_W,
+          background      : "var(--s-header)",
+          borderRight     : "1px solid var(--b-card)",
+          backdropFilter  : "blur(20px)",
         }}
       >
-        <div className="max-w-6xl mx-auto px-4 sm:px-8 h-16 flex items-center justify-between gap-4">
+        <SidebarContent {...sidebarProps} />
+      </aside>
 
-          {/* Brand */}
-          <Link to="/" className="flex items-center gap-2.5 flex-shrink-0">
-            <img src={logo} alt="SIRS"
-              className="h-9 w-auto object-contain rounded-lg" />
-            <span className="text-xs font-medium leading-tight"
-              style={{ color: "var(--t-sub)" }}>
-              Recrutamento<br />Inteligente
-            </span>
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 lg:hidden"
+          style={{ background: "rgba(7,17,26,0.75)", backdropFilter: "blur(4px)" }}
+          onClick={() => setMobileOpen(false)}
+        >
+          <aside
+            className="h-full flex flex-col"
+            style={{
+              width      : SIDEBAR_W,
+              background : "var(--s-header)",
+              borderRight: "1px solid var(--b-card)",
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <SidebarContent {...sidebarProps} />
+          </aside>
+        </div>
+      )}
+
+      {/* Main content — pushed right by sidebar on desktop */}
+      <div className="sidebar-layout-main flex-1 min-w-0 flex flex-col">
+
+        {/* Mobile topbar */}
+        <header
+          className="lg:hidden sticky top-0 z-20 h-14 flex items-center px-4 gap-3 border-b flex-shrink-0"
+          style={{
+            background    : "var(--s-header)",
+            borderColor   : "var(--b-card)",
+            backdropFilter: "blur(18px)",
+          }}
+        >
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{
+              background: "var(--s-pill)",
+              border    : "1px solid var(--b-normal)",
+              color     : "var(--color-brand-sky)",
+            }}
+          >
+            <IconMenu size={18} />
+          </button>
+          <Link to="/" className="flex items-center gap-2">
+            <img src={logo} alt="SIRS" className="h-8 w-auto object-contain rounded-lg" />
           </Link>
-
-          {/* Nav desktop — visível a partir de 860px */}
-          <nav className="hidden min-[860px]:flex items-center gap-0.5">
-            {nav.map(n => (
-              <Link key={n.path} to={n.path}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold tracking-wider transition-all whitespace-nowrap ${
-                  loc.pathname === n.path
-                    ? "text-brand-black"
-                    : "text-brand-pale/55 hover:text-brand-cloud hover:bg-brand-teal/30"
-                }`}
-                style={loc.pathname === n.path
-                  ? { background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }
-                  : undefined}>
-                {n.label.toUpperCase()}
-              </Link>
-            ))}
-          </nav>
-
-          {/* Ações direita */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-
-            {/* Tema */}
+          <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => setLight(v => !v)}
-              title={light ? "Tema escuro" : "Tema claro"}
-              className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
-              style={{ background: "var(--s-pill)", border: "1px solid var(--b-subtle)" }}>
-              {light ? "🌙" : "☀️"}
+              className="w-8 h-8 rounded-lg flex items-center justify-center"
+              style={{
+                background: "var(--s-pill)",
+                border    : "1px solid var(--b-subtle)",
+                color     : "var(--color-brand-sky)",
+              }}
+            >
+              {light ? <IconMoon size={14} /> : <IconSun size={14} />}
             </button>
-
-            {/* Usuário */}
             {usuario && (
-              <div className="flex items-center gap-2 pl-2 hidden min-[860px]:flex"
-                style={{ borderLeft: "1px solid var(--b-normal)" }}>
-                <Link to="/perfil" className="flex items-center gap-2 group">
-                  <div className="hidden lg:block text-right">
-                    <p className="text-xs font-semibold text-brand-cloud leading-none group-hover:text-brand-sky transition-colors">
-                      {usuario.nome}
-                    </p>
-                    <p className="text-xs text-brand-pale/45 mt-0.5 capitalize">{usuario.papel}</p>
-                  </div>
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}>
-                    <span className="text-xs font-bold text-brand-black">
-                      {usuario.nome.charAt(0).toUpperCase()}
-                    </span>
-                  </div>
-                </Link>
-                <button onClick={onLogout}
-                  className="text-xs text-brand-pale/40 hover:text-brand-sky font-medium transition-colors">
-                  Sair
-                </button>
-              </div>
+              <Link
+                to="/perfil"
+                className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}
+              >
+                <span className="text-xs font-bold" style={{ color: "#07111A" }}>
+                  {usuario.nome.charAt(0).toUpperCase()}
+                </span>
+              </Link>
             )}
-
-            <div className="relative min-[860px]:hidden" ref={menuRef}>
-              <button
-                onClick={() => setMenuAberto(v => !v)}
-                className="w-9 h-9 rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all"
-                style={{
-                  background: menuAberto ? "rgba(26,139,191,0.2)" : "var(--s-pill)",
-                  border    : "1px solid var(--b-normal)",
-                }}>
-                <span className="block w-4 h-0.5 rounded-full transition-all"
-                  style={{
-                    background: "var(--color-brand-sky)",
-                    transform : menuAberto ? "translateY(4px) rotate(45deg)" : "none",
-                  }} />
-                <span className="block w-4 h-0.5 rounded-full transition-all"
-                  style={{
-                    background: "var(--color-brand-sky)",
-                    opacity   : menuAberto ? 0 : 1,
-                  }} />
-                <span className="block w-4 h-0.5 rounded-full transition-all"
-                  style={{
-                    background: "var(--color-brand-sky)",
-                    transform : menuAberto ? "translateY(-8px) rotate(-45deg)" : "none",
-                  }} />
-              </button>
-
-              {/* Dropdown */}
-              {menuAberto && (
-                <div
-                  className="absolute right-0 top-full mt-2 w-56 rounded-2xl py-2 z-30 shadow-xl"
-                  style={{
-                    background  : "var(--s-header)",
-                    border      : "1px solid var(--b-card)",
-                    backdropFilter: "blur(24px)",
-                  }}>
-
-                  {/* Links de nav */}
-                  <div className="px-2 pb-2 border-b" style={{ borderColor: "var(--b-subtle)" }}>
-                    {nav.map(n => (
-                      <Link key={n.path} to={n.path}
-                        className={navLinkClass(n.path)}
-                        style={navLinkStyle(n.path)}>
-                        {n.label}
-                      </Link>
-                    ))}
-                  </div>
-
-                  {/* Usuário */}
-                  {usuario && (
-                    <div className="px-2 pt-2 space-y-1">
-                      <Link to="/perfil" className="flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all hover:bg-white/5">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                          style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}>
-                          <span className="text-xs font-bold text-brand-black">
-                            {usuario.nome.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-brand-cloud truncate">{usuario.nome}</p>
-                          <p className="text-xs text-brand-pale/45 capitalize">{usuario.papel}</p>
-                        </div>
-                      </Link>
-                      <button onClick={onLogout}
-                        className="w-full text-left px-4 py-2.5 rounded-xl text-sm font-semibold transition-all hover:bg-white/5"
-                        style={{ color: "#FCA5A5" }}>
-                        Sair
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
           </div>
-        </div>
-      </header>
+        </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-8 py-10">
-        {children}
-      </main>
+        {/* Page content */}
+        <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-8 py-8 lg:py-10">
+          {children}
+        </main>
+
+      </div>
     </div>
   )
 }

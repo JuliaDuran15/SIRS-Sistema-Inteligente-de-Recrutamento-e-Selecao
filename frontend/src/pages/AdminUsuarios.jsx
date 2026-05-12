@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react"
 import { getUsuarios, createUsuario, updateUsuario, deleteUsuario } from "../api"
+import { IconSearch } from "../components/Icons"
 
 const PAPEL_COR   = { rh: "blue", gestor: "purple", admin: "amber" }
 const PAPEL_LABEL = { rh: "RH", gestor: "Gestor técnico", admin: "Admin" }
@@ -204,9 +205,10 @@ export function AdminUsuarios() {
   const [usuarios, setUsuarios]     = useState([])
   const [loading, setLoading]       = useState(true)
   const [modalNovo, setModalNovo]   = useState(false)
-  const [editando, setEditando]     = useState(null)   // usuário sendo editado
+  const [editando, setEditando]     = useState(null)
   const [deletando, setDeletando]   = useState(null)
   const [erro, setErro]             = useState(null)
+  const [busca, setBusca]           = useState("")
 
   useEffect(() => {
     getUsuarios()
@@ -237,7 +239,14 @@ export function AdminUsuarios() {
     setEditando(null)
   }
 
-  const porPapel = papeis => usuarios.filter(u => papeis.includes(u.papel))
+  const usuariosFiltrados = busca.trim()
+    ? usuarios.filter(u => {
+        const q = busca.toLowerCase()
+        return u.nome.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+      })
+    : usuarios
+
+  const porPapel = papeis => usuariosFiltrados.filter(u => papeis.includes(u.papel))
 
   if (loading) return (
     <div className="space-y-4">
@@ -253,18 +262,40 @@ export function AdminUsuarios() {
       {editando  && <ModalEditarUsuario usuario={editando} onSalvo={onSalvoEdicao} onFechar={() => setEditando(null)} />}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-xl font-bold text-brand-cloud">Gerenciar Usuários</h1>
           <p className="text-sm text-brand-pale/45 mt-0.5">
-            {usuarios.length} {usuarios.length === 1 ? "usuário ativo" : "usuários ativos"}
+            {busca
+              ? `${usuariosFiltrados.length} resultado${usuariosFiltrados.length !== 1 ? "s" : ""} para "${busca}"`
+              : `${usuarios.length} ${usuarios.length === 1 ? "usuário ativo" : "usuários ativos"}`}
           </p>
         </div>
         <button onClick={() => setModalNovo(true)}
-          className="px-4 py-2.5 rounded-xl text-sm font-bold text-brand-black"
+          className="px-4 py-2.5 rounded-xl text-sm font-bold text-brand-black flex-shrink-0"
           style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}>
           + Novo usuário
         </button>
+      </div>
+
+      {/* Busca */}
+      <div className="relative">
+        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 flex items-center text-brand-pale/35 pointer-events-none">
+          <IconSearch size={15} />
+        </span>
+        <input
+          value={busca}
+          onChange={e => setBusca(e.target.value)}
+          placeholder="Buscar por nome ou e-mail…"
+          className="w-full rounded-xl pl-9 pr-9 py-2.5 text-sm transition-all"
+        />
+        {busca && (
+          <button
+            onClick={() => setBusca("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-brand-pale/35 hover:text-brand-pale transition-colors text-lg leading-none">
+            ×
+          </button>
+        )}
       </div>
 
       {erro && (
@@ -274,14 +305,29 @@ export function AdminUsuarios() {
         </div>
       )}
 
-      <Secao titulo="RH" usuarios={porPapel(["rh"])}
-        onEdit={setEditando} onDelete={handleDelete} deletando={deletando} />
+      {busca && usuariosFiltrados.length === 0 ? (
+        <div className="text-center py-16 rounded-2xl border-2 border-dashed"
+          style={{ borderColor: "var(--b-card)" }}>
+          <p className="text-sm text-brand-pale/45 font-semibold">
+            Nenhum usuário encontrado para "{busca}"
+          </p>
+          <button onClick={() => setBusca("")}
+            className="mt-2 text-xs text-brand-sky hover:underline">
+            Limpar busca
+          </button>
+        </div>
+      ) : (
+        <>
+          <Secao titulo="RH" usuarios={porPapel(["rh"])}
+            onEdit={setEditando} onDelete={handleDelete} deletando={deletando} />
 
-      <Secao titulo="Gestores Técnicos" usuarios={porPapel(["gestor"])}
-        onEdit={setEditando} onDelete={handleDelete} deletando={deletando} />
+          <Secao titulo="Gestores Técnicos" usuarios={porPapel(["gestor"])}
+            onEdit={setEditando} onDelete={handleDelete} deletando={deletando} />
 
-      <Secao titulo="Administradores" usuarios={porPapel(["admin"])}
-        onEdit={setEditando} onDelete={handleDelete} deletando={deletando} soLeitura />
+          <Secao titulo="Administradores" usuarios={porPapel(["admin"])}
+            onEdit={setEditando} onDelete={handleDelete} deletando={deletando} soLeitura />
+        </>
+      )}
     </div>
   )
 }

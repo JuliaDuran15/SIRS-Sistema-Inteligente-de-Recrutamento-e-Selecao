@@ -36,9 +36,12 @@ from app.schemas.webhook import (
     ImportacaoResultado,
     VagaImport,
 )
+from app.core.logger import get_logger
 from app.core.rate_limit import checar_rate_limit
 from fastapi import APIRouter, Header, HTTPException, Request
 from sqlalchemy.orm import Session
+
+logger = get_logger("WEBHOOK")
 
 router = APIRouter()
 
@@ -127,6 +130,10 @@ def _parse_xml(body: bytes) -> ImportacaoPayload:
 # ── Lógica de importação ──────────────────────────────────────────────────────
 
 def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
+    logger.info(
+        f"fonte={dados.fonte or 'sem-fonte'} | "
+        f"vagas={len(dados.vagas)} candidatos={len(dados.candidatos)}"
+    )
     resultado = ImportacaoResultado()
     erros: list[ErroImportacao] = []
     vagas_map: dict[str, Vaga] = {}  # external_id → instância Vaga
@@ -249,6 +256,19 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
             ))
 
     db.commit()
+    if erros:
+        logger.warning(
+            f"fonte={dados.fonte or 'sem-fonte'} | {len(erros)} erro(s): "
+            + "; ".join(f"{e.tipo}/{e.identificador}: {e.detalhe}" for e in erros[:5])
+        )
+    logger.info(
+        f"fonte={dados.fonte or 'sem-fonte'} | importação concluída | "
+        f"vagas_criadas={resultado.vagas_criadas} "
+        f"candidatos_criados={resultado.candidatos_criados} "
+        f"candidatos_atualizados={resultado.candidatos_atualizados} "
+        f"candidaturas_criadas={resultado.candidaturas_criadas} "
+        f"curriculos={resultado.curriculos_processados}"
+    )
     return ImportacaoResponse(
         importados  = resultado,
         erros       = erros,

@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react"
 import { getAnalyticsResumo, getAnalyticsFunil, getAnalyticsScores, getVagas } from "../api"
+import {
+  IconBriefcase, IconUsers, IconActivity, IconCheckCircle,
+  IconCalendar, IconClock, IconFilter,
+} from "../components/Icons"
 
 const COR_ETAPA = {
   green  : { bg: "rgba(26,170,128,0.18)",  bar: "#2EE8B4", text: "#2EE8B4"  },
@@ -10,10 +14,20 @@ const COR_ETAPA = {
   gray   : { bg: "rgba(100,116,139,0.12)", bar: "#94A3B8", text: "#94A3B8"  },
 }
 
-function Stat({ label, valor, cor = "#4DC8E8", sub }) {
+function Stat({ label, valor, cor = "#4DC8E8", sub, Icon }) {
   return (
-    <div className="card-glass rounded-2xl p-5 flex flex-col gap-1">
-      <p className="text-xs font-bold text-brand-pale/40 uppercase tracking-wider">{label}</p>
+    <div className="card-glass rounded-2xl p-5 flex flex-col gap-2">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-xs font-bold text-brand-pale/40 uppercase tracking-wider leading-tight">{label}</p>
+        {Icon && (
+          <div
+            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{ background: `${cor}1A`, color: cor }}
+          >
+            <Icon size={15} />
+          </div>
+        )}
+      </div>
       <p className="text-3xl font-bold font-mono" style={{ color: cor }}>{valor ?? "—"}</p>
       {sub && <p className="text-xs text-brand-pale/35">{sub}</p>}
     </div>
@@ -141,15 +155,15 @@ export function Dashboard() {
       ) : resumo && (
         <>
           <div className="grid grid-cols-4 gap-4">
-            <Stat label="Vagas abertas"       valor={resumo.vagas_abertas}        cor="#2EE8B4" sub={resumo.vagas_pausadas ? `${resumo.vagas_pausadas} pausadas` : undefined} />
-            <Stat label="Candidatos"          valor={resumo.candidatos_total}     cor="#4DC8E8" />
-            <Stat label="Candidaturas ativas" valor={resumo.candidaturas_ativas}  cor="#4DC8E8" sub={`${resumo.em_triagem} em triagem pendente`} />
-            <Stat label="Contratados"         valor={resumo.contratados_total}    cor="#2EE8B4" />
+            <Stat label="Vagas abertas"       valor={resumo.vagas_abertas}       cor="#2EE8B4" sub={resumo.vagas_pausadas ? `${resumo.vagas_pausadas} pausadas` : undefined} Icon={IconBriefcase} />
+            <Stat label="Candidatos"          valor={resumo.candidatos_total}    cor="#4DC8E8" Icon={IconUsers} />
+            <Stat label="Candidaturas ativas" valor={resumo.candidaturas_ativas} cor="#4DC8E8" sub={`${resumo.em_triagem} em triagem`} Icon={IconActivity} />
+            <Stat label="Contratados"         valor={resumo.contratados_total}   cor="#2EE8B4" Icon={IconCheckCircle} />
           </div>
           <div className="grid grid-cols-3 gap-4">
-            <Stat label="Entrevistas agendadas" valor={resumo.entrevistas_agendadas}  cor="#FCD34D" />
-            <Stat label="Decisões pendentes"    valor={resumo.decisoes_pendentes}     cor="#FCD34D" />
-            <Stat label="Em triagem"            valor={resumo.em_triagem}             cor="#FCD34D" />
+            <Stat label="Entrevistas agendadas" valor={resumo.entrevistas_agendadas} cor="#FCD34D" Icon={IconCalendar} />
+            <Stat label="Decisões pendentes"    valor={resumo.decisoes_pendentes}    cor="#FCD34D" Icon={IconClock} />
+            <Stat label="Em triagem"            valor={resumo.em_triagem}            cor="#FCD34D" Icon={IconFilter} />
           </div>
         </>
       )}

@@ -12,14 +12,18 @@ from app.ai.matching_engine import (
 )
 from app.ai.resume_parser import parsear_curriculo, vetorizar_texto, vetorizar_secoes
 from app.core.celery_app import celery_app
+from app.core.logger import get_logger
 from app.db.session import SessionLocal
 from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.curriculo import Curriculo
 from app.models.vaga import Vaga
 
+logger = get_logger("TASKS")
+
 
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=60)
 def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
+    logger.info(f"candidatura={candidatura_id} | iniciando processamento de PDF")
     db = SessionLocal()
 
     try:
@@ -103,6 +107,11 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
         candidatura.status = StatusCandidatura.TRIAGEM_PENDENTE
 
         db.commit()
+        logger.info(
+            f"candidatura={candidatura_id} | vaga='{vaga.nome}' | "
+            f"score_rh={round(score_rh*100,1)} score_mercado={round(score_mercado*100,1)} "
+            f"score_curriculo={score_curriculo}"
+        )
 
         return {
             "status"        : "ok",
@@ -111,6 +120,7 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
         }
 
     except Exception as exc:
+        logger.error(f"candidatura={candidatura_id} | ERRO no processamento de PDF: {exc}", exc_info=True)
         db.rollback()
         raise self.retry(exc=exc)
 
@@ -134,7 +144,7 @@ def atualizar_mercado_vaga(self, vaga_id: str):
         if not vaga:
             raise ValueError(f"Vaga {vaga_id} não encontrada")
 
-        # asyncio.run para rodar código async dentro da task síncrona do Celery
+        logger.info(f"vaga={vaga_id} nome='{vaga.nome}' | analisando mercado")
         resultado = asyncio.run(analisar_mercado(vaga.nome))
 
         vaga.vetor_mercado = resultado["vetor_mercado"]
@@ -146,8 +156,11 @@ def atualizar_mercado_vaga(self, vaga_id: str):
         }
 
         db.commit()
-        print(f"Mercado atualizado para vaga '{vaga.nome}': "
-              f"{resultado['total_vagas_analisadas']} vagas analisadas")
+        logger.info(
+            f"vaga={vaga_id} nome='{vaga.nome}' | mercado atualizado | "
+            f"{resultado['total_vagas_analisadas']} vagas analisadas | "
+            f"fonte={resultado['fonte']}"
+        )
 
         return {
             "status"  : "ok",
@@ -156,6 +169,7 @@ def atualizar_mercado_vaga(self, vaga_id: str):
         }
 
     except Exception as exc:
+        logger.error(f"vaga={vaga_id} | ERRO ao analisar mercado: {exc}", exc_info=True)
         db.rollback()
         raise self.retry(exc=exc)
 
@@ -168,6 +182,7 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
     Processa currículo recebido como texto puro (via webhook).
     Equivalente a processar_curriculo, mas sem extração de PDF.
     """
+    logger.info(f"candidatura={candidatura_id} | iniciando processamento de texto ({len(texto)} chars)")
     db = SessionLocal()
 
     try:
@@ -237,6 +252,11 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
         candidatura.status = StatusCandidatura.TRIAGEM_PENDENTE
 
         db.commit()
+        logger.info(
+            f"candidatura={candidatura_id} | vaga='{vaga.nome}' | "
+            f"score_rh={round(score_rh*100,1)} score_mercado={round(score_mercado*100,1)} "
+            f"score_curriculo={score_curriculo}"
+        )
         return {
             "status"         : "ok",
             "candidatura_id" : candidatura_id,
@@ -244,6 +264,7 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
         }
 
     except Exception as exc:
+        logger.error(f"candidatura={candidatura_id} | ERRO no processamento de texto: {exc}", exc_info=True)
         db.rollback()
         raise self.retry(exc=exc)
 

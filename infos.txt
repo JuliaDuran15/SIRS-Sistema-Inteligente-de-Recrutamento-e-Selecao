@@ -346,3 +346,25 @@ Quem realizou a ação (nome do RH/gestor) ou "automático" para ações do sist
 Data e hora formatadas em pt-BR
 Quando é o evento curriculo_processado, mostra o score calculado pela IA
 Pontos coloridos por tipo: verde = positivo, azul = entrevista, âmbar = pendente, vermelho = reprovado, roxo = IA
+
+
+
+# API (requisições HTTP + webhook)
+docker compose logs -f api
+
+# Worker (processamento de currículos + mercado)
+docker compose logs -f worker
+
+# Os dois juntos
+docker compose logs -f api worker
+
+# Só erros
+docker compose logs -f api worker | grep ERROR
+
+
+
+
+Coletar N candidaturas com label binário (contratado / não contratado)
+Extrair o vetor de features: [sim_exp, sim_full, bonus_exp, bonus_nivel, bonus_overlap]
+Treinar uma regressão logística — os coeficientes aprenderão os pesos ótimos para o seu domínio específico
+Validar com NDCG@10 e MRR (métricas padrão de ranking)

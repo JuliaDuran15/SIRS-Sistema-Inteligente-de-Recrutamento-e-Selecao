@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Link } from "react-router-dom"
 import { getCandidatos, createCandidato, getVagas, createCandidatura } from "../api"
 import { Badge } from "../components/Badge"
+import { IconSearch } from "../components/Icons"
 
 const inputClass = "w-full rounded-xl px-4 py-2.5 text-sm transition-all"
 const LIMIT = 30
@@ -82,7 +83,9 @@ export function Candidatos() {
       {/* Barra de busca + filtros */}
       <div className="flex gap-3 mb-6 flex-wrap">
         <div className="flex-1 min-w-48 relative">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-pale/35 text-sm">⌕</span>
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-pale/35 flex items-center">
+            <IconSearch size={15} />
+          </span>
           <input
             value={busca}
             onChange={e => setBusca(e.target.value)}

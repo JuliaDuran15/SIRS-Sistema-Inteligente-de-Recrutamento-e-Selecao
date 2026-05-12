@@ -2,6 +2,7 @@ import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { getVagas, createVaga, updateVagaStatus, getUsuarios } from "../api"
 import { Badge } from "../components/Badge"
+import { IconSearch } from "../components/Icons"
 
 const PESOS_DEFAULT = {
   peso_rh: 0.6, peso_mercado: 0.4,
@@ -221,7 +222,9 @@ export function Vagas({ usuario }) {
       {/* Busca */}
       {!loading && vagas.length > 0 && (
         <div className="relative mb-2">
-          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-pale/35 text-sm select-none">⌕</span>
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-brand-pale/35 flex items-center">
+            <IconSearch size={15} />
+          </span>
           <input
             value={busca}
             onChange={e => setBusca(e.target.value)}
@@ -272,8 +275,7 @@ export function Vagas({ usuario }) {
               </Link>
 
               <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-xs font-mono px-2 py-1 rounded-lg font-semibold"
-                  style={{ background: "rgba(26,139,191,0.15)", color: "#4DC8E8" }}>
+                <span className="vaga-peso-pill text-xs font-mono px-2 py-1 rounded-lg font-semibold">
                   RH {Math.round(v.peso_rh * 100)}% · Mkt {Math.round(v.peso_mercado * 100)}%
                 </span>
                 <Badge cor={STATUS_COR[v.status] ?? "gray"}>
@@ -285,26 +287,20 @@ export function Vagas({ usuario }) {
                   <div className="flex gap-1">
                     {v.status === "aberta" && (
                       <button onClick={() => handleStatus(v, "pausada")}
-                        className="px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
-                        style={{ background: "rgba(252,211,77,0.15)", color: "#FCD34D",
-                                 border: "1px solid rgba(252,211,77,0.25)" }}
+                        className="btn-vaga-pausar px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
                         title="Pausar vaga">
                         ⏸
                       </button>
                     )}
                     {v.status === "pausada" && (
                       <button onClick={() => handleStatus(v, "aberta")}
-                        className="px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
-                        style={{ background: "rgba(46,232,180,0.15)", color: "#2EE8B4",
-                                 border: "1px solid rgba(46,232,180,0.25)" }}
+                        className="btn-vaga-reabrir px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
                         title="Reabrir vaga">
                         ▶
                       </button>
                     )}
                     <button onClick={() => handleStatus(v, "fechada")}
-                      className="px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
-                      style={{ background: "rgba(252,165,165,0.1)", color: "#FCA5A5",
-                               border: "1px solid rgba(252,165,165,0.2)" }}
+                      className="btn-vaga-encerrar px-2.5 py-1 rounded-lg text-xs font-bold transition-all"
                       title="Encerrar vaga">
                       ✕
                     </button>
