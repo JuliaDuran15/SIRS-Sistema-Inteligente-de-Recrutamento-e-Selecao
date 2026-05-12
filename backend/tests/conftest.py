@@ -8,7 +8,7 @@ Estratégia de banco:
 - Célery/AI: patchados para não rodar de verdade.
 """
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 from fastapi.testclient import TestClient
@@ -106,6 +106,13 @@ def mock_vetorizar():
     """Evita carregar o modelo de embeddings durante testes de API."""
     with patch("app.ai.resume_parser.vetorizar_texto", return_value=[0.1] * 384), \
          patch("app.api.endpoints.vagas.vetorizar_texto", return_value=[0.1] * 384):
+        yield
+
+
+@pytest.fixture(autouse=True)
+def mock_rate_limit():
+    """Desativa o rate limiter durante testes — evita 429 por acúmulo no Redis."""
+    with patch("app.api.endpoints.webhook.checar_rate_limit", new_callable=AsyncMock):
         yield
 
 

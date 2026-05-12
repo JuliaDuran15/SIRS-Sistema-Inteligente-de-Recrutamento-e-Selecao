@@ -208,11 +208,12 @@ def distribuicao_scores(
     n       = len(scores)
     media   = round(sum(scores) / n, 1) if n else None
     sorted_ = sorted(scores)
-    mediana = (
-        round((sorted_[n // 2 - 1] + sorted_[n // 2]) / 2, 1) if n >= 2
-        else sorted_[0] if n == 1
-        else None
-    )
+    if n == 0:
+        mediana = None
+    elif n % 2 == 1:
+        mediana = round(sorted_[n // 2], 1)
+    else:
+        mediana = round((sorted_[n // 2 - 1] + sorted_[n // 2]) / 2, 1)
 
     return DistribuicaoScores(
         vaga_id = vaga_id,
