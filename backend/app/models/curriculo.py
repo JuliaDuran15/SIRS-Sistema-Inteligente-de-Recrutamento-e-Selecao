@@ -21,11 +21,11 @@ class Curriculo(Base):
     texto_extraido   : Mapped[str | None]   = mapped_column(Text)
 
     # Vetor principal — currículo completo
-    vetor_embedding                         = mapped_column(Vector(384), nullable=True)
+    vetor_embedding                         = mapped_column(Vector(_dim()), nullable=True)
 
     # Vetores de seção (None quando seção não detectada no CV)
-    vetor_secao_exp                         = mapped_column(Vector(384), nullable=True)
-    vetor_secao_skills                      = mapped_column(Vector(384), nullable=True)
+    vetor_secao_exp                         = mapped_column(Vector(_dim()), nullable=True)
+    vetor_secao_skills                      = mapped_column(Vector(_dim()), nullable=True)
 
     arquivo_pdf      : Mapped[str | None]   = mapped_column(String(120))   # nome do arquivo em uploads/curriculos/
     skills_extraidas : Mapped[dict | None]  = mapped_column(JSONB)

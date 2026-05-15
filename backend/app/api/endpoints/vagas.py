@@ -421,6 +421,13 @@ def exportar_candidatos(
         "banco_de_talentos": "Banco de talentos",
     }
 
+    def _csv_str(value) -> str:
+        """Evita CSV formula injection prefixando valores que iniciam com =+-@"""
+        s = str(value) if value is not None else ""
+        if s and s[0] in ("=", "+", "-", "@", "\t", "\r"):
+            return "'" + s
+        return s
+
     for cand in candidaturas:
         c   = cand.candidato
         cur = cand.curriculo
@@ -428,23 +435,25 @@ def exportar_candidatos(
         sinais = (expl or {}).get("sinais_estruturais", {})
         skills = ", ".join(sinais.get("habilidades_em_comum", []))
         anos   = sinais.get("anos_experiencia", "")
+        status_val = str(cand.status.value if hasattr(cand.status, "value") else cand.status)
         w.writerow([
-            c.nome if c else "",
-            c.email if c else "",
-            c.telefone or "" if c else "",
-            c.cidade or "" if c else "",
-            c.estado or "" if c else "",
-            STATUS_PT.get(str(cand.status.value if hasattr(cand.status, "value") else cand.status), str(cand.status)),
+            _csv_str(c.nome if c else ""),
+            _csv_str(c.email if c else ""),
+            _csv_str(c.telefone or "" if c else ""),
+            _csv_str(c.cidade or "" if c else ""),
+            _csv_str(c.estado or "" if c else ""),
+            STATUS_PT.get(status_val, status_val),
             cur.score_curriculo if cur else "",
             cur.score_rh        if cur else "",
             cur.score_mercado   if cur else "",
             cand.score_total or "",
             anos,
-            skills,
+            _csv_str(skills),
         ])
 
     buf.seek(0)
-    nome_arquivo = vaga.nome.replace(" ", "_").lower()[:40]
+    import re as _re
+    nome_arquivo = _re.sub(r'[^\w\-]', '_', vaga.nome.lower())[:40]
     return StreamingResponse(
         iter([buf.getvalue().encode("utf-8-sig")]),
         media_type="text/csv",

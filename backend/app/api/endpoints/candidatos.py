@@ -46,9 +46,9 @@ def webhook_candidato(dados: CandidatoCreate, db: Session = DB):
 
 @router.get("/", response_model=CandidatoListResponse)
 def listar_candidatos(
-    q      : str | None = Query(None, description="Busca por nome ou e-mail"),
-    cidade : str | None = Query(None),
-    origem : str | None = Query(None, description="manual | externo"),
+    q      : str | None = Query(None, description="Busca por nome ou e-mail", max_length=200),
+    cidade : str | None = Query(None, max_length=100),
+    origem : str | None = Query(None, description="manual | externo", max_length=50),
     limit  : int        = Query(50, ge=1, le=200),
     offset : int        = Query(0,  ge=0),
     db     : Session    = DB,

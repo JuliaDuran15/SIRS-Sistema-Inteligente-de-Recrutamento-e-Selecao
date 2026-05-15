@@ -1,22 +1,32 @@
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 
 class EntrevistaCreate(BaseModel):
     candidatura_id : UUID
-    tipo           : str   # "rh" | "tecnica"
+    tipo           : str       = Field(..., pattern=r"^(rh|tecnica)$")
     agendada_para  : datetime
 
+
 class EntrevistaResultado(BaseModel):
-    score_manual  : float        # 0–10
-    anotacoes     : str
-    pontos_fortes : list[str] = []
-    pontos_fracos : list[str] = []
+    score_manual  : float              = Field(..., ge=0, le=10)
+    anotacoes     : str                = Field(..., max_length=5000)
+    pontos_fortes : list[str]          = []
+    pontos_fracos : list[str]          = []
+
+    @field_validator("pontos_fortes", "pontos_fracos", mode="before")
+    @classmethod
+    def limitar_itens(cls, v):
+        if isinstance(v, list):
+            return [str(item)[:300] for item in v[:20]]
+        return v
+
 
 class AnotacoesUpdate(BaseModel):
-    anotacoes: str
+    anotacoes: str = Field(..., max_length=5000)
+
 
 class EntrevistaResponse(BaseModel):
     id                : UUID

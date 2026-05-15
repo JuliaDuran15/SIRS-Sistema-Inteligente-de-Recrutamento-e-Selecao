@@ -59,3 +59,14 @@ app.include_router(analytics.router,    prefix="/analytics",    tags=["analytics
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.post("/admin/reprocessar-curriculos", tags=["admin"])
+def reprocessar_curriculos(_=__import__("app.core.auth", fromlist=["APENAS_ADMIN"]).APENAS_ADMIN):
+    """
+    Enfileira reprocessamento de todos os currículos com o modelo de embedding atual.
+    Necessário após trocar EMBEDDING_MODEL no .env.
+    """
+    from app.ai.tasks import reprocessar_todos_curriculos
+    result = reprocessar_todos_curriculos.delay()
+    return {"task_id": result.id, "mensagem": "Reprocessamento enfileirado. Acompanhe nos logs do worker."}

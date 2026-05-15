@@ -99,6 +99,59 @@ class TestExtracaoAnos:
         assert resultado > 0
 
 
+class TestExtracao_Secao_vs_TextoCompleto:
+    """
+    Verifica que a extração de intervalos usa a seção 'experiência' quando
+    disponível, evitando contar anos de formação ou outras seções.
+    """
+
+    def test_anos_formacao_nao_contam_quando_secao_detectada(self):
+        """
+        CV com cabeçalho 'FORMAÇÃO' e 'EXPERIÊNCIA PROFISSIONAL' bem definidos.
+        O ano de conclusão da faculdade (2010) não deve inflar o total.
+        """
+        texto = (
+            "EXPERIÊNCIA PROFISSIONAL\n"
+            "Empresa Alpha: 2018-2024. Desenvolvedor Python Sênior.\n"
+            "\n"
+            "FORMAÇÃO\n"
+            "Ciência da Computação — USP (2006-2010).\n"
+        )
+        resultado = _extrair_anos_curriculo(texto)
+        # Deve contar só 2018-2024 = 6 anos, não misturar com 2006-2010
+        assert resultado == pytest.approx(6.0, abs=0.5), (
+            f"Com seção detectada, deveria contar só exp. profissional (6a), obteve {resultado}"
+        )
+
+    def test_sem_cabecalho_usa_texto_completo(self):
+        """
+        CV sem cabeçalhos de seção → fallback para texto completo.
+        Neste caso o comportamento anterior é mantido.
+        """
+        texto = (
+            "João Silva, desenvolvedor Python. "
+            "Trabalhou na Empresa X de 2019 a 2023. "
+            "Formado em CC em 2015."
+        )
+        resultado = _extrair_anos_curriculo(texto)
+        # Sem seção detectada: soma todos os intervalos encontrados
+        assert resultado > 0
+
+    def test_formacao_dentro_da_secao_experiencia_ainda_conta(self):
+        """
+        [LIMITAÇÃO CONHECIDA] Se a formação está dentro da seção experiência
+        (CV mal estruturado), ainda é contada.
+        """
+        texto = (
+            "EXPERIÊNCIA\n"
+            "Empresa A: 2018-2022. Dev Python.\n"
+            "Mestrado USP: 2014-2016.\n"
+        )
+        resultado = _extrair_anos_curriculo(texto)
+        # Ambos os intervalos estão na seção experiência → ambos contam
+        assert resultado >= 4.0
+
+
 class TestExtracaoNivel:
     def test_senior(self):
         assert _extrair_nivel("Desenvolvedor Python Sênior com 8 anos") == 3
@@ -155,27 +208,48 @@ class TestExtracaoHabilidades:
 
 
 class TestExtracaoEducacao:
-    def test_graduacao_via_formacao(self):
+    def test_graduacao_concluida_via_formacao(self):
         formacao = [{"nivel": "graduacao", "curso": "CC", "instituicao": "USP", "status": "concluido"}]
+        assert _extrair_educacao("", formacao) == 3
+
+    def test_graduacao_cursando_via_formacao(self):
+        formacao = [{"nivel": "graduacao", "curso": "CC", "instituicao": "ABC", "status": "cursando"}]
+        assert _extrair_educacao("", formacao) == 2
+
+    def test_graduacao_trancada_via_formacao(self):
+        formacao = [{"nivel": "graduacao", "curso": "SI", "instituicao": "XYZ", "status": "trancado"}]
         assert _extrair_educacao("", formacao) == 2
 
     def test_mba_via_formacao(self):
         formacao = [{"nivel": "mba", "curso": "MBA RH", "instituicao": "FGV", "status": "concluido"}]
-        assert _extrair_educacao("", formacao) == 3
+        assert _extrair_educacao("", formacao) == 4
 
     def test_mestrado_via_formacao(self):
         formacao = [{"nivel": "mestrado", "curso": "MSc", "instituicao": "USP", "status": "concluido"}]
-        assert _extrair_educacao("", formacao) == 4
+        assert _extrair_educacao("", formacao) == 5
 
     def test_maior_nivel_entre_formacoes(self):
         formacao = [
             {"nivel": "graduacao", "curso": "CC", "instituicao": "USP", "status": "concluido"},
             {"nivel": "mestrado",  "curso": "MSc", "instituicao": "USP", "status": "concluido"},
         ]
-        assert _extrair_educacao("", formacao) == 4
+        assert _extrair_educacao("", formacao) == 5
 
-    def test_fallback_via_texto(self):
-        assert _extrair_educacao("Possui mestrado em engenharia", []) == 4
+    def test_fallback_via_texto_mestrado(self):
+        assert _extrair_educacao("Possui mestrado em engenharia", []) == 5
+
+    def test_fallback_via_texto_graduacao_completa(self):
+        assert _extrair_educacao("Bacharelado em Ciência da Computação — USP (2013)", []) == 3
+
+    def test_fallback_via_texto_cursando(self):
+        assert _extrair_educacao("Cursando Sistemas de Informação", []) == 2
+
+    def test_fallback_via_texto_trancado(self):
+        assert _extrair_educacao("Graduação trancada em 2021", []) == 2
+
+    def test_mestrado_com_cursando_nao_rebaixa(self):
+        # "cursando" não deve rebaixar mestrado — o rebaixe é só para graduação
+        assert _extrair_educacao("Mestrado em andamento — UNICAMP", []) == 5
 
     def test_sem_educacao(self):
         assert _extrair_educacao("Experiência em Python", []) == 0
@@ -261,7 +335,7 @@ class TestExtrairFeaturesCompleto:
         assert feat["nivel_senioridade"] >= 3    # sênior ou tech lead
         assert "python" in feat["habilidades"]
         assert "fastapi" in feat["habilidades"]
-        assert feat["nivel_educacao"] == 2
+        assert feat["nivel_educacao"] == 3  # graduação concluída
 
     def test_vaga_com_termos_mercado_enriquece_habilidades(self):
         texto_vaga = (

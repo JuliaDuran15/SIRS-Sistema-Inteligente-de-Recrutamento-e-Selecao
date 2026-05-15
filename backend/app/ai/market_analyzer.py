@@ -7,7 +7,6 @@ import numpy as np
 from app.ai.resume_parser import get_model
 from app.core.config import settings
 
-# ── Tradução ───────────────────────────────────────────────────────────────
 
 def traduzir_para_ingles(texto: str) -> str:
     """Traduz texto para inglês usando deep-translator (sem API key)."""

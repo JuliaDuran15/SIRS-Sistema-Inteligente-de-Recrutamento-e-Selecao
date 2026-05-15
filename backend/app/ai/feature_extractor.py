@@ -4,7 +4,7 @@ Extração de features estruturadas de currículos e requisitos de vaga.
 Complementa a análise semântica pura (cosine similarity) com sinais baseados
 em regras: anos de experiência, nível de senioridade e overlap de habilidades.
 
-O módulo é puramente regex + dict lookup — sem dependências extras além do stdlib.
+O módulo é puramente regex + dict lookup
 """
 import re
 from datetime import datetime
@@ -41,31 +41,87 @@ _ANOS_POR_NIVEL: dict[int, float] = {
     6: 15.0,
 }
 
-# ── Catálogo de habilidades técnicas reconhecidas ────────────────────────────
+# ── Catálogo de habilidades técnicas (forma canônica) ────────────────────────
 _HABILIDADES_TECH: frozenset[str] = frozenset({
     # Linguagens
     'python', 'java', 'javascript', 'typescript', 'go', 'golang', 'rust',
     'c++', 'c#', 'kotlin', 'swift', 'php', 'ruby', 'scala', 'r',
+    'dart', 'elixir', 'haskell', 'lua', 'perl', 'groovy',
     # Web / API
     'fastapi', 'django', 'flask', 'react', 'vue', 'angular',
-    'node.js', 'node', 'express', 'nextjs', 'graphql', 'rest',
-    # Dados
+    'node.js', 'express', 'nestjs', 'nextjs', 'nuxt', 'svelte',
+    'graphql', 'rest', 'grpc', 'fastify', 'spring', 'springboot',
+    'laravel', 'rails', 'asp.net', 'blazor',
+    # Dados & IA
     'spark', 'pyspark', 'airflow', 'kafka', 'dbt', 'hadoop', 'flink',
     'pandas', 'numpy', 'scikit-learn', 'tensorflow', 'pytorch',
+    'keras', 'huggingface', 'langchain', 'openai', 'llm',
+    'mlflow', 'sagemaker', 'vertex ai', 'databricks',
     # Banco de dados
-    'postgresql', 'postgres', 'mysql', 'mongodb', 'redis',
-    'elasticsearch', 'cassandra', 'dynamodb', 'oracle', 'sql', 'nosql',
+    'postgresql', 'mysql', 'mongodb', 'redis', 'sqlite',
+    'elasticsearch', 'cassandra', 'dynamodb', 'oracle', 'sql server',
+    'mariadb', 'neo4j', 'influxdb', 'cockroachdb', 'sql', 'nosql',
     # Cloud & DevOps
-    'aws', 'azure', 'gcp', 'docker', 'kubernetes', 'k8s',
-    'terraform', 'ansible', 'github actions', 'ci/cd', 'linux',
+    'aws', 'azure', 'gcp', 'docker', 'kubernetes',
+    'terraform', 'ansible', 'pulumi', 'helm',
+    'github actions', 'gitlab ci', 'jenkins', 'ci/cd', 'argocd',
+    'linux', 'nginx', 'apache',
     # Ferramentas
-    'git', 'celery', 'rabbitmq', 'jira', 'power bi', 'excel',
-    'figma', 'tableau', 'looker',
-    # Negócio
-    'sap', 'erp', 'crm', 'salesforce',
+    'git', 'celery', 'rabbitmq', 'jira', 'confluence',
+    'power bi', 'excel', 'figma', 'tableau', 'looker', 'metabase',
+    'postman', 'swagger', 'sonarqube',
+    # Negócio / ERP
+    'sap', 'sap fi', 'sap sd', 'sap mm', 'erp', 'crm', 'salesforce',
+    'totvs', 'protheus', 'oracle erp',
+    # Financeiro / Contábil
+    'ifrs', 'cpc', 'gaap', 'conciliação', 'controladoria',
+    'planejamento orçamentário', 'fluxo de caixa', 'demonstrações financeiras',
     # Metodologias
-    'agile', 'scrum', 'kanban',
+    'agile', 'scrum', 'kanban', 'lean', 'safe', 'xp',
 })
+
+# ── Aliases → forma canônica ──────────────────────────────────────────────────
+# Normaliza variações de escrita para a skill canônica do catálogo acima.
+_ALIASES: dict[str, str] = {
+    # Python
+    'python3': 'python', 'python 3': 'python',
+    # JavaScript / TypeScript
+    'js': 'javascript', 'es6': 'javascript', 'es2015': 'javascript',
+    'ts': 'typescript',
+    # Node
+    'node': 'node.js', 'nodejs': 'node.js', 'node js': 'node.js',
+    # React
+    'react.js': 'react', 'reactjs': 'react', 'react native': 'react',
+    # Vue / Angular
+    'vue.js': 'vue', 'vuejs': 'vue',
+    'angularjs': 'angular', 'angular.js': 'angular',
+    # Spring
+    'spring boot': 'springboot', 'spring framework': 'spring',
+    # Kubernetes
+    'k8s': 'kubernetes',
+    # PostgreSQL
+    'postgres': 'postgresql', 'pgsql': 'postgresql',
+    # SQL Server
+    'mssql': 'sql server', 'ms sql': 'sql server', 't-sql': 'sql server',
+    # AWS serviços (normalizar para aws)
+    'ec2': 'aws', 's3': 'aws', 'lambda': 'aws', 'rds': 'aws',
+    'eks': 'aws', 'ecs': 'aws',
+    # GCP
+    'google cloud': 'gcp', 'google cloud platform': 'gcp', 'bigquery': 'gcp',
+    # Azure
+    'microsoft azure': 'azure', 'azure devops': 'azure',
+    # CI/CD
+    'continuous integration': 'ci/cd', 'continuous delivery': 'ci/cd',
+    'devops': 'ci/cd',
+    # Scikit-learn
+    'sklearn': 'scikit-learn',
+    # LLM / IA generativa
+    'gpt': 'openai', 'chatgpt': 'openai', 'openai api': 'openai',
+    'transformers': 'huggingface',
+    # Negócio
+    'power automate': 'erp',  # automação de processos
+    'sharepoint': 'erp',
+}
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -85,11 +141,13 @@ def extrair_features_curriculo(
       habilidades       — set:   skills técnicas identificadas
       nivel_educacao    — int:   0=sem … 5=doutorado
     """
+    habilidades = _extrair_habilidades(texto)
     return {
-        "anos_experiencia" : _extrair_anos_curriculo(texto),
-        "nivel_senioridade": _extrair_nivel(texto),
-        "habilidades"      : _extrair_habilidades(texto),
-        "nivel_educacao"   : _extrair_educacao(texto, formacao or []),
+        "anos_experiencia"  : _extrair_anos_curriculo(texto),
+        "nivel_senioridade" : _extrair_nivel(texto),
+        "habilidades"       : habilidades,
+        "proficiencia_skills": _extrair_proficiencia(texto, habilidades),
+        "nivel_educacao"    : _extrair_educacao(texto, formacao or []),
     }
 
 
@@ -165,11 +223,18 @@ def calcular_bonus_estrutural(
         else:
             bonus -= 0.05          # muito abaixo: penalidade significativa
 
-    # ── 3. Overlap de habilidades (+0.04) ─────────────────────────────────────
+    # ── 3. Overlap de habilidades (+0.04) ponderado por proficiência ──────────
     hab_req  = features_vaga.get("habilidades", set())
     hab_cand = features_curriculo.get("habilidades", set())
+    profic   = features_curriculo.get("proficiencia_skills", {})
     if hab_req and hab_cand:
-        overlap = len(hab_req & hab_cand) / len(hab_req)
+        skills_comuns = hab_req & hab_cand
+        if profic:
+            # Cada skill pesa pelo nível de proficiência (0.3 básico → 1.3 expert)
+            peso_total = sum(profic.get(s, 1.0) for s in skills_comuns)
+            overlap = peso_total / len(hab_req)
+        else:
+            overlap = len(skills_comuns) / len(hab_req)
         bonus += overlap * 0.04
 
     return max(-0.15, min(0.15, bonus))
@@ -213,6 +278,13 @@ def _extrair_anos_curriculo(texto: str) -> float:
         return max(valores_explicitos)
 
     # ── 2. Soma de intervalos de emprego ─────────────────────────────────────
+    # Restringe a busca à seção "experiência" quando detectável —
+    # evita somar anos de formação ou de outras seções não profissionais.
+    from app.ai.section_extractor import extrair_secoes
+    secoes = extrair_secoes(texto)
+    secao_exp = secoes.get("experiencia", "").strip()
+    texto_busca = (secao_exp if secao_exp else texto).lower()
+
     # Detecta padrões como:
     #   2018–2022 | 2019 - 2023 | 01/2018 - 12/2022
     #   2020 – presente | 2021 - atual | 2022 - current
@@ -231,7 +303,7 @@ def _extrair_anos_curriculo(texto: str) -> float:
     )
 
     intervalos: list[tuple[int, int]] = []
-    for m in _PAD_INTERVALO.finditer(texto_lower):
+    for m in _PAD_INTERVALO.finditer(texto_busca):
         inicio = int(m.group(1))
         if m.group(2):
             fim = int(m.group(2))
@@ -246,7 +318,7 @@ def _extrair_anos_curriculo(texto: str) -> float:
         r'(?:desde|since|a\s+partir\s+de)\s+((?:19|20)\d{2})',
         re.IGNORECASE,
     )
-    for m in _PAD_DESDE.finditer(texto_lower):
+    for m in _PAD_DESDE.finditer(texto_busca):
         inicio = int(m.group(1))
         if 1980 <= inicio <= ano_atual:
             intervalos.append((inicio, ano_atual))
@@ -257,9 +329,9 @@ def _extrair_anos_curriculo(texto: str) -> float:
             return round(total, 1)
 
     # ── 3. Fallback conservador ───────────────────────────────────────────────
-    # Usa o menor ano encontrado, divide por 1.4 para ser conservador
-    # (anos de formação inflacionam o span)
-    anos_texto = [int(y) for y in re.findall(r'\b(20\d{2}|19[89]\d)\b', texto)]
+    # Usa o menor ano encontrado na seção de experiência (ou texto completo),
+    # divide por 1.4 para ser conservador.
+    anos_texto = [int(y) for y in re.findall(r'\b(20\d{2}|19[89]\d)\b', texto_busca)]
     anos_validos = [a for a in anos_texto if 1990 <= a <= ano_atual]
     if len(anos_validos) >= 2:
         span = ano_atual - min(anos_validos)
@@ -315,40 +387,116 @@ def _extrair_nivel(texto: str) -> int:
     return nivel_max
 
 
+# ── Modificadores de proficiência ────────────────────────────────────────────
+_PROF_BAIXO: frozenset[str] = frozenset({
+    'básico', 'básica', 'básicos', 'básicas',
+    'iniciante', 'iniciantes', 'noções', 'noção',
+    'conhecimento básico', 'conhecimentos básicos',
+    'rudimentar', 'elementar', 'superficial',
+    'beginner', 'basic', 'introductory',
+    'pouco', 'um pouco',
+})
+_PROF_ALTO: frozenset[str] = frozenset({
+    'avançado', 'avançada', 'sólido', 'sólida', 'profundo', 'profunda',
+    'expert', 'especialista', 'extenso', 'amplo', 'domínio',
+    'advanced', 'proficient', 'expert',
+})
+
+_WB  = r'(?<![a-z0-9\+\#\.])'  # word-boundary esquerdo (inclui ponto)
+_WB_R = r'(?![a-z0-9\+\#\.])'  # word-boundary direito  (inclui ponto)
+
+# Mapa inverso: canonical → todas as formas pesquisáveis (inclui aliases)
+_SKILL_BUSCA: dict[str, list[str]] = {s: [s] for s in _HABILIDADES_TECH}
+for _alias, _canonical in _ALIASES.items():
+    if _canonical in _SKILL_BUSCA:
+        _SKILL_BUSCA[_canonical].append(_alias)
+
+
+def _encontra_skill(texto_lower: str, patterns: list[str]) -> int:
+    """Retorna a posição da primeira ocorrência de qualquer forma da skill, ou -1."""
+    for p in patterns:
+        m = re.search(_WB + re.escape(p) + _WB_R, texto_lower)
+        if m:
+            return m.start()
+    return -1
+
+
 def _extrair_habilidades(texto: str) -> set[str]:
-    """Retorna o conjunto de habilidades técnicas reconhecidas no texto."""
+    """
+    Retorna o conjunto de habilidades técnicas reconhecidas no texto.
+    Busca cada skill junto com seus aliases — sem modificar o texto.
+    """
     texto_lower = texto.lower()
     encontradas: set[str] = set()
-    for skill in _HABILIDADES_TECH:
-        # Word-boundary adaptado para termos com pontos (node.js, c++)
-        padrao = r'(?<![a-z0-9\+\#])' + re.escape(skill) + r'(?![a-z0-9\+\#])'
-        if re.search(padrao, texto_lower):
-            encontradas.add(skill)
+    for canonical, patterns in _SKILL_BUSCA.items():
+        if _encontra_skill(texto_lower, patterns) >= 0:
+            encontradas.add(canonical)
     return encontradas
+
+
+def _extrair_proficiencia(texto: str, habilidades: set[str]) -> dict[str, float]:
+    """
+    Para cada skill detectada, retorna um multiplicador de proficiência (0.3–1.3).
+    Examina uma janela de ±70 chars em volta de cada menção da skill.
+
+    0.3 = mencionado como básico/iniciante
+    1.0 = mencionado sem modificador (padrão)
+    1.3 = mencionado como avançado/expert
+    """
+    texto_lower = texto.lower()
+    resultado: dict[str, float] = {}
+    for skill in habilidades:
+        pos = _encontra_skill(texto_lower, _SKILL_BUSCA.get(skill, [skill]))
+        if pos < 0:
+            resultado[skill] = 1.0
+            continue
+        janela = texto_lower[max(0, pos - 70): pos + len(skill) + 70]
+        if any(m in janela for m in _PROF_BAIXO):
+            resultado[skill] = 0.3
+        elif any(m in janela for m in _PROF_ALTO):
+            resultado[skill] = 1.3
+        else:
+            resultado[skill] = 1.0
+    return resultado
+
+
+_INCOMPLETO = frozenset({'cursando', 'trancado', 'trancada', 'em andamento', 'interrompido', 'incompleto'})
 
 
 def _extrair_educacao(texto: str, formacao: list) -> int:
     """
     Retorna nível de educação:
-    0=sem / 1=técnico / 2=graduação / 3=pós/MBA / 4=mestrado / 5=doutorado
+    0=sem / 1=técnico / 2=graduação incompleta (cursando/trancado) /
+    3=graduação / 4=pós/MBA / 5=mestrado / 6=doutorado
     """
     nivel_map = {
         'tecnico': 1, 'técnico': 1, 'tecnologo': 1, 'tecnólogo': 1,
-        'graduacao': 2, 'graduação': 2, 'bacharelado': 2, 'licenciatura': 2,
-        'especializacao': 3, 'especialização': 3, 'mba': 3,
-        'mestrado': 4, 'msc': 4,
-        'doutorado': 5, 'phd': 5,
+        'graduacao': 3, 'graduação': 3, 'bacharelado': 3, 'licenciatura': 3,
+        'especializacao': 4, 'especialização': 4, 'mba': 4,
+        'mestrado': 5, 'msc': 5,
+        'doutorado': 6, 'phd': 6,
     }
     if formacao:
-        nivel_max = max(
-            (nivel_map.get((f.get("nivel") or "").lower(), 0) for f in formacao),
-            default=0,
-        )
+        nivel_max = 0
+        for f in formacao:
+            nivel = nivel_map.get((f.get("nivel") or "").lower(), 0)
+            status = (f.get("status") or "").lower()
+            # Graduação com status de cursando/trancado → incompleta
+            if nivel == 3 and status in ('cursando', 'em andamento', 'trancado'):
+                nivel = 2
+            nivel_max = max(nivel_max, nivel)
         if nivel_max > 0:
             return nivel_max
 
     texto_lower = texto.lower()
     for palavra, nivel in sorted(nivel_map.items(), key=lambda x: -x[1]):
         if palavra in texto_lower:
+            # Graduação com indicador de incompleto em qualquer parte do texto
+            if nivel == 3 and any(inc in texto_lower for inc in _INCOMPLETO):
+                return 2
             return nivel
+
+    # Fallback: "cursando" ou "trancado" sem palavra-chave de grau → graduação incompleta
+    if any(inc in texto_lower for inc in ('cursando', 'trancado', 'trancada')):
+        return 2
     return 0

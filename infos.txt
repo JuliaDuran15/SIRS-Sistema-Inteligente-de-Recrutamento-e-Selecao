@@ -370,26 +370,105 @@ Treinar uma regressão logística — os coeficientes aprenderão os pesos ótim
 Validar com NDCG@10 e MRR (métricas padrão de ranking)
 
 
-
-Funcionalidades faltando
-Alta prioridade
-
-Notificação de e-mail — a config SMTP já existe mas parece não estar sendo usada. Notificar candidatos quando aprovados/reprovados e RH quando um CV é processado seria um diferencial grande
-Preview de CV inline — hoje o RH precisa baixar o PDF para ver. Renderizar direto na página do candidato seria muito mais rápido no fluxo de triagem
-Status de processamento em tempo real — quando um CV está sendo processado (status processando_curriculo), o frontend não atualiza sozinho. Um polling simples ou WebSocket mostraria o progresso sem precisar recarregar
-Export CSV/Excel — lista de candidatos de uma vaga com scores, para compartilhar com o time
-Média prioridade
-
-Kanban do pipeline — visualizar candidatos como cards arrastáveis entre colunas (triagem → entrevista RH → técnica) seria mais natural que a lista atual
-Busca por score mínimo — "mostre só candidatos com score > 70" na VagaDetalhe
 Comentários internos — thread de discussão por candidatura (RH e Gestor podem anotar)
 
 IA / Scoring
 Explicabilidade do score — mostrar ao RH por que o candidato pontuou assim: "forte em Python (+15), fraco em Docker (-8), 3 anos de experiência relevante (+12)". O feature_extractor.py já calcula os componentes, só falta expor isso na UI
 Score de viés — verificar se candidatos de certos grupos estão sendo sistematicamente penalizados por viés no embedding (importante para compliance)
-Threshold configurável por vaga — "aprovar automaticamente todos com score > 85" para vagas de alto volume
 
 
-Export CSV/Excel — lista de candidatos de uma vaga com scores, para compartilhar com o time
-e fazer a adicção (pagina adicional)
-Kanban do pipeline — visualizar candidatos como cards arrastáveis entre colunas (triagem → entrevista RH → técnica) seria mais natural que a lista atual
+Como o algoritmo calculava (antes):
+
+Varria o texto inteiro em busca de intervalos yyyy–yyyy
+Sem distinção de seção: anos de graduação (2006-2010), cursos, voluntariado — tudo contava
+Como calcula agora:
+
+Tenta extrair a seção "experiência profissional" usando o section_extractor
+Se encontrar → busca intervalos só nessa seção → formação não contamina
+Se não encontrar cabeçalho (CV sem estrutura) → fallback para texto completo (comportamento anterior)
+
+
+
+Alta prioridade — médio esforço
+
+4. Análise de trajetória de carreira
+Hoje só conta anos totais. Não detecta crescimento:
+Estagiário 2016 → Júnior 2017 → Pleno 2019 → Sênior 2021 → Lead 2023
+Isso é muito mais informativo que "7 anos de experiência". Extrair a progressão permitiria comparar candidatos com mesma duração mas trajetórias diferentes.
+
+5. Comparação requisito a requisito (requirement-level matching)
+Atualmente: compara o CV inteiro vs a vaga inteira.
+Mais preciso: para cada requisito da vaga ("5+ anos Python", "experiência com Docker"), procurar a evidência específica no CV.
+
+Requisito: "FastAPI"
+→ Buscar no CV: "desenvolvi APIs com FastAPI" → match alto
+→ vs "ouvi falar de FastAPI" → match baixo
+Isso é o que cross-encoders fazem — o bge-reranker-base já instalado faz isso, mas só no reranking manual. Poderia ser usado no score primário.
+
+Médio prazo — alto valor estratégico
+6. Feedback loop — aprender com contratações reais
+O maior problema do sistema: não aprende. Quando uma candidatura com score 45 é contratada e fica 3 anos na empresa, esse dado é desperdiçado.
+
+Adicionar uma tabela feedback_score que registra:
+
+candidatura_id, score_curriculo, foi_contratado, permaneceu_X_meses
+Com esses dados é possível:
+Calibrar os limiares (baixo < 50 pode estar errado para certas vagas)
+Identificar vagas onde o modelo acerta vs erra sistematicamente
+A longo prazo: fine-tuning do embedding com pares reais
+
+7. Detecção de inconsistências
+Alguns padrões suspeitos que o sistema ignora:
+"10 anos de experiência em React" (React tem 12 anos, mas candidato tem 22 e formou em 2021)
+Buracos grandes inexplicados no histórico sem menção
+Número de empregos muito alto para o período
+
+
+  DATA SCIENTIST
+──────────────────────────────────────────────────────────────────────
+  SCORES
+    Semântico bruto  :  37.0%
+    Bônus estrutural : +0.132  →  score_rh final: 50.3%
+    Score mercado    :  37.0%
+    Score final      :  45.0/100  [REGULAR]
+──────────────────────────────────────────────────────────────────────
+  FEATURES ESTRUTURAIS
+    Experiência  : 12.0 anos  (vaga exige ~5a)  → ✓ suficiente
+    Senioridade  : nível 3 = sênior  (vaga espera nível 3 = sênior)  → ✓ ok
+    Educação     : nível 5 = mestrado
+──────────────────────────────────────────────────────────────────────
+  SKILLS DETECTADAS NO CV (17 total)
+    aws*  docker*  fastapi*  git  huggingface  mongodb  numpy  
+    openai  pandas  postgresql*  python*  pytorch  r  sagemaker  
+    scikit-learn  tableau  tensorflow  
+    (* = skill em comum com a vaga)
+──────────────────────────────────────────────────────────────────────
+  OVERLAP COM VAGA (5 skills em comum de 9 requeridas)
+    aws, docker, fastapi, postgresql, python
+
+══════════════════════════════════════════════════════════════════════
+  JÚNIOR ESTÁGIO
+──────────────────────────────────────────────────────────────────────
+  SCORES
+    Semântico bruto  :  55.9%
+    Bônus estrutural : -0.059  →  score_rh final: 50.0%
+    Score mercado    :  55.9%
+    Score final      :  52.4/100  [REGULAR]
+──────────────────────────────────────────────────────────────────────
+  FEATURES ESTRUTURAIS
+    Experiência  : 1.0 anos  (vaga exige ~5a)  → ✗ insuficiente
+    Senioridade  : nível 0 = estágio  (vaga espera nível 3 = sênior)  → ✗ abaixo
+    Educação     : nível 2 = graduação incompleta
+──────────────────────────────────────────────────────────────────────
+  SKILLS DETECTADAS NO CV (3 total)
+    excel  python*  sql  
+    (* = skill em comum com a vaga)
+──────────────────────────────────────────────────────────────────────
+  OVERLAP COM VAGA (1 skills em comum de 9 requeridas)
+    python
+
+
+
+ EmbeddingGemma e dividir em chunk-> nao melhorou 
+
+ 

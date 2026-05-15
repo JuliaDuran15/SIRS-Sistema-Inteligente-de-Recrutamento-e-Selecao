@@ -9,10 +9,13 @@ Uso no endpoint:
     async def importar(request: Request, ...):
         await checar_rate_limit(request, max_por_hora=60)
 """
+import logging
 import time
 
 from app.core.config import settings
 from fastapi import HTTPException, Request
+
+_log = logging.getLogger("rate_limit")
 
 
 def _redis_client():
@@ -74,6 +77,6 @@ async def checar_rate_limit(
 
     except HTTPException:
         raise
-    except Exception:
+    except Exception as exc:
         # Redis fora do ar → deixa passar (fail open) para não bloquear integrações
-        pass
+        _log.warning("Rate limit check falhou (Redis indisponível?): %s", exc)

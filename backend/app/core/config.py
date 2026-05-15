@@ -20,10 +20,14 @@ class Settings(BaseSettings):
     MARKET_ANALYZER_SOURCE : str = "adzuna"
 
     # ── Modelos de embedding e reranking ──────────────────────────────────────
-    # Troca de modelo exige: 1) reiniciar containers  2) rodar migração para
-    # alterar dimensão dos vetores  3) reprocessar todos os currículos/vagas.
-    EMBEDDING_MODEL : str = "all-MiniLM-L6-v2"   # ou "all-mpnet-base-v2" (768d)
-    EMBEDDING_DIM   : int = 384                    # mude junto com o modelo
+    # Modelos 384d (drop-in, sem migração de vetores):
+    #   all-MiniLM-L6-v2                      — rápido, inglês (padrão anterior)
+    #   paraphrase-multilingual-MiniLM-L12-v2 — multilingual PT/EN/ES, 384d
+    # Modelos 768d (exige migração Alembic + reprocessar tudo):
+    #   all-mpnet-base-v2                      — inglês, alta qualidade
+    #   paraphrase-multilingual-mpnet-base-v2  — multilingual, máxima qualidade
+    EMBEDDING_MODEL : str = "paraphrase-multilingual-mpnet-base-v2"
+    EMBEDDING_DIM   : int = 768
     RERANKER_MODEL  : str = "BAAI/bge-reranker-base"
     RERANKER_TOP_N  : int = 20                     # quantos candidatos reordenar
 

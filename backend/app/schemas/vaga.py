@@ -2,12 +2,12 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class VagaCreate(BaseModel):
-    nome             : str
-    requisitos_texto : str
+    nome             : str   = Field(..., min_length=1, max_length=200)
+    requisitos_texto : str   = Field(..., min_length=1, max_length=20_000)
     gestores_ids     : list[str] = []
 
     # Pesos do score curricular — devem somar 1.0
@@ -18,6 +18,11 @@ class VagaCreate(BaseModel):
     peso_curriculo      : float = 0.50
     peso_entrevista_rh  : float = 0.25
     peso_entrevista_tec : float = 0.25
+
+    @field_validator("nome", "requisitos_texto", mode="before")
+    @classmethod
+    def strip_strings(cls, v):
+        return v.strip() if isinstance(v, str) else v
 
     @model_validator(mode="after")
     def validar_pesos(self):
@@ -94,4 +99,9 @@ class VagaUpdateRequisitos(BaseModel):
     Usado quando o analista edita só o texto dos requisitos.
     O sistema recalcula o vetor automaticamente.
     """
-    requisitos_texto: str
+    requisitos_texto: str = Field(..., min_length=1, max_length=20_000)
+
+    @field_validator("requisitos_texto", mode="before")
+    @classmethod
+    def strip_string(cls, v):
+        return v.strip() if isinstance(v, str) else v

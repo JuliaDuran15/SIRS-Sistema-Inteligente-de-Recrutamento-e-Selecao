@@ -350,3 +350,40 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
 
     finally:
         db.close()
+
+
+@celery_app.task
+def reprocessar_todos_curriculos():
+    """
+    Reprocessa todos os currículos com texto extraído usando o modelo de
+    embedding atual. Necessário após trocar EMBEDDING_MODEL no .env.
+
+    Execute via: docker compose exec worker celery -A app.core.celery_app call app.ai.tasks.reprocessar_todos_curriculos
+    Ou via API:  POST /admin/reprocessar-curriculos  (apenas admin)
+    """
+    from app.models.candidatura import Candidatura as _Cand
+    db = SessionLocal()
+    try:
+        curriculos = (
+            db.query(Curriculo)
+            .filter(Curriculo.texto_extraido.isnot(None))
+            .all()
+        )
+        total = len(curriculos)
+        logger.info(f"reprocessar_todos_curriculos | {total} currículos para reprocessar")
+
+        for i, cur in enumerate(curriculos, 1):
+            try:
+                processar_curriculo_texto.delay(
+                    str(cur.candidatura_id),
+                    cur.texto_extraido,
+                )
+                if i % 10 == 0:
+                    logger.info(f"reprocessar | {i}/{total} enfileirados")
+            except Exception as exc:
+                logger.warning(f"reprocessar | curriculo {cur.id} falhou ao enfileirar: {exc}")
+
+        logger.info(f"reprocessar_todos_curriculos | {total} tasks enfileiradas")
+        return {"enfileirados": total}
+    finally:
+        db.close()

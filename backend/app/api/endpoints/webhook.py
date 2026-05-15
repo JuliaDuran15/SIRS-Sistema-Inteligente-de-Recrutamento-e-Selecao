@@ -14,8 +14,9 @@ Fluxo por chamada:
 """
 import json
 import re
-import xml.etree.ElementTree as ET
 from datetime import date
+
+import defusedxml.ElementTree as ET
 
 _RE_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -51,7 +52,8 @@ router = APIRouter()
 def _checar_api_key(api_key: str | None) -> None:
     chave = settings.WEBHOOK_SECRET_KEY
     if not chave:
-        return  # não configurada → modo aberto (dev)
+        logger.warning("WEBHOOK_SECRET_KEY não configurada — endpoint aberto (inseguro em produção)")
+        return
     if api_key != chave:
         raise HTTPException(status_code=401, detail="X-Webhook-Key inválida ou ausente")
 
