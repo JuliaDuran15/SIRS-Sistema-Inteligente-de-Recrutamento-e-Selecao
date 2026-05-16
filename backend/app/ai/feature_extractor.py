@@ -92,6 +92,8 @@ _ALIASES: dict[str, str] = {
     'node': 'node.js', 'nodejs': 'node.js', 'node js': 'node.js',
     # React
     'react.js': 'react', 'reactjs': 'react', 'react native': 'react',
+    # Next.js
+    'next.js': 'nextjs', 'next js': 'nextjs',
     # Vue / Angular
     'vue.js': 'vue', 'vuejs': 'vue',
     'angularjs': 'angular', 'angular.js': 'angular',
@@ -180,7 +182,7 @@ def calcular_bonus_estrutural(
     features_vaga: dict,
 ) -> float:
     """
-    Retorna um bônus/penalidade entre -0.15 e +0.15 baseado em:
+    Retorna um bônus/penalidade entre -0.25 e +0.25 baseado em:
       - Adequação de anos de experiência ao requisito
       - Alinhamento de nível de senioridade
       - Overlap de habilidades técnicas
@@ -199,45 +201,52 @@ def calcular_bonus_estrutural(
     if anos_req == 0.0 and nivel_req > 0:
         anos_req = _ANOS_POR_NIVEL.get(nivel_req, 0.0)
 
-    # ── 1. Experiência (±0.06) ────────────────────────────────────────────────
-    if anos_req > 0 and anos_cand > 0:
-        ratio = anos_cand / anos_req
-        if ratio >= 1.0:
-            bonus += 0.06          # cumpre ou supera o requisito
-        elif ratio >= 0.7:
-            bonus += 0.02          # próximo do requisito
-        elif ratio < 0.35:
-            bonus -= 0.06          # muito aquém — penalidade
-
-    # ── 2. Senioridade (±0.05) ────────────────────────────────────────────────
-    if nivel_req > 0 and nivel_cand > 0:
-        diff = nivel_cand - nivel_req
-        if diff == 0:
-            bonus += 0.05          # nível exato
-        elif diff == 1:
-            bonus += 0.02          # um nível acima: levemente favorável
-        elif diff > 1:
-            bonus -= 0.01          # muito acima: possível overcualification
-        elif diff == -1:
-            bonus -= 0.02          # um nível abaixo: leve penalidade
-        else:
-            bonus -= 0.05          # muito abaixo: penalidade significativa
-
-    # ── 3. Overlap de habilidades (+0.04) ponderado por proficiência ──────────
+    # ── 3. Overlap de habilidades calculado antes — condiciona componentes ───────
     hab_req  = features_vaga.get("habilidades", set())
     hab_cand = features_curriculo.get("habilidades", set())
     profic   = features_curriculo.get("proficiencia_skills", {})
+    overlap  = 0.0
     if hab_req and hab_cand:
         skills_comuns = hab_req & hab_cand
-        if profic:
-            # Cada skill pesa pelo nível de proficiência (0.3 básico → 1.3 expert)
-            peso_total = sum(profic.get(s, 1.0) for s in skills_comuns)
-            overlap = peso_total / len(hab_req)
+        if skills_comuns:
+            if profic:
+                peso_total = sum(profic.get(s, 1.0) for s in skills_comuns)
+                overlap = peso_total / len(hab_req)
+            else:
+                overlap = len(skills_comuns) / len(hab_req)
+            bonus += overlap * 0.08
         else:
-            overlap = len(skills_comuns) / len(hab_req)
-        bonus += overlap * 0.04
+            bonus -= 0.15          # candidato tem skills mas nenhuma é relevante
 
-    return max(-0.15, min(0.15, bonus))
+    # ── 1. Experiência (±0.08, escalada pelo overlap para evitar premiar exp irrelevante) ──
+    if anos_req > 0 and anos_cand > 0:
+        ratio = anos_cand / anos_req
+        # Escala o bônus positivo pelo overlap: exp irrelevante vale menos
+        escala = max(overlap, 0.3) if hab_req else 1.0
+        if ratio >= 1.0:
+            bonus += 0.08 * escala
+        elif ratio >= 0.7:
+            bonus += 0.03 * escala
+        elif ratio < 0.35:
+            bonus -= 0.10          # penalidade por anos insuficientes não é escalada
+
+    # ── 2. Senioridade (penalidade proporcional ao gap) ───────────────────────
+    if nivel_req > 0 and nivel_cand > 0:
+        diff = nivel_cand - nivel_req
+        if diff == 0:
+            bonus += 0.07          # nível exato
+        elif diff == 1:
+            bonus += 0.03          # um nível acima: levemente favorável
+        elif diff > 1:
+            bonus -= 0.01          # muito acima: possível overqualification
+        elif diff == -1:
+            bonus -= 0.05          # um nível abaixo
+        elif diff == -2:
+            bonus -= 0.10          # dois níveis abaixo
+        else:
+            bonus -= 0.15          # três+ níveis abaixo: mismatch severo
+
+    return max(-0.25, min(0.25, bonus))
 
 
 # ─────────────────────────────────────────────────────────────────────────────

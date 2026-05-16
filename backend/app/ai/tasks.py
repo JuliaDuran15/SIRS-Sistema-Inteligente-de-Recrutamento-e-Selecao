@@ -2,6 +2,11 @@ import asyncio
 from datetime import datetime
 
 import app.db.base  # noqa: F401 — garante que todos os models estão mapeados
+from app.ai.feature_extractor import (
+    calcular_bonus_estrutural,
+    extrair_features_curriculo,
+    extrair_features_vaga,
+)
 from app.ai.market_analyzer import analisar_mercado
 from app.ai.matching_engine import (
     calcular_score_curriculo,
@@ -10,7 +15,7 @@ from app.ai.matching_engine import (
     calcular_score_rh_multi_secao,
     gerar_explicacao,
 )
-from app.ai.resume_parser import parsear_curriculo, vetorizar_texto, vetorizar_secoes
+from app.ai.resume_parser import parsear_curriculo, vetorizar_secoes, vetorizar_texto
 from app.core.celery_app import celery_app
 from app.core.email import email_cv_processado
 from app.core.logger import get_logger
@@ -30,7 +35,6 @@ def _recalcular_scores_mercado(db, vaga: Vaga) -> int:
     Retorna a quantidade de currículos atualizados.
     """
     from app.models.candidatura import Candidatura as _Cand
-    from app.ai.feature_extractor import extrair_features_curriculo, extrair_features_vaga
 
     novo_vetor = vaga.vetor_mercado
     if novo_vetor is None:
@@ -52,20 +56,31 @@ def _recalcular_scores_mercado(db, vaga: Vaga) -> int:
     count = 0
     for cur in curriculos:
         try:
-            novo_mkt  = calcular_score_mercado(cur.vetor_embedding, novo_vetor,
-                                               vetor_secao_skills=cur.vetor_secao_skills)
-            s_rh_raw  = (cur.score_rh or 0) / 100
-            novo_final = calcular_score_curriculo(s_rh_raw, novo_mkt, vaga.peso_rh, vaga.peso_mercado)
+            # Recalcula score_rh semântico puro a partir dos vetores
+            if cur.vetor_secao_exp is not None:
+                s_rh_raw = calcular_score_rh_multi_secao(
+                    cur.vetor_embedding, vaga.vetor_vaga, cur.vetor_secao_exp
+                )
+            else:
+                s_rh_raw = calcular_score_rh(cur.vetor_embedding, vaga.vetor_vaga)
 
-            # Regenera explicação com os novos valores
+            novo_mkt = calcular_score_mercado(
+                cur.vetor_embedding, novo_vetor, vetor_secao_skills=cur.vetor_secao_skills
+            )
+
             feat_cv   = extrair_features_curriculo(cur.texto_extraido or "")
             feat_vaga = extrair_features_vaga(vaga.requisitos_texto, termos)
+            bonus     = calcular_bonus_estrutural(feat_cv, feat_vaga)
+
+            novo_final = calcular_score_curriculo(s_rh_raw, novo_mkt, vaga.peso_rh, vaga.peso_mercado, bonus)
+
             nova_expl = gerar_explicacao(
                 s_rh_raw, novo_mkt, novo_final,
                 vaga.peso_rh, vaga.peso_mercado,
                 features_cv=feat_cv, features_vaga=feat_vaga,
             )
 
+            cur.score_rh        = round(s_rh_raw * 100, 1)
             cur.score_mercado   = round(novo_mkt * 100, 1)
             cur.score_curriculo = novo_final
             cur.explicacao      = nova_expl
@@ -128,29 +143,28 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
         vetor_exp    = resultado.get("vetor_secao_exp")
         vetor_skills = resultado.get("vetor_secao_skills")
 
-        # 4. Calcula scores — multi-seção quando disponível, fallback holístico
+        # 4. Features estruturais e bônus (calculados antes dos scores)
         termos        = (vaga.ranking_mercado or {}).get("termos")
         vetor_mercado = vaga.vetor_mercado if vaga.vetor_mercado is not None else vaga.vetor_vaga
 
+        feat_cv   = extrair_features_curriculo(resultado["texto_extraido"])
+        feat_vaga = extrair_features_vaga(vaga.requisitos_texto, termos)
+        bonus     = calcular_bonus_estrutural(feat_cv, feat_vaga)
+
+        # 5. Scores semânticos puros + score final com bônus aplicado ao combinado
         score_rh = calcular_score_rh_multi_secao(
             vetor_embedding = resultado["vetor_embedding"],
             vetor_vaga      = vaga.vetor_vaga,
             vetor_secao_exp = vetor_exp,
-            texto_curriculo = resultado["texto_extraido"],
-            texto_vaga      = vaga.requisitos_texto,
-            termos_mercado  = termos,
         )
         score_mercado = calcular_score_mercado(
             resultado["vetor_embedding"], vetor_mercado, vetor_secao_skills=vetor_skills
         )
         score_curriculo = calcular_score_curriculo(
-            score_rh, score_mercado, vaga.peso_rh, vaga.peso_mercado
+            score_rh, score_mercado, vaga.peso_rh, vaga.peso_mercado, bonus
         )
 
-        # 5. Explicação XAI com sinais estruturais
-        from app.ai.feature_extractor import extrair_features_curriculo, extrair_features_vaga
-        feat_cv   = extrair_features_curriculo(resultado["texto_extraido"])
-        feat_vaga = extrair_features_vaga(vaga.requisitos_texto, termos)
+        # 6. Explicação XAI
         explicacao = gerar_explicacao(
             score_rh, score_mercado, score_curriculo,
             vaga.peso_rh, vaga.peso_mercado,
@@ -283,25 +297,23 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
         secs   = vetorizar_secoes(texto)
         termos = (vaga.ranking_mercado or {}).get("termos")
 
+        feat_cv   = extrair_features_curriculo(texto)
+        feat_vaga = extrair_features_vaga(vaga.requisitos_texto, termos)
+        bonus     = calcular_bonus_estrutural(feat_cv, feat_vaga)
+
         vetor_mercado = vaga.vetor_mercado if vaga.vetor_mercado is not None else vaga.vetor_vaga
         score_rh = calcular_score_rh_multi_secao(
             vetor_embedding = vetor,
             vetor_vaga      = vaga.vetor_vaga,
             vetor_secao_exp = secs["exp"],
-            texto_curriculo = texto,
-            texto_vaga      = vaga.requisitos_texto,
-            termos_mercado  = termos,
         )
         score_mercado = calcular_score_mercado(
             vetor, vetor_mercado, vetor_secao_skills=secs["skills"]
         )
         score_curriculo = calcular_score_curriculo(
-            score_rh, score_mercado, vaga.peso_rh, vaga.peso_mercado
+            score_rh, score_mercado, vaga.peso_rh, vaga.peso_mercado, bonus
         )
 
-        from app.ai.feature_extractor import extrair_features_curriculo, extrair_features_vaga
-        feat_cv   = extrair_features_curriculo(texto)
-        feat_vaga = extrair_features_vaga(vaga.requisitos_texto, termos)
         explicacao = gerar_explicacao(
             score_rh, score_mercado, score_curriculo,
             vaga.peso_rh, vaga.peso_mercado,
@@ -361,7 +373,6 @@ def reprocessar_todos_curriculos():
     Execute via: docker compose exec worker celery -A app.core.celery_app call app.ai.tasks.reprocessar_todos_curriculos
     Ou via API:  POST /admin/reprocessar-curriculos  (apenas admin)
     """
-    from app.models.candidatura import Candidatura as _Cand
     db = SessionLocal()
     try:
         curriculos = (

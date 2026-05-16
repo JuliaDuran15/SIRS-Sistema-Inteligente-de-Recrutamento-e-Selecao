@@ -2,20 +2,21 @@ from app.ai.market_analyzer import analisar_mercado
 from app.core.logger import get_logger
 
 logger = get_logger("VAGAS")
+import csv
+import io
+
 from app.ai.matching_engine import calcular_score_curriculo, calcular_score_final
 from app.ai.resume_parser import vetorizar_texto
-from app.ai.tasks import atualizar_mercado_vaga, _recalcular_scores_mercado
+from app.ai.tasks import _recalcular_scores_mercado, atualizar_mercado_vaga
 from app.api.deps import DB
 from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL, get_usuario_atual
-from app.models.candidatura import Candidatura, StatusCandidatura
+from app.models.candidatura import Candidatura
 from app.models.curriculo import Curriculo
 from app.models.entrevista import Entrevista
 from app.models.usuario import PapelUsuario
 from app.models.vaga import Vaga
 from app.schemas.candidatura import CandidaturaRerankItem
 from app.schemas.vaga import RhsAutorizadosUpdate, VagaCreate, VagaResponse, VagaUpdatePesos
-import csv
-import io
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -128,6 +129,16 @@ def buscar_vaga(vaga_id: str, db: Session = DB, _=QUALQUER_PAPEL):
 
 
 def _recalcular_scores_vaga(vaga: Vaga, db: Session) -> int:
+    from app.ai.feature_extractor import (
+        calcular_bonus_estrutural,
+        extrair_features_curriculo,
+        extrair_features_vaga,
+    )
+    from app.ai.matching_engine import calcular_score_rh, calcular_score_rh_multi_secao
+
+    termos = [t["termo"] for t in (vaga.ranking_mercado or {}).get("termos", [])]
+    feat_vaga = extrair_features_vaga(vaga.requisitos_texto or "", termos)
+
     candidaturas = db.query(Candidatura).filter(Candidatura.vaga_id == vaga.id).all()
     atualizadas = 0
     for cand in candidaturas:
@@ -135,11 +146,25 @@ def _recalcular_scores_vaga(vaga: Vaga, db: Session) -> int:
         if not curriculo or curriculo.score_rh is None:
             continue
 
+        # Recalcula score_rh semântico a partir dos vetores quando disponível
+        if curriculo.vetor_embedding and vaga.vetor_vaga:
+            s_rh = (
+                calcular_score_rh_multi_secao(curriculo.vetor_embedding, vaga.vetor_vaga, curriculo.vetor_secao_exp)
+                if curriculo.vetor_secao_exp is not None
+                else calcular_score_rh(curriculo.vetor_embedding, vaga.vetor_vaga)
+            )
+        else:
+            s_rh = curriculo.score_rh / 100
+
+        feat_cv = extrair_features_curriculo(curriculo.texto_extraido or "")
+        bonus   = calcular_bonus_estrutural(feat_cv, feat_vaga)
+
         novo_score = calcular_score_curriculo(
-            curriculo.score_rh     / 100,
-            curriculo.score_mercado / 100,
+            s_rh,
+            (curriculo.score_mercado or 0) / 100,
             vaga.peso_rh,
             vaga.peso_mercado,
+            bonus,
         )
         curriculo.score_curriculo = novo_score
 

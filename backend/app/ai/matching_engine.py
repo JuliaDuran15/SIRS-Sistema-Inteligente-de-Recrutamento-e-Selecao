@@ -6,85 +6,33 @@ def _cos(a: list[float], b: list[float]) -> float:
 
 
 def calcular_score_rh_multi_secao(
-    vetor_embedding    : list[float],
-    vetor_vaga         : list[float],
-    vetor_secao_exp    : list[float] | None = None,
-    texto_curriculo    : str | None = None,
-    texto_vaga         : str | None = None,
-    formacao           : list | None = None,
-    termos_mercado     : list | None = None,
-    # mantido por compatibilidade — não mais usado no cálculo do score_rh
-    vetor_mercado      : list[float] | None = None,
-    vetor_secao_skills : list[float] | None = None,
+    vetor_embedding : list[float],
+    vetor_vaga      : list[float],
+    vetor_secao_exp : list[float] | None = None,
 ) -> float:
     """
-    Score de aderência à vaga usando vetores de seção quando disponíveis.
+    Similaridade semântica CV↔vaga (sem bônus estrutural).
 
-    Com seção de experiência (CV bem estruturado):
-      60% × sim(exp_section, vaga_req)  ← compatibilidade direta
-      40% × sim(full_cv, vaga_req)      ← holística
+    Com seção de experiência:
+      60% × sim(exp_section, vaga) + 40% × sim(full_cv, vaga)
+    Sem seção:
+      100% × sim(full_cv, vaga)
 
-    Sem seções (fallback):
-      Usa calcular_score_rh padrão + bônus estrutural.
-
-    Nota: a comparação skills vs mercado pertence a calcular_score_mercado,
-    não a este score — para que peso_mercado=0 a desative completamente.
+    O bônus estrutural é calculado externamente e aplicado ao score
+    combinado final em calcular_score_curriculo, garantindo que corrija
+    tanto o componente RH quanto o componente mercado.
     """
     if vetor_secao_exp is not None:
-        sim_exp  = _cos(vetor_secao_exp, vetor_vaga)
-        sim_full = _cos(vetor_embedding, vetor_vaga)
-        score    = 0.60 * sim_exp + 0.40 * sim_full
-
-        if texto_curriculo and texto_vaga:
-            from app.ai.feature_extractor import (
-                extrair_features_curriculo, extrair_features_vaga, calcular_bonus_estrutural,
-            )
-            feat_cv   = extrair_features_curriculo(texto_curriculo, formacao)
-            feat_vaga = extrair_features_vaga(texto_vaga, termos_mercado)
-            bonus     = calcular_bonus_estrutural(feat_cv, feat_vaga) * 0.6
-            score     = max(0.0, min(1.0, score + bonus))
-
-        return score
-
-    # Fallback: scoring padrão com bônus estrutural total
-    return calcular_score_rh(
-        vetor_embedding, vetor_vaga,
-        texto_curriculo=texto_curriculo,
-        texto_vaga=texto_vaga,
-        formacao=formacao,
-        termos_mercado=termos_mercado,
-    )
+        return 0.60 * _cos(vetor_secao_exp, vetor_vaga) + 0.40 * _cos(vetor_embedding, vetor_vaga)
+    return _cos(vetor_embedding, vetor_vaga)
 
 
 def calcular_score_rh(
     vetor_curriculo : list[float],
     vetor_vaga      : list[float],
-    texto_curriculo : str | None = None,
-    texto_vaga      : str | None = None,
-    formacao        : list | None = None,
-    termos_mercado  : list | None = None,
 ) -> float:
-    """
-    Score de aderência aos requisitos da vaga.
-
-    Quando texto_curriculo e texto_vaga são fornecidos, aplica um bônus
-    estrutural baseado em anos de experiência, senioridade e overlap de
-    habilidades (±15% sobre a similaridade semântica base).
-    """
-    sim = _cos(vetor_curriculo, vetor_vaga)
-
-    if texto_curriculo and texto_vaga:
-        from app.ai.feature_extractor import (
-            extrair_features_curriculo,
-            extrair_features_vaga,
-            calcular_bonus_estrutural,
-        )
-        feat_cv   = extrair_features_curriculo(texto_curriculo, formacao)
-        feat_vaga = extrair_features_vaga(texto_vaga, termos_mercado)
-        bonus     = calcular_bonus_estrutural(feat_cv, feat_vaga)
-        return max(0.0, min(1.0, sim + bonus))
-
-    return sim
+    """Similaridade semântica CV↔vaga (sem bônus estrutural)."""
+    return _cos(vetor_curriculo, vetor_vaga)
 
 
 def calcular_score_mercado(
@@ -108,13 +56,21 @@ def calcular_score_mercado(
 
 
 def calcular_score_curriculo(
-    score_rh: float,
-    score_mercado: float,
-    peso_rh: float,
-    peso_mercado: float,
+    score_rh         : float,
+    score_mercado    : float,
+    peso_rh          : float,
+    peso_mercado     : float,
+    bonus_estrutural : float = 0.0,
 ) -> float:
-    score = (score_rh * peso_rh) + (score_mercado * peso_mercado)
-    return round(score * 100, 1)
+    """
+    Combina os scores semânticos com o bônus estrutural.
+
+    O bônus é aplicado ao score combinado (não só ao componente RH),
+    garantindo que sinais estruturais (experiência, senioridade, skills)
+    corrijam o resultado final independentemente do peso de cada componente.
+    """
+    score = (score_rh * peso_rh) + (score_mercado * peso_mercado) + bonus_estrutural
+    return round(max(0.0, min(1.0, score)) * 100, 1)
 
 
 def gerar_explicacao(
