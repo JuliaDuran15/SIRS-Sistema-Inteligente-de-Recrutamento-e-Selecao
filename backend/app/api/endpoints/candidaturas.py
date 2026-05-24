@@ -258,4 +258,19 @@ def atualizar_status(
     transicionar(candidatura, novo_status, ator)
     db.commit()
     db.refresh(candidatura)
+
+    if novo_status in (StatusCandidatura.APROVADO_TRIAGEM, StatusCandidatura.REPROVADO_TRIAGEM):
+        from app.core.email import email_triagem_resultado
+        from app.models.candidato import Candidato
+        candidato = db.query(Candidato).filter(Candidato.id == candidatura.candidato_id).first()
+        vaga_obj  = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
+        if candidato and vaga_obj:
+            email_triagem_resultado(
+                destinatario   = usuario.email,
+                nome_rh        = usuario.nome,
+                candidato_nome = candidato.nome,
+                vaga_nome      = vaga_obj.nome,
+                aprovado       = (novo_status == StatusCandidatura.APROVADO_TRIAGEM),
+            )
+
     return candidatura

@@ -4,6 +4,7 @@ import { getVaga, getCandidaturas, analisarMercado, rerankarVaga, updatePesos, u
 import { ScoreBar } from "../components/ScoreBar"
 import { Badge } from "../components/Badge"
 import { CvPreview } from "../components/CvPreview"
+import { ComparacaoCandidatos } from "../components/ComparacaoCandidatos"
 
 const corStatus = {
   novo: "gray", triagem_pendente: "amber",
@@ -193,7 +194,19 @@ export function VagaDetalhe({ usuario }) {
   const [aplicandoLote, setAplicandoLote] = useState(false)
   const [filtroStatus, setFiltroStatus]   = useState("")
   const [exportando, setExportando]       = useState(false)
+  const [comparando, setComparando]       = useState(new Set())
+  const [modalComparacao, setModalComparacao] = useState(false)
   const navigate = useNavigate()
+
+  function toggleComparando(cid) {
+    setComparando(prev => {
+      const next = new Set(prev)
+      if (next.has(cid)) { next.delete(cid); return next }
+      if (next.size >= 3) return prev
+      next.add(cid)
+      return next
+    })
+  }
 
   // Filtro aplicado à lista de candidaturas — computado fora do JSX para evitar IIFE
   const candidaturasFiltradas = candidaturas.filter(c => {
@@ -440,6 +453,12 @@ export function VagaDetalhe({ usuario }) {
 
   const termos     = vaga.ranking_mercado?.termos?.slice(0, 12) || []
   const totalVagas = vaga.ranking_mercado?.total_vagas_analisadas
+
+  // Candidaturas selecionadas para comparar, na ordem do ranking atual
+  const candidaturasComparacao = candidaturasFiltradas
+    .map((c, i) => ({ ...c, _rank: i + 1 }))
+    .filter(c => comparando.has(c.id))
+  const rankMap = Object.fromEntries(candidaturasComparacao.map(c => [c.id, c._rank]))
 
   return (
     <div>
@@ -981,17 +1000,29 @@ export function VagaDetalhe({ usuario }) {
                         <span /> /* espaçador para manter o link à direita */
                       )}
 
-                      <Link
-                        to={`/candidaturas/${c.id}/entrevistas`}
-                        className="text-xs font-bold px-3 py-1.5 rounded-lg transition-all flex-shrink-0"
-                        style={{
-                          background: "rgba(26,139,191,0.12)",
-                          border: "1px solid rgba(26,139,191,0.25)",
-                          color: "#4DC8E8",
-                        }}
-                      >
-                        Ver detalhes →
-                      </Link>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <button
+                          onClick={() => toggleComparando(c.id)}
+                          disabled={comparando.size >= 3 && !comparando.has(c.id)}
+                          className="text-xs font-bold px-3 py-1.5 rounded-lg transition-all disabled:opacity-30"
+                          style={comparando.has(c.id)
+                            ? { background: "rgba(167,139,250,0.22)", border: "1px solid rgba(167,139,250,0.4)", color: "#A78BFA" }
+                            : { background: "var(--s-chip)", border: "1px solid var(--b-subtle)", color: "var(--t-muted2)" }}
+                        >
+                          {comparando.has(c.id) ? "✓ Comparando" : "Comparar"}
+                        </button>
+                        <Link
+                          to={`/candidaturas/${c.id}/entrevistas`}
+                          className="text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
+                          style={{
+                            background: "rgba(26,139,191,0.12)",
+                            border: "1px solid rgba(26,139,191,0.25)",
+                            color: "#4DC8E8",
+                          }}
+                        >
+                          Ver detalhes →
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 )
@@ -1062,6 +1093,57 @@ export function VagaDetalhe({ usuario }) {
           </div>
         </div>
       </div>
+
+      {/* Barra flutuante de comparação */}
+      {comparando.size >= 2 && !modalComparacao && (
+        <div
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl"
+          style={{
+            background: "#0E2030",
+            border: "1px solid rgba(167,139,250,0.35)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+          }}
+        >
+          <div className="flex -space-x-1.5 mr-1">
+            {candidaturasComparacao.slice(0, 3).map(c => (
+              <div
+                key={c.id}
+                className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold border-2"
+                style={{ background: "rgba(167,139,250,0.2)", color: "#A78BFA", borderColor: "#0E2030" }}
+                title={c.candidato?.nome}
+              >
+                {(c.candidato?.nome ?? "?")[0].toUpperCase()}
+              </div>
+            ))}
+          </div>
+          <span className="text-sm text-brand-pale/60 font-semibold">
+            {comparando.size} candidatos
+          </span>
+          <button
+            onClick={() => setModalComparacao(true)}
+            className="px-4 py-1.5 rounded-xl text-sm font-bold transition-all"
+            style={{ background: "rgba(167,139,250,0.22)", border: "1px solid rgba(167,139,250,0.4)", color: "#A78BFA" }}
+          >
+            Comparar →
+          </button>
+          <button
+            onClick={() => setComparando(new Set())}
+            className="text-brand-pale/30 hover:text-brand-pale transition-colors text-lg leading-none ml-1"
+            title="Limpar seleção"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Modal de comparação */}
+      {modalComparacao && candidaturasComparacao.length >= 2 && (
+        <ComparacaoCandidatos
+          candidaturas={candidaturasComparacao}
+          rankMap={rankMap}
+          onClose={() => setModalComparacao(false)}
+        />
+      )}
     </div>
   )
 }

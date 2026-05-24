@@ -7,6 +7,7 @@ na resposta (útil em desenvolvimento/testes).
 """
 import smtplib
 import ssl
+from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -211,4 +212,163 @@ def email_cv_processado(
     )
 
     assunto = f"SIRS — CV processado: {candidato_nome} → {vaga_nome} ({score}/100)"
+    return enviar_email(destinatario, assunto, corpo)
+
+
+_MESES = ["janeiro","fevereiro","março","abril","maio","junho",
+          "julho","agosto","setembro","outubro","novembro","dezembro"]
+
+
+def _fmt_data(dt: datetime) -> str:
+    return f"{dt.day} de {_MESES[dt.month - 1]} de {dt.year}, às {dt.hour:02d}h{dt.minute:02d}"
+
+
+def email_entrevista_agendada(
+    destinatario       : str,
+    nome_entrevistador : str,
+    candidato_nome     : str,
+    vaga_nome          : str,
+    tipo               : str,       # "rh" | "tecnica"
+    agendada_para      : datetime,
+) -> bool:
+    tipo_label = "Entrevista de RH" if tipo == "rh" else "Entrevista Técnica"
+    data_fmt   = _fmt_data(agendada_para)
+    assunto    = f"SIRS — {tipo_label} agendada: {candidato_nome}"
+
+    corpo = (
+        '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"></head>'
+        '<body style="margin:0;padding:0;background:#07111A;font-family:\'Segoe UI\',sans-serif">'
+        '<table width="100%" cellpadding="0" cellspacing="0">'
+        '<tr><td align="center" style="padding:40px 16px">'
+        '<table width="500" cellpadding="0" cellspacing="0" style="background:#0E2030;'
+        'border-radius:16px;overflow:hidden;border:1px solid rgba(77,200,232,0.15)">'
+
+        # Header
+        '<tr><td style="background:linear-gradient(135deg,#1A8BBF,#4DC8E8);padding:24px 32px">'
+        '<p style="margin:0;font-size:20px;font-weight:700;color:#07111A">SIRS</p>'
+        '<p style="margin:2px 0 0;font-size:11px;color:rgba(7,17,26,0.6)">Sistema Inteligente de Recrutamento e Seleção</p>'
+        '</td></tr>'
+
+        # Body
+        '<tr><td style="padding:28px 32px">'
+        '<p style="margin:0 0 4px;font-size:15px;font-weight:600;color:#DFF0F6">Olá, ' + nome_entrevistador + '</p>'
+        '<p style="margin:0 0 24px;font-size:13px;color:rgba(125,216,240,0.55);line-height:1.6">'
+        'Uma <strong style="color:#4DC8E8">' + tipo_label.lower() + '</strong> foi agendada para você no SIRS.</p>'
+
+        # Card com detalhes
+        '<table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(14,80,104,0.3);'
+        'border-radius:12px;margin-bottom:24px"><tr><td style="padding:20px 24px">'
+        '<table width="100%" cellpadding="0" cellspacing="0">'
+
+        '<tr><td style="padding-bottom:12px">'
+        '<p style="margin:0 0 2px;font-size:10px;font-weight:700;color:rgba(125,216,240,0.4);'
+        'text-transform:uppercase;letter-spacing:1px">Candidato</p>'
+        '<p style="margin:0;font-size:15px;font-weight:600;color:#DFF0F6">' + candidato_nome + '</p>'
+        '</td></tr>'
+
+        '<tr><td style="padding-bottom:12px;border-top:1px solid rgba(77,200,232,0.08);padding-top:12px">'
+        '<p style="margin:0 0 2px;font-size:10px;font-weight:700;color:rgba(125,216,240,0.4);'
+        'text-transform:uppercase;letter-spacing:1px">Vaga</p>'
+        '<p style="margin:0;font-size:14px;color:#4DC8E8">' + vaga_nome + '</p>'
+        '</td></tr>'
+
+        '<tr><td style="border-top:1px solid rgba(77,200,232,0.08);padding-top:12px">'
+        '<p style="margin:0 0 2px;font-size:10px;font-weight:700;color:rgba(125,216,240,0.4);'
+        'text-transform:uppercase;letter-spacing:1px">Data e hora</p>'
+        '<p style="margin:0;font-size:14px;font-weight:600;color:#2EE8B4;font-family:monospace">' + data_fmt + '</p>'
+        '</td></tr>'
+
+        '</table></td></tr></table>'
+
+        '<a href="' + settings.FRONTEND_URL + '" style="display:inline-block;padding:12px 24px;'
+        'border-radius:10px;background:linear-gradient(135deg,#1A8BBF,#4DC8E8);'
+        'color:#07111A;font-weight:700;font-size:13px;text-decoration:none">'
+        'Abrir no SIRS →</a>'
+        '</td></tr>'
+
+        # Footer
+        '<tr><td style="padding:14px 32px 20px;border-top:1px solid rgba(77,200,232,0.08)">'
+        '<p style="margin:0;font-size:10px;color:rgba(125,216,240,0.2)">SIRS — Sistema Inteligente de Recrutamento e Seleção</p>'
+        '</td></tr>'
+
+        '</table></td></tr></table></body></html>'
+    )
+    return enviar_email(destinatario, assunto, corpo)
+
+
+def email_triagem_resultado(
+    destinatario   : str,
+    nome_rh        : str,
+    candidato_nome : str,
+    vaga_nome      : str,
+    aprovado       : bool,
+) -> bool:
+    cor_status  = "#2EE8B4" if aprovado else "#FCA5A5"
+    label       = "Aprovado na triagem" if aprovado else "Reprovado na triagem"
+    descricao   = (
+        "O candidato foi <strong style='color:#2EE8B4'>aprovado</strong> e pode prosseguir para a entrevista de RH."
+        if aprovado else
+        "O candidato foi <strong style='color:#FCA5A5'>reprovado</strong> na triagem e não avançará no processo."
+    )
+    assunto = f"SIRS — Triagem: {candidato_nome} {'aprovado' if aprovado else 'reprovado'} → {vaga_nome}"
+
+    corpo = (
+        '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"></head>'
+        '<body style="margin:0;padding:0;background:#07111A;font-family:\'Segoe UI\',sans-serif">'
+        '<table width="100%" cellpadding="0" cellspacing="0">'
+        '<tr><td align="center" style="padding:40px 16px">'
+        '<table width="500" cellpadding="0" cellspacing="0" style="background:#0E2030;'
+        'border-radius:16px;overflow:hidden;border:1px solid rgba(77,200,232,0.15)">'
+
+        # Header
+        '<tr><td style="background:linear-gradient(135deg,#1A8BBF,#4DC8E8);padding:24px 32px">'
+        '<p style="margin:0;font-size:20px;font-weight:700;color:#07111A">SIRS</p>'
+        '<p style="margin:2px 0 0;font-size:11px;color:rgba(7,17,26,0.6)">Sistema Inteligente de Recrutamento e Seleção</p>'
+        '</td></tr>'
+
+        # Body
+        '<tr><td style="padding:28px 32px">'
+        '<p style="margin:0 0 4px;font-size:15px;font-weight:600;color:#DFF0F6">Olá, ' + nome_rh + '</p>'
+        '<p style="margin:0 0 24px;font-size:13px;color:rgba(125,216,240,0.55);line-height:1.6">'
+        'A triagem da candidatura abaixo foi concluída no SIRS.</p>'
+
+        # Card status
+        '<table width="100%" cellpadding="0" cellspacing="0" style="background:rgba(14,80,104,0.3);'
+        'border-radius:12px;margin-bottom:24px"><tr><td style="padding:20px 24px">'
+        '<table width="100%" cellpadding="0" cellspacing="0">'
+
+        '<tr><td style="padding-bottom:12px">'
+        '<p style="margin:0 0 2px;font-size:10px;font-weight:700;color:rgba(125,216,240,0.4);'
+        'text-transform:uppercase;letter-spacing:1px">Candidato</p>'
+        '<p style="margin:0;font-size:15px;font-weight:600;color:#DFF0F6">' + candidato_nome + '</p>'
+        '</td></tr>'
+
+        '<tr><td style="padding-bottom:12px;border-top:1px solid rgba(77,200,232,0.08);padding-top:12px">'
+        '<p style="margin:0 0 2px;font-size:10px;font-weight:700;color:rgba(125,216,240,0.4);'
+        'text-transform:uppercase;letter-spacing:1px">Vaga</p>'
+        '<p style="margin:0;font-size:14px;color:#4DC8E8">' + vaga_nome + '</p>'
+        '</td></tr>'
+
+        '<tr><td style="border-top:1px solid rgba(77,200,232,0.08);padding-top:12px">'
+        '<p style="margin:0 0 6px;font-size:10px;font-weight:700;color:rgba(125,216,240,0.4);'
+        'text-transform:uppercase;letter-spacing:1px">Resultado</p>'
+        '<p style="margin:0 0 8px;font-size:16px;font-weight:700;color:' + cor_status + '">' + label + '</p>'
+        '<p style="margin:0;font-size:13px;color:rgba(125,216,240,0.55);line-height:1.5">' + descricao + '</p>'
+        '</td></tr>'
+
+        '</table></td></tr></table>'
+
+        '<a href="' + settings.FRONTEND_URL + '" style="display:inline-block;padding:12px 24px;'
+        'border-radius:10px;background:linear-gradient(135deg,#1A8BBF,#4DC8E8);'
+        'color:#07111A;font-weight:700;font-size:13px;text-decoration:none">'
+        'Abrir no SIRS →</a>'
+        '</td></tr>'
+
+        # Footer
+        '<tr><td style="padding:14px 32px 20px;border-top:1px solid rgba(77,200,232,0.08)">'
+        '<p style="margin:0;font-size:10px;color:rgba(125,216,240,0.2)">SIRS — Sistema Inteligente de Recrutamento e Seleção</p>'
+        '</td></tr>'
+
+        '</table></td></tr></table></body></html>'
+    )
     return enviar_email(destinatario, assunto, corpo)

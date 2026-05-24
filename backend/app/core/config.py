@@ -26,8 +26,8 @@ class Settings(BaseSettings):
     # Modelos 768d (exige migração Alembic + reprocessar tudo):
     #   all-mpnet-base-v2                      — inglês, alta qualidade
     #   paraphrase-multilingual-mpnet-base-v2  — multilingual, máxima qualidade
-    EMBEDDING_MODEL : str = "paraphrase-multilingual-mpnet-base-v2"
-    EMBEDDING_DIM   : int = 768
+    EMBEDDING_MODEL : str = "paraphrase-multilingual-MiniLM-L12-v2"
+    EMBEDDING_DIM   : int = 384
     RERANKER_MODEL  : str = "BAAI/bge-reranker-base"
     RERANKER_TOP_N  : int = 20                     # quantos candidatos reordenar
 

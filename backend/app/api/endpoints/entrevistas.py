@@ -2,6 +2,7 @@ from datetime import datetime
 
 from app.api.deps import DB
 from app.core.auth import QUALQUER_PAPEL, get_usuario_atual
+from app.core.email import email_entrevista_agendada
 from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.entrevista import Entrevista
 from app.models.usuario import PapelUsuario
@@ -89,6 +90,18 @@ def agendar_entrevista(
 
     db.commit()
     db.refresh(entrevista)
+
+    from app.models.candidato import Candidato
+    candidato = db.query(Candidato).filter(Candidato.id == candidatura.candidato_id).first()
+    email_entrevista_agendada(
+        destinatario       = usuario.email,
+        nome_entrevistador = usuario.nome,
+        candidato_nome     = candidato.nome if candidato else "—",
+        vaga_nome          = vaga.nome if vaga else "—",
+        tipo               = dados.tipo,
+        agendada_para      = dados.agendada_para,
+    )
+
     return entrevista
 
 

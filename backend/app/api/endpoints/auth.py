@@ -1,3 +1,4 @@
+import hashlib
 from uuid import UUID
 
 from app.api.deps import DB
@@ -8,6 +9,11 @@ from app.models.usuario import Usuario
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from jose import JWTError, jwt as jose_jwt
+
+
+def _senha_fingerprint(senha_hash: str) -> str:
+    """16 chars do SHA-256 do hash atual — invalida o token se a senha mudar."""
+    return hashlib.sha256(senha_hash.encode()).hexdigest()[:16]
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -115,7 +121,11 @@ def esqueceu_senha(dados: EsqueceuSenhaRequest, db: Session = DB):
     if not usuario:
         raise HTTPException(status_code=404, detail="Email não encontrado")
 
-    token     = criar_token({"sub": usuario.email, "tipo": "reset"}, expira_em_horas=1)
+    token = criar_token({
+        "sub" : usuario.email,
+        "tipo": "reset",
+        "fph" : _senha_fingerprint(usuario.senha_hash),  # invalida se a senha já foi trocada
+    }, expira_em_horas=1)
     reset_url = f"{settings.FRONTEND_URL}/resetar-senha?token={token}"
 
     if smtp_configurado():
@@ -143,6 +153,10 @@ def resetar_senha(dados: ResetarSenhaRequest, db: Session = DB):
     ).first()
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
+
+    # Garante uso único: se a senha já foi alterada após a emissão, o fingerprint não bate
+    if payload.get("fph") != _senha_fingerprint(usuario.senha_hash):
+        raise HTTPException(status_code=400, detail="Token já utilizado ou inválido")
 
     if len(dados.senha_nova) < 6:
         raise HTTPException(status_code=400, detail="A nova senha deve ter pelo menos 6 caracteres")

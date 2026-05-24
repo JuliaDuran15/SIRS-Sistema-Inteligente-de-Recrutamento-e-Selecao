@@ -54,6 +54,7 @@ export const deleteUsuario  = (id)       => api.delete(`/usuarios/${id}`)
 export const getAnalyticsResumo  = ()         => api.get("/analytics/resumo")
 export const getAnalyticsFunil   = (vaga_id)  => api.get("/analytics/funil",  vaga_id ? { params: { vaga_id } } : {})
 export const getAnalyticsScores  = (vaga_id)  => api.get("/analytics/scores", { params: { vaga_id } })
+export const getAuditoria        = (params)   => api.get("/analytics/auditoria", { params })
 
 export const alterarSenha   = (data)     => api.patch("/auth/senha", data)
 export const esqueceuSenha  = (email)    => api.post("/auth/esqueceu-senha", { email })

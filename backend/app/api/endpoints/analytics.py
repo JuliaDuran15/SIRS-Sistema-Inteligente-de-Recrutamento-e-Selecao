@@ -221,3 +221,77 @@ def distribuicao_scores(
         media   = media,
         mediana = mediana,
     )
+
+
+# ── Auditoria ─────────────────────────────────────────────────────────────────
+
+class EventoAuditoria(BaseModel):
+    candidatura_id  : str
+    candidato_nome  : str
+    candidato_email : str
+    vaga_nome       : str
+    de              : str | None
+    para            : str
+    ator            : str | None
+    em              : str | None
+
+
+class AuditoriaResponse(BaseModel):
+    eventos : list[EventoAuditoria]
+    total   : int
+    limit   : int
+    offset  : int
+
+
+@router.get("/auditoria", response_model=AuditoriaResponse)
+def auditoria(
+    limit   : int           = Query(50, ge=1, le=200),
+    offset  : int           = Query(0,  ge=0),
+    vaga_id : str | None    = Query(None),
+    ator    : str | None    = Query(None, description="Filtra por nome do ator (parcial)"),
+    para    : str | None    = Query(None, description="Filtra pelo status de destino"),
+    db      : Session       = DB,
+    usuario = Depends(get_usuario_atual),
+):
+    """Retorna o log de todas as transições de status das candidaturas. Apenas Admin."""
+    if usuario.papel != PapelUsuario.ADMIN:
+        raise HTTPException(status_code=403, detail="Apenas administradores podem acessar a auditoria")
+
+    query = (
+        db.query(Candidatura, Candidato, Vaga)
+        .join(Candidato, Candidatura.candidato_id == Candidato.id)
+        .join(Vaga,      Candidatura.vaga_id      == Vaga.id)
+    )
+    if vaga_id:
+        query = query.filter(Candidatura.vaga_id == vaga_id)
+
+    eventos: list[dict] = []
+    for cand, candidato, vaga in query.all():
+        for evt in (cand.historico or []):
+            evt_ator = evt.get("ator") or ""
+            evt_para = evt.get("para") or ""
+            if ator and ator.lower() not in evt_ator.lower():
+                continue
+            if para and para != evt_para:
+                continue
+            eventos.append({
+                "candidatura_id" : str(cand.id),
+                "candidato_nome" : candidato.nome,
+                "candidato_email": candidato.email,
+                "vaga_nome"      : vaga.nome,
+                "de"             : evt.get("de"),
+                "para"           : evt_para,
+                "ator"           : evt_ator or None,
+                "em"             : evt.get("em"),
+            })
+
+    eventos.sort(key=lambda e: e["em"] or "", reverse=True)
+    total   = len(eventos)
+    pagina  = eventos[offset : offset + limit]
+
+    return AuditoriaResponse(
+        eventos=[EventoAuditoria(**e) for e in pagina],
+        total=total,
+        limit=limit,
+        offset=offset,
+    )

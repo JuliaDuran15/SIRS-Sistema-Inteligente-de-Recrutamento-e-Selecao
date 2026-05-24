@@ -14,6 +14,7 @@ import { Perfil }           from "./pages/Perfil"
 import { Dashboard }        from "./pages/Dashboard"
 import { EsqueceuSenha }   from "./pages/EsqueceuSenha"
 import { ResetarSenha }    from "./pages/ResetarSenha"
+import { Auditoria }       from "./pages/Auditoria"
 import api                   from "./api"
 import "./index.css"
 
@@ -75,6 +76,9 @@ function App() {
         }/>
         <Route path="/admin" element={
           <Protegida apenasAdmin><AdminUsuarios /></Protegida>
+        }/>
+        <Route path="/auditoria" element={
+          <Protegida apenasAdmin><Auditoria /></Protegida>
         }/>
         <Route path="/perfil" element={
           <Protegida><Perfil usuario={usuario} /></Protegida>

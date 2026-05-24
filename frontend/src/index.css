@@ -66,7 +66,7 @@
 
 /* ── Light theme overrides ────────────────────────────────────────────────── */
 html.light {
-  --color-brand-black:   #FFFFFF;
+  --color-brand-black:   #eff5fa;
   --color-brand-teal:    #E8F3FA;
   --color-brand-ocean:   #1A8BBF;
   --color-brand-sky:     #1270A8;   /* azul mais escuro — melhor contraste no claro */
@@ -80,8 +80,8 @@ html.light {
   --s-body-to:      #D2E5F0;
   --s-header:       rgba(228, 238, 246, 0.95);
   --s-track:        rgba(180, 205, 222, 0.55);
-  --s-content:      rgba(255, 255, 255, 0.88);
-  --s-section:      rgba(255, 255, 255, 0.85);
+  --s-content:      rgba(247, 247, 247, 0.88);
+  --s-section:      rgba(247, 247, 247, 0.85);
   --s-skeleton:     rgba(150, 180, 200, 0.35);
   --s-skeleton-lt:  rgba(150, 180, 200, 0.22);
   --s-chip:         rgba(26, 112, 168, 0.09);

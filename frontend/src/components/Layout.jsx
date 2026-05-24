@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { Link, useLocation } from "react-router-dom"
 import logo from "../assets/logo.png"
 import {
-  IconBriefcase, IconUsers, IconBarChart, IconCog,
+  IconBriefcase, IconUsers, IconBarChart, IconCog, IconActivity,
   IconLogOut, IconSun, IconMoon, IconMenu,
 } from "./Icons"
 
@@ -150,7 +150,10 @@ export function Layout({ children, usuario, onLogout }) {
     { path: "/candidatos", label: "Candidatos", Icon: IconUsers      },
     { path: "/dashboard",  label: "Dashboard",  Icon: IconBarChart   },
     ...(usuario?.papel === "admin"
-      ? [{ path: "/admin", label: "Usuários", Icon: IconCog }]
+      ? [
+          { path: "/admin",     label: "Usuários",  Icon: IconCog      },
+          { path: "/auditoria", label: "Auditoria", Icon: IconActivity },
+        ]
       : []),
   ]
 

@@ -487,3 +487,36 @@ docker compose -f /home/julia/projetos/sirs-v2/docker-compose.yml exec api pytes
     → python=0.3  docker=0.3  ⚠ python contaminou!
   skills a 78 chars — sem sangramento
     → python=1.3  docker=0.3  ✓ correto
+
+
+
+
+IA e Scoring
+Alta prioridade
+
+Extração de skills via LLM — o feature_extractor.py atual usa regex. Não detecta "experiência com pipelines de dados em nuvem" como Spark/AWS, nem "construí sistemas de recomendação" como ML. Um prompt para Claude Haiku custaria ~$0.001/CV e eliminaria a necessidade de manter o dicionário de aliases manualmente.
+
+Análise de trajetória de carreira — hoje só conta anos totais. Detectar progressão (estagiário 2016 → júnior 2018 → sênior 2022) é muito mais informativo que "6 anos de experiência" e permitiria comparar candidatos com mesma duração mas trajetórias diferentes.
+
+Feedback loop — o sistema não aprende. Quando um candidato com score 45 é contratado e fica 3 anos, esse dado é desperdiçado. Uma tabela feedback_score com (candidatura_id, score, foi_contratado, meses_na_empresa) permitiria calibrar os pesos da fórmula com dados reais da empresa.
+
+Requirement-level matching — atualmente compara CV inteiro vs. vaga inteira. O ideal seria: para cada requisito da vaga ("5+ anos Python", "experiência com Docker"), buscar evidência específica no CV. O cross-encoder bge-reranker-base já instalado faz isso, mas só no reranking manual.
+
+Médio prazo
+
+Modelo multilíngue — paraphrase-multilingual-MiniLM-L12-v2 captura melhor CVs em PT misturado com inglês técnico (padrão real no mercado BR)
+HNSW index no pgvector — busca vetorial hoje é força bruta O(N). CREATE INDEX USING hnsw torna logarítmica, relevante com centenas de vagas e milhares de CVs
+Score de viés — verificar se candidatos de certos grupos são sistematicamente penalizados pelo embedding (importante para compliance)
+
+
+Dashboard analítico — os dados já existem no historico de cada candidatura: funil por etapa, tempo médio, histograma de scores, taxa de aprovação por vaga
+Explicabilidade do score na UI — o gerar_explicacao() já calcula os componentes (experiência, senioridade, skills); só falta mostrar isso ao RH em vez de um número opaco
+Comentários internos — thread por candidatura para RH e Gestor trocarem notas sem sair do sistema
+Templates de vagas — reusar configurações (pesos, requisitos base) de vagas anteriores similares
+Infraestrutura e Técnico
+PDFs em storage persistente — atualmente ficam em /app/uploads dentro do container; se o container for recriado, somem. S3 ou volume Docker resolve
+WebSocket para status do CV — hoje o frontend faz polling a cada 3s enquanto processa. WebSocket eliminaria esse custo e tornaria o feedback instantâneo
+Testes do webhook XML — o parser XML tem casos de borda não cobertos (atributos vs. elementos, encoding, CDATA)
+WEBHOOK_SECRET_KEY obrigatório em produção — hoje é opcional mesmo no README; se ENVIRONMENT=production e a chave estiver vazia, a API não deveria subir
+
+docker compose exec api pytest tests/test_setores_especificos.py::TestPipelineSetores::test_relatorio_setores -m slow -s
