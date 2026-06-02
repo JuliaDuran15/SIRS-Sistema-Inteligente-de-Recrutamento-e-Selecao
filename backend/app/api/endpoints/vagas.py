@@ -16,7 +16,7 @@ from app.models.entrevista import Entrevista
 from app.models.usuario import PapelUsuario
 from app.models.vaga import Vaga
 from app.schemas.candidatura import CandidaturaRerankItem
-from app.schemas.vaga import RhsAutorizadosUpdate, VagaCreate, VagaResponse, VagaUpdatePesos
+from app.schemas.vaga import RhsAutorizadosUpdate, VagaCreate, VagaResponse, VagaUpdatePesos, VagaUpdateRequisitos
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -77,7 +77,7 @@ def criar_vaga(dados: VagaCreate, db: Session = DB, usuario=Depends(get_usuario_
 @router.patch("/{vaga_id}/requisitos", response_model=VagaResponse)
 def atualizar_requisitos(
     vaga_id: str,
-    requisitos_texto: str,
+    dados: VagaUpdateRequisitos,
     db: Session = DB,
     usuario=Depends(get_usuario_atual),
 ):
@@ -86,8 +86,16 @@ def atualizar_requisitos(
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
     if not _pode_editar_vaga(usuario, vaga):
         raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta vaga")
-    vaga.requisitos_texto = requisitos_texto
-    vaga.vetor_vaga       = vetorizar_texto(requisitos_texto)
+
+    if dados.nome is not None:
+        vaga.nome = dados.nome
+
+    if dados.requisitos_texto is not None:
+        vaga.requisitos_texto = dados.requisitos_texto
+        vaga.vetor_vaga       = vetorizar_texto(dados.requisitos_texto)
+        # Requisitos mudaram → recalcula scores e explicações de todos os CVs
+        _recalcular_scores_vaga(vaga, db)
+
     db.commit()
     db.refresh(vaga)
     return vaga
@@ -134,7 +142,11 @@ def _recalcular_scores_vaga(vaga: Vaga, db: Session) -> int:
         extrair_features_curriculo,
         extrair_features_vaga,
     )
-    from app.ai.matching_engine import calcular_score_rh, calcular_score_rh_multi_secao
+    from app.ai.matching_engine import (
+        calcular_score_rh,
+        calcular_score_rh_multi_secao,
+        gerar_explicacao,
+    )
 
     termos = [t["termo"] for t in (vaga.ranking_mercado or {}).get("termos", [])]
     feat_vaga = extrair_features_vaga(vaga.requisitos_texto or "", termos)
@@ -147,7 +159,7 @@ def _recalcular_scores_vaga(vaga: Vaga, db: Session) -> int:
             continue
 
         # Recalcula score_rh semântico a partir dos vetores quando disponível
-        if curriculo.vetor_embedding and vaga.vetor_vaga:
+        if curriculo.vetor_embedding is not None and vaga.vetor_vaga is not None:
             s_rh = (
                 calcular_score_rh_multi_secao(curriculo.vetor_embedding, vaga.vetor_vaga, curriculo.vetor_secao_exp)
                 if curriculo.vetor_secao_exp is not None
@@ -156,17 +168,22 @@ def _recalcular_scores_vaga(vaga: Vaga, db: Session) -> int:
         else:
             s_rh = curriculo.score_rh / 100
 
+        s_mkt  = (curriculo.score_mercado or 0) / 100
         feat_cv = extrair_features_curriculo(curriculo.texto_extraido or "")
         bonus   = calcular_bonus_estrutural(feat_cv, feat_vaga)
 
         novo_score = calcular_score_curriculo(
-            s_rh,
-            (curriculo.score_mercado or 0) / 100,
+            s_rh, s_mkt,
             vaga.peso_rh,
             vaga.peso_mercado,
             bonus,
         )
         curriculo.score_curriculo = novo_score
+        curriculo.explicacao = gerar_explicacao(
+            s_rh, s_mkt, novo_score,
+            vaga.peso_rh, vaga.peso_mercado,
+            features_cv=feat_cv, features_vaga=feat_vaga,
+        )
 
         entrevistas = db.query(Entrevista).filter(
             Entrevista.candidatura_id == cand.id,
@@ -305,13 +322,18 @@ def rerankar_candidaturas(
     O cross-encoder é carregado na primeira chamada (~2–5s) e fica em memória.
     Chamadas subsequentes são mais rápidas.
     """
+    import time
     from app.ai.reranker import rerankar
     from app.core.config import settings
     from app.models.curriculo import Curriculo
 
+    t_inicio = time.perf_counter()
+
     vaga = db.query(Vaga).filter(Vaga.id == vaga_id).first()
     if not vaga:
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
+
+    logger.info("rerankar endpoint: vaga_id=%s, usuário=%s", vaga_id, getattr(usuario, "email", "?"))
 
     # Carrega candidaturas com curriculo processado, ordenadas por score
     candidaturas = (
@@ -319,6 +341,8 @@ def rerankar_candidaturas(
         .filter(Candidatura.vaga_id == vaga_id)
         .all()
     )
+
+    logger.info("rerankar endpoint: %d candidatura(s) carregada(s) para a vaga.", len(candidaturas))
 
     top_n   = settings.RERANKER_TOP_N
     cur_map = {
@@ -328,10 +352,15 @@ def rerankar_candidaturas(
             .all()
     }
 
+    logger.debug("rerankar endpoint: %d currículo(s) encontrado(s). top_n=%s", len(cur_map), top_n)
+
     # Prepara lista para o reranker
     items = []
+    sem_curriculo = 0
     for ca in candidaturas:
         cur = cur_map.get(str(ca.id))
+        if cur is None:
+            sem_curriculo += 1
         items.append({
             "id"               : str(ca.id),
             "candidatura"      : ca,
@@ -339,6 +368,12 @@ def rerankar_candidaturas(
             "texto_curriculo"  : (cur.texto_extraido or "") if cur else "",
             "score_curriculo"  : (cur.score_curriculo or 0) if cur else 0,
         })
+
+    if sem_curriculo:
+        logger.warning(
+            "rerankar endpoint: %d candidatura(s) sem currículo processado (serão enviadas com texto vazio).",
+            sem_curriculo,
+        )
 
     # Ordena por score bi-encoder e pega top-N
     items_sorted = sorted(items, key=lambda x: x["score_curriculo"], reverse=True)
@@ -364,6 +399,11 @@ def rerankar_candidaturas(
             candidato       = ca.candidato,
             curriculo       = cur,
         ))
+
+    logger.info(
+        "rerankar endpoint: concluído em %.2fs — %d item(ns) retornado(s).",
+        time.perf_counter() - t_inicio, len(resultado),
+    )
 
     return resultado
 

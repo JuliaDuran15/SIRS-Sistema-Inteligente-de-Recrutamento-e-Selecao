@@ -95,13 +95,11 @@ class VagaUpdatePesos(BaseModel):
 
 
 class VagaUpdateRequisitos(BaseModel):
-    """
-    Usado quando o analista edita só o texto dos requisitos.
-    O sistema recalcula o vetor automaticamente.
-    """
-    requisitos_texto: str = Field(..., min_length=1, max_length=20_000)
+    """Nome e/ou requisitos — qualquer campo omitido é ignorado."""
+    nome             : str | None = Field(None, min_length=1, max_length=200)
+    requisitos_texto : str | None = Field(None, min_length=1, max_length=20_000)
 
-    @field_validator("requisitos_texto", mode="before")
+    @field_validator("nome", "requisitos_texto", mode="before")
     @classmethod
-    def strip_string(cls, v):
+    def strip_strings(cls, v):
         return v.strip() if isinstance(v, str) else v

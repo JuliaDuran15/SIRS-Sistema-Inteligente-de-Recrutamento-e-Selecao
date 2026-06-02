@@ -16,7 +16,11 @@ const COR_ETAPA = {
 
 function Stat({ label, valor, cor = "#4DC8E8", sub, Icon }) {
   return (
-    <div className="card-glass rounded-2xl p-5 flex flex-col gap-2">
+    <div className="card-glass rounded-2xl p-5 flex flex-col gap-2 relative overflow-hidden">
+      <div
+        className="stat-accent-bar"
+        style={{ background: `linear-gradient(90deg, ${cor}99, ${cor}22)` }}
+      />
       <div className="flex items-start justify-between gap-2">
         <p className="text-xs font-bold text-brand-pale/40 uppercase tracking-wider leading-tight">{label}</p>
         {Icon && (
@@ -142,7 +146,7 @@ export function Dashboard() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold text-brand-cloud">Dashboard</h1>
-        <p className="text-sm text-brand-pale/45 mt-1">Visão geral do processo seletivo</p>
+        <p className="text-sm mt-1" style={{ color: "var(--t-muted2)" }}>Visão geral do processo seletivo</p>
       </div>
 
       {/* Cards de resumo */}

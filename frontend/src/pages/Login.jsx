@@ -41,106 +41,115 @@ export function Login({ onLogin }) {
   }
 
 return (
-<div className="auth-page flex h-screen w-screen items-center justify-center p-4">
-      
-      {/* O Card */}
-      <div className="w-full max-w-[400px] rounded-3xl border border-brand-sky/20 bg-brand-teal/20 p-8 shadow-2xl backdrop-blur-xl">
-        <div className="flex flex-col items-center">
-             <h1 className="text-2xl font-bold text-white">Entrar no SIRS</h1>
-        
-        {/* LOGO E HEADER */}
-        <div className="flex flex-col items-center mb-8">
-          <img
-            src={logo}
-            alt="SIRS Logo"
-            className="h-20 w-auto mb-2 object-contain"
-          />
-          <p className="text-sm text-white/50 mt-2">
-            Acesse sua conta para continuar
-          </p>
+  <div className="auth-page flex min-h-screen w-screen items-center justify-center p-4 relative overflow-hidden">
+
+    {/* Radial glow de fundo */}
+    <div
+      className="pointer-events-none absolute inset-0 flex items-center justify-center"
+      aria-hidden="true"
+    >
+      <div className="h-[480px] w-[480px] rounded-full opacity-[0.18]"
+        style={{ background: "radial-gradient(circle, #1A8BBF 0%, transparent 70%)" }} />
+    </div>
+
+    {/* Card */}
+    <div className="relative w-full max-w-[400px] rounded-3xl p-8 shadow-2xl backdrop-blur-xl"
+      style={{
+        background: "rgba(14, 80, 104, 0.22)",
+        border: "1px solid rgba(77, 200, 232, 0.18)",
+        boxShadow: "0 8px 40px rgba(7,17,26,0.5), inset 0 1px 0 rgba(255,255,255,0.06)",
+      }}>
+
+      {/* Logo + Header */}
+      <div className="flex flex-col items-center mb-8">
+        <div className="mb-5 overflow-hidden rounded-2xl"
+          style={{ background: "rgba(77,200,232,0.08)", border: "1px solid rgba(77,200,232,0.15)" }}>
+          <img src={logo} alt="SIRS" className="h-16 w-auto object-contain p-2" />
         </div>
+        <h1 className="text-2xl font-bold text-white tracking-tight">Entrar no SIRS</h1>
+        <p className="mt-1.5 text-sm text-white/45">Acesse sua conta para continuar</p>
+      </div>
 
-        {/* FORMULÁRIO */}
-        <form onSubmit={handleSubmit} className="w-full space-y-5">
-          <div className="space-y-1">
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              placeholder="Email"
-              className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-[#1A8BBF] transition-all"
-            />
+      {/* Formulário */}
+      <form onSubmit={handleSubmit} className="w-full space-y-4">
+        <input
+          type="email"
+          required
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          placeholder="Email"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white placeholder-white/30 transition-all focus:outline-none focus:ring-2 focus:ring-[#1A8BBF]/60"
+        />
+
+        <input
+          type="password"
+          required
+          value={senha}
+          onChange={e => setSenha(e.target.value)}
+          placeholder="Senha"
+          className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm text-white placeholder-white/30 transition-all focus:outline-none focus:ring-2 focus:ring-[#1A8BBF]/60"
+        />
+
+        {erro && (
+          <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2.5">
+            <p className="text-center text-xs text-red-400">{erro}</p>
           </div>
+        )}
 
-          <div className="space-y-1">
-            <input
-              type="password"
-              required
-              value={senha}
-              onChange={e => setSenha(e.target.value)}
-              placeholder="Senha"
-              className="w-full px-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/30 text-sm focus:outline-none focus:ring-2 focus:ring-[#1A8BBF] transition-all"
-            />
-          </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="mt-1 w-full rounded-xl py-3.5 text-sm font-bold text-white shadow-lg transition-all hover:brightness-110 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+          style={{
+            background: "linear-gradient(135deg, #1A8BBF 0%, #4DC8E8 100%)",
+            boxShadow: "0 4px 14px rgba(26,139,191,0.35)",
+          }}
+        >
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round"/>
+              </svg>
+              Processando...
+            </span>
+          ) : "Entrar na Plataforma"}
+        </button>
 
-          {erro && (
-            <div className="bg-red-500/10 border border-red-500/20 py-2 px-4 rounded-lg">
-              <p className="text-xs text-red-400 text-center">{erro}</p>
-            </div>
-          )}
+        <div className="text-center">
+          <Link to="/esqueceu-senha" className="text-xs text-white/35 transition-colors hover:text-white/60">
+            Esqueceu a senha?
+          </Link>
+        </div>
+      </form>
 
+      {/* Divider */}
+      <div className="my-7 flex w-full items-center gap-3">
+        <div className="h-px flex-1 bg-white/10" />
+        <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">Acesso Rápido</span>
+        <div className="h-px flex-1 bg-white/10" />
+      </div>
+
+      {/* Contas de teste */}
+      <div className="w-full space-y-2">
+        {[
+          { email: "ana@sirs.com", papel: "RH" },
+          { email: "carlos@sirs.com", papel: "Gestor" },
+          { email: "admin@sirs.com", papel: "Admin" },
+        ].map(u => (
           <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3.5 rounded-xl text-sm font-bold text-white transition-all hover:brightness-110 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#1A8BBF]/20"
-            style={{ background: "linear-gradient(135deg, #1A8BBF 0%, #4DC8E8 100%)" }}
+            key={u.email}
+            type="button"
+            onClick={() => { setEmail(u.email); setSenha("admin123") }}
+            className="group w-full flex items-center justify-between rounded-xl border border-white/5 bg-white/[0.02] px-4 py-2.5 transition-all hover:border-white/15 hover:bg-white/8"
           >
-            {loading ? "Processando..." : "Entrar na Plataforma"}
+            <span className="text-xs text-white/55 transition-colors group-hover:text-white/80">{u.email}</span>
+            <span className="rounded-md bg-[#1A8BBF]/20 px-2 py-0.5 text-[10px] font-bold uppercase text-[#4DC8E8]">
+              {u.papel}
+            </span>
           </button>
-
-          <div className="text-center">
-            <Link
-              to="/esqueceu-senha"
-              className="text-xs text-white/35 hover:text-white/60 transition-colors"
-            >
-              Esqueceu a senha?
-            </Link>
-          </div>
-        </form>
-
-        {/* DIVIDER */}
-        <div className="w-full my-8 flex items-center gap-3">
-          <div className="flex-1 h-[1px] bg-white/10" />
-          <span className="text-[10px] font-bold uppercase tracking-widest text-white/30">Acesso Rápido</span>
-          <div className="flex-1 h-[1px] bg-white/10" />
-        </div>
-
-        {/* USERS DE TESTE (STAGED USERS) */}
-        <div className="w-full grid grid-cols-1 gap-2">
-          {[
-            { email: "ana@sirs.com", papel: "RH" },
-            { email: "carlos@sirs.com", papel: "Gestor" },
-            { email: "admin@sirs.com", papel: "Admin" },
-          ].map(u => (
-            <button
-              key={u.email}
-              type="button"
-              onClick={() => {
-                setEmail(u.email)
-                setSenha("admin123")
-              }}
-              className="w-full flex justify-between items-center px-4 py-2.5 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/10 hover:border-white/20 transition-all group"
-            >
-              <span className="text-xs text-white/60 group-hover:text-white transition-colors">{u.email}</span>
-              <span className="text-[10px] bg-[#1A8BBF]/20 text-[#4DC8E8] px-2 py-0.5 rounded-md font-bold uppercase">
-                {u.papel}
-              </span>
-            </button>
-          ))}
-        </div>
-</div>
+        ))}
       </div>
-      </div>
-  )
+    </div>
+  </div>
+)
 }

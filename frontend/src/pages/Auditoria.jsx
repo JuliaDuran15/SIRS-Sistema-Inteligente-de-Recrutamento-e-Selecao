@@ -105,6 +105,16 @@ export function Auditoria() {
             {loading ? "Carregando..." : `${data.total} eventos registrados`}
           </p>
         </div>
+        <button
+          onClick={() => carregar(offset)}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl transition-all disabled:opacity-40"
+          style={{ background: "var(--s-chip)", color: "var(--t-muted2)", border: "1px solid var(--b-subtle)" }}>
+          {loading ? (
+            <span className="w-3.5 h-3.5 border-2 rounded-full animate-spin"
+              style={{ borderColor: "var(--b-normal)", borderTopColor: "#4DC8E8" }} />
+          ) : "↻"} Atualizar
+        </button>
       </div>
 
       {/* Filtros */}

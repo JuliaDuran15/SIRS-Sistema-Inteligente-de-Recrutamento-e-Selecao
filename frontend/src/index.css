@@ -155,6 +155,34 @@ html.light {
   min-height: 100dvh;
 }
 
+/* ── Smooth scroll & selection ────────────────────────────────────────────── */
+html { scroll-behavior: smooth; }
+
+::selection {
+  background: rgba(26, 139, 191, 0.3);
+  color: inherit;
+}
+
+/* ── Custom scrollbar ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--b-normal);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--b-strong); }
+
+/* ── Keyframe animations ──────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 @layer base {
   * {
     -webkit-font-smoothing: antialiased;
@@ -172,7 +200,7 @@ html.light {
     color: var(--color-brand-cloud);
     font-family: var(--font-sans);
     margin: 0;
-    transition: background-color 0.25s ease, color 0.25s ease;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   h1, h2, h3 { letter-spacing: -0.02em; }
@@ -181,7 +209,7 @@ html.light {
     background: var(--s-content);
     color: var(--color-brand-cloud);
     border: 1px solid var(--b-strong);
-    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   }
 
   input::placeholder, textarea::placeholder {
@@ -190,8 +218,8 @@ html.light {
 
   input:focus, textarea:focus, select:focus {
     outline: none;
-    border-color: rgba(26, 139, 191, 0.55);
-    box-shadow: 0 0 0 3px rgba(26, 139, 191, 0.15);
+    border-color: rgba(26, 139, 191, 0.6);
+    box-shadow: 0 0 0 3px rgba(26, 139, 191, 0.12);
   }
 
   option {
@@ -204,20 +232,22 @@ html.light {
   .card-glass {
     background: var(--s-section);
     border: 1px solid var(--b-card);
-    transition: background 0.2s ease, border-color 0.2s ease;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   }
 
   .card-interactive {
     background: var(--s-skeleton-lt);
     border: 1px solid var(--b-card);
-    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
   }
   .card-interactive:hover {
     background: var(--s-section);
     border-color: var(--b-strong);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   }
   html.light .card-interactive:hover {
-    box-shadow: 0 2px 10px rgba(15,80,130,0.12);
+    box-shadow: 0 2px 12px rgba(15,80,130,0.12);
   }
 
   /* Textos com opacidade sobre o brand-pale do @theme (azul claro):
@@ -316,5 +346,42 @@ html.light {
     .sidebar-layout-main {
       margin-left: 240px;
     }
+  }
+
+  /* ── Page entrance animation ─────────────────────────────────────────────── */
+  .page-enter {
+    animation: slideUp 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* ── Stat card accent ────────────────────────────────────────────────────── */
+  .stat-accent-bar {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 999px 999px 0 0;
+  }
+
+  /* ── Empty state container ───────────────────────────────────────────────── */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 5rem 1rem;
+    border-radius: 1rem;
+    border: 2px dashed var(--b-card);
+    animation: fadeIn 0.3s ease;
+  }
+
+  .empty-state-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--s-skeleton-lt);
+    color: var(--t-faint2);
+    flex-shrink: 0;
   }
 }

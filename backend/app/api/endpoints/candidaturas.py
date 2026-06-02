@@ -46,7 +46,7 @@ def transicionar(candidatura: Candidatura, novo_status: StatusCandidatura, ator:
             status_code=400,
             detail=f"Transição inválida: {candidatura.status} → {novo_status}"
         )
-    historico = candidatura.historico or []
+    historico = list(candidatura.historico or [])
     historico.append({
         "de"  : candidatura.status,
         "para": novo_status,
@@ -124,7 +124,7 @@ def upload_curriculo(candidatura_id: str, arquivo: UploadFile = File(...),
         db.add(curriculo)
     curriculo.arquivo_pdf = nome_arquivo
 
-    historico = candidatura.historico or []
+    historico = list(candidatura.historico or [])
     historico.append({
         "de"  : candidatura.status,
         "para": StatusCandidatura.AGUARDANDO_PROC,

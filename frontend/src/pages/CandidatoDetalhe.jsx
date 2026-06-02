@@ -10,6 +10,7 @@ import {
 import { Badge } from "../components/Badge"
 import { ScoreBar } from "../components/ScoreBar"
 import { CvPreview } from "../components/CvPreview"
+import { ExplicacaoScore } from "../components/ExplicacaoScore"
 
 const STATUS_COR = {
   novo: "gray", aguardando_processamento: "gray", processando_curriculo: "amber",
@@ -79,6 +80,13 @@ export function CandidatoDetalhe({ usuario }) {
   const [novaVagaId, setNovaVagaId]       = useState("")
   const [vinculando, setVinculando]       = useState(false)
   const [erroVinculo, setErroVinculo]     = useState(null)
+  const [expandidos, setExpandidos]       = useState(new Set())
+
+  const toggleExpandido = (id) => setExpandidos(prev => {
+    const next = new Set(prev)
+    next.has(id) ? next.delete(id) : next.add(id)
+    return next
+  })
 
   const podeGerenciar = usuario?.papel === "rh" || usuario?.papel === "admin"
 
@@ -225,9 +233,21 @@ export function CandidatoDetalhe({ usuario }) {
 
                 {/* Score curricular se já processado */}
                 {c.curriculo?.score_curriculo != null && (
-                  <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(77,200,232,0.08)" }}>
-                    <ScoreBar score={c.curriculo.score_curriculo}
-                      label={`Score currículo: ${c.curriculo.score_curriculo}`} />
+                  <div className="mt-3 pt-3 space-y-2.5" style={{ borderTop: "1px solid rgba(77,200,232,0.08)" }}>
+                    {c.curriculo.score_rh != null ? (
+                      <>
+                        <ScoreBar score={c.curriculo.score_rh}      label="Aderência aos requisitos da vaga" />
+                        <ScoreBar score={c.curriculo.score_mercado}  label="Aderência ao mercado" />
+                        <ExplicacaoScore
+                          explicacao={c.curriculo.explicacao}
+                          expandido={expandidos.has(c.id)}
+                          onToggle={() => toggleExpandido(c.id)}
+                        />
+                      </>
+                    ) : (
+                      <ScoreBar score={c.curriculo.score_curriculo}
+                        label={`Score currículo: ${c.curriculo.score_curriculo}`} />
+                    )}
                   </div>
                 )}
 

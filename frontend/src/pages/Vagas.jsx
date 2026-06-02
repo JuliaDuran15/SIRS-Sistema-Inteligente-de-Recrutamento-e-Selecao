@@ -2,7 +2,7 @@ import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { getVagas, createVaga, updateVagaStatus, getUsuarios } from "../api"
 import { Badge } from "../components/Badge"
-import { IconSearch } from "../components/Icons"
+import { IconSearch, IconBriefcase } from "../components/Icons"
 
 const PESOS_DEFAULT = {
   peso_rh: 0.6, peso_mercado: 0.4,
@@ -249,27 +249,33 @@ export function Vagas({ usuario }) {
           ))}
         </div>
       ) : vagasOrdenadas.length === 0 ? (
-        <div className="text-center py-20 rounded-2xl border-2 border-dashed"
-          style={{ borderColor: "var(--b-card)" }}>
-          <p className="text-brand-pale/55 text-sm font-semibold">
-            {busca ? `Nenhuma vaga encontrada para "${busca}"` : "Nenhuma vaga"}
+        <div className="empty-state">
+          <div className="empty-state-icon">
+            <IconBriefcase size={20} />
+          </div>
+          <p className="text-sm font-semibold" style={{ color: "var(--t-muted2)" }}>
+            {busca ? `Nenhuma vaga encontrada para "${busca}"` : "Nenhuma vaga cadastrada"}
           </p>
           {busca && (
             <button onClick={() => setBusca("")}
-              className="mt-2 text-xs text-brand-sky hover:underline">
+              className="text-xs text-brand-sky hover:underline transition-colors">
               Limpar busca
             </button>
           )}
         </div>
       ) : (
         <div className="space-y-2.5">
-          {vagasOrdenadas.map(v => (
-            <div key={v.id} className="card-interactive rounded-2xl px-6 py-4 flex items-center gap-4">
+          {vagasOrdenadas.map(v => {
+            const statusAccent = { aberta: "#2EE8B4", pausada: "#FCD34D", fechada: "var(--b-subtle)" }
+            return (
+            <div key={v.id} className="card-interactive rounded-2xl px-6 py-4 flex items-center gap-4 relative overflow-hidden">
+              <div className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full"
+                style={{ background: statusAccent[v.status] ?? "var(--b-subtle)" }} />
               <Link to={`/vagas/${v.id}`} className="flex-1 min-w-0 group">
                 <p className="font-bold text-brand-cloud group-hover:text-brand-sky transition-colors">
                   {v.nome}
                 </p>
-                <p className="text-sm text-brand-pale/45 mt-0.5 truncate max-w-xl">
+                <p className="text-sm mt-0.5 truncate max-w-xl" style={{ color: "var(--t-muted)" }}>
                   {v.requisitos_texto}
                 </p>
               </Link>
@@ -313,7 +319,8 @@ export function Vagas({ usuario }) {
                 </Link>
               </div>
             </div>
-          ))}
+          )
+          })}
         </div>
       )}
     </div>

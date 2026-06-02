@@ -13,7 +13,10 @@ Limitação: O modelo tem limite de ~512 tokens, então usamos apenas os
 trechos mais relevantes do CV (resumo + experiência + skills, ≤800 chars).
 """
 import logging
+import time
 from typing import Any
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +30,9 @@ def _get_reranker():
         from sentence_transformers.cross_encoder import CrossEncoder
         from app.core.config import settings
         logger.info("Carregando cross-encoder: %s", settings.RERANKER_MODEL)
-        _reranker_model = CrossEncoder(
-            settings.RERANKER_MODEL,
-            max_length=512,
-        )
-        logger.info("Cross-encoder pronto.")
+        t0 = time.perf_counter()
+        _reranker_model = CrossEncoder(settings.RERANKER_MODEL, max_length=512)
+        logger.info("Cross-encoder pronto em %.1fs.", time.perf_counter() - t0)
     return _reranker_model
 
 
@@ -54,26 +55,61 @@ def rerankar(
     """
     from app.ai.section_extractor import texto_para_rerank
 
+    t_inicio = time.perf_counter()
+    total_entrada = len(candidaturas)
+
     if not candidaturas:
+        logger.info("rerankar: nenhuma candidatura recebida, retornando vazio.")
         return []
 
     cands = candidaturas[:top_n] if top_n else candidaturas
+    n = len(cands)
+
+    logger.info(
+        "rerankar: iniciando — %d candidatura(s) de entrada, top_n=%s, processando %d. "
+        "Vaga: '%s...'",
+        total_entrada, top_n, n, texto_vaga[:80],
+    )
 
     # Prepara pares (texto_vaga, trecho_cv) para o cross-encoder
     pares: list[tuple[str, str]] = []
+    sem_curriculo = 0
     for c in cands:
         texto_cv = c.get("texto_curriculo") or ""
-        trecho   = texto_para_rerank(texto_cv) if texto_cv else ""
+        if not texto_cv:
+            sem_curriculo += 1
+        trecho = texto_para_rerank(texto_cv) if texto_cv else ""
         pares.append((texto_vaga, trecho))
 
+    if sem_curriculo:
+        logger.warning("rerankar: %d candidatura(s) sem texto de currículo.", sem_curriculo)
+
+    logger.debug("rerankar: %d par(es) prontos para o cross-encoder.", len(pares))
+
     try:
-        reranker  = _get_reranker()
-        scores    = reranker.predict(pares, show_progress_bar=False)
-        # normalize para [0, 1] via sigmoid
-        import numpy as np
-        scores_norm = (1 / (1 + np.exp(-scores))).tolist()
+        reranker = _get_reranker()
+
+        t_predict = time.perf_counter()
+        scores_raw = reranker.predict(pares, show_progress_bar=False)
+        logger.debug(
+            "rerankar: predict concluído em %.2fs. Scores brutos — min=%.3f, max=%.3f, média=%.3f.",
+            time.perf_counter() - t_predict,
+            float(np.min(scores_raw)),
+            float(np.max(scores_raw)),
+            float(np.mean(scores_raw)),
+        )
+
+        scores_norm = (1 / (1 + np.exp(-scores_raw))).tolist()
+        logger.debug(
+            "rerankar: scores normalizados (sigmoid) — min=%.3f, max=%.3f, média=%.3f.",
+            min(scores_norm), max(scores_norm),
+            sum(scores_norm) / len(scores_norm),
+        )
     except Exception as exc:
-        logger.error("Erro no cross-encoder: %s — retornando ordem original", exc)
+        logger.error(
+            "rerankar: erro no cross-encoder após %.2fs: %s — retornando ordem original.",
+            time.perf_counter() - t_inicio, exc,
+        )
         for c in cands:
             c["score_rerank"] = None
         return cands
@@ -81,4 +117,12 @@ def rerankar(
     for c, score in zip(cands, scores_norm):
         c["score_rerank"] = round(float(score), 4)
 
-    return sorted(cands, key=lambda c: c["score_rerank"] or 0, reverse=True)
+    resultado = sorted(cands, key=lambda c: c["score_rerank"] or 0, reverse=True)
+
+    top5 = [(r.get("id"), r["score_rerank"]) for r in resultado[:5]]
+    logger.info(
+        "rerankar: concluído em %.2fs. Top-5 (id, score): %s",
+        time.perf_counter() - t_inicio, top5,
+    )
+
+    return resultado

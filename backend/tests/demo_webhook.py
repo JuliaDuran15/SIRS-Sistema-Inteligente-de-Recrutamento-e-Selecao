@@ -64,7 +64,7 @@ def demo_json():
         "vagas": [
             {
                 "external_id": "demo_v1",
-                "nome": "Demo Dev Python",
+                "nome": "Dev Python",
                 "requisitos_texto": (
                     "Desenvolvedor Python com experiência em FastAPI, SQLAlchemy, "
                     "PostgreSQL, Docker e boas práticas de API REST. "
@@ -139,7 +139,7 @@ def demo_xml():
     xml = """<importacao fonte="sap_hcm">
   <vagas>
     <vaga external_id="demo_xml_v1">
-      <nome>Demo Analista Financeiro</nome>
+      <nome> Analista Financeiro</nome>
       <requisitos_texto>Excel avancado, SAP FI, Power BI, IFRS, fluxo de caixa, CRC preferencial</requisitos_texto>
     </vaga>
   </vagas>

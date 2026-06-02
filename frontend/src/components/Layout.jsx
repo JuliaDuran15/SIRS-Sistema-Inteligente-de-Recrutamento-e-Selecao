@@ -28,12 +28,13 @@ function NavItem({ path, label, Icon, active }) {
   return (
     <Link
       to={path}
-      className="flex items-center gap-3 rounded-xl text-sm font-semibold transition-all group"
+      className={`flex items-center gap-3 rounded-xl text-sm font-semibold transition-all duration-200 group${!active ? " hover:bg-white/5" : ""}`}
       style={active ? {
-        background: "linear-gradient(135deg, rgba(26,139,191,0.2), rgba(77,200,232,0.1))",
+        background: "linear-gradient(135deg, rgba(26,139,191,0.25), rgba(77,200,232,0.08))",
         color: "#4DC8E8",
         borderLeft: "2px solid #4DC8E8",
         padding: "10px 12px 10px 10px",
+        boxShadow: "0 1px 8px rgba(26,139,191,0.12)",
       } : {
         color: "var(--t-muted2)",
         borderLeft: "2px solid transparent",
@@ -41,12 +42,12 @@ function NavItem({ path, label, Icon, active }) {
       }}
     >
       <span
-        className="flex-shrink-0 transition-colors"
+        className="flex-shrink-0 transition-all duration-200"
         style={{ color: active ? "#4DC8E8" : "var(--t-faint2)" }}
       >
         <Icon size={17} />
       </span>
-      <span className={active ? "" : "group-hover:text-brand-cloud transition-colors"}>
+      <span className={active ? "" : "group-hover:text-brand-cloud transition-colors duration-200"}>
         {label}
       </span>
     </Link>
@@ -58,9 +59,9 @@ function SidebarContent({ nav, usuario, onLogout, light, setLight, currentPath }
     <div className="flex flex-col h-full overflow-hidden">
 
       {/* Logo */}
-      <div className="px-5 py-4 border-b flex-shrink-0" style={{ borderColor: "var(--b-subtle)" }}>
-        <Link to="/" className="flex items-center gap-3">
-          <img src={logo} alt="SIRS" className="h-9 w-auto object-contain rounded-lg flex-shrink-0" />
+      <div className="px-5 py-5 border-b flex-shrink-0" style={{ borderColor: "var(--b-subtle)" }}>
+        <Link to="/" className="flex items-center gap-3 group">
+          <img src={logo} alt="SIRS" className="h-9 w-auto object-contain rounded-lg flex-shrink-0 transition-opacity group-hover:opacity-90" />
           <div className="min-w-0">
             <p className="text-sm font-bold text-brand-cloud leading-tight">SIRS</p>
             <p className="text-xs leading-tight" style={{ color: "var(--t-sub)" }}>
@@ -73,8 +74,8 @@ function SidebarContent({ nav, usuario, onLogout, light, setLight, currentPath }
       {/* Navigation */}
       <nav className="flex-1 p-3 pt-4 space-y-0.5 overflow-y-auto">
         <p
-          className="text-xs font-bold uppercase tracking-widest px-3 mb-3"
-          style={{ color: "var(--t-sub)" }}
+          className="text-[10px] font-bold uppercase tracking-[0.12em] px-3 mb-3"
+          style={{ color: "var(--t-faint2)" }}
         >
           Menu
         </p>
@@ -106,13 +107,22 @@ function SidebarContent({ nav, usuario, onLogout, light, setLight, currentPath }
               className="w-full flex items-center gap-3 rounded-xl text-sm font-semibold transition-all hover:bg-white/5 group"
               style={{ color: "var(--t-muted2)", borderLeft: "2px solid transparent", padding: "10px 12px 10px 10px" }}
             >
-              <div
-                className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}
-              >
-                <span className="text-xs font-bold" style={{ color: "#07111A", fontSize: "10px" }}>
-                  {usuario.nome.charAt(0).toUpperCase()}
-                </span>
+              <div className="flex-shrink-0 relative">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{
+                    background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)",
+                    boxShadow: "0 0 0 2px rgba(77,200,232,0.25)",
+                  }}
+                >
+                  <span className="text-xs font-bold" style={{ color: "#07111A" }}>
+                    {usuario.nome.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <span
+                  className="absolute bottom-0 right-0 w-2 h-2 rounded-full border border-current"
+                  style={{ background: "#2EE8B4", borderColor: "var(--s-header)" }}
+                />
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-brand-cloud truncate group-hover:text-brand-sky transition-colors">
@@ -168,10 +178,10 @@ export function Layout({ children, usuario, onLogout }) {
       <aside
         className="hidden lg:flex flex-col fixed top-0 left-0 h-screen z-10"
         style={{
-          width           : SIDEBAR_W,
-          background      : "var(--s-header)",
-          borderRight     : "1px solid var(--b-card)",
-          backdropFilter  : "blur(20px)",
+          width          : SIDEBAR_W,
+          background     : "linear-gradient(180deg, var(--s-header) 0%, rgba(7,17,26,0.9) 100%)",
+          borderRight    : "1px solid var(--b-card)",
+          backdropFilter : "blur(24px)",
         }}
       >
         <SidebarContent {...sidebarProps} />
@@ -252,7 +262,9 @@ export function Layout({ children, usuario, onLogout }) {
 
         {/* Page content */}
         <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-8 py-8 lg:py-10">
-          {children}
+          <div className="page-enter">
+            {children}
+          </div>
         </main>
 
       </div>

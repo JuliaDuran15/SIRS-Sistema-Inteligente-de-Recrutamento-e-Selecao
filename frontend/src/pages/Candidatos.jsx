@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Link } from "react-router-dom"
 import { getCandidatos, createCandidato, getVagas, createCandidatura } from "../api"
 import { Badge } from "../components/Badge"
-import { IconSearch } from "../components/Icons"
+import { IconSearch, IconUsers } from "../components/Icons"
 
 const inputClass = "w-full rounded-xl px-4 py-2.5 text-sm transition-all"
 const LIMIT = 30
@@ -160,13 +160,16 @@ export function Candidatos() {
           ))}
         </div>
       ) : data.items.length === 0 ? (
-        <div className="text-center py-24 rounded-2xl border-2 border-dashed" style={{ borderColor: "var(--b-card)" }}>
-          <p className="text-brand-pale/55 text-sm font-semibold">
+        <div className="empty-state">
+          <div className="empty-state-icon">
+            <IconUsers size={20} />
+          </div>
+          <p className="text-sm font-semibold" style={{ color: "var(--t-muted2)" }}>
             {busca || origem ? "Nenhum candidato encontrado para os filtros aplicados" : "Nenhum candidato cadastrado"}
           </p>
           {(busca || origem) && (
             <button onClick={() => { setBusca(""); setOrigem("") }}
-              className="mt-3 text-xs text-brand-sky hover:underline">
+              className="text-xs text-brand-sky hover:underline transition-colors">
               Limpar filtros
             </button>
           )}
