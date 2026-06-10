@@ -1,7 +1,16 @@
 import time
 
 import app.db.base  # noqa: F401 — importa todos os models antes de qualquer endpoint
-from app.api.endpoints import analytics, auth, candidatos, candidaturas, entrevistas, usuarios, vagas, webhook
+from app.api.endpoints import (
+    analytics,
+    auth,
+    candidatos,
+    candidaturas,
+    entrevistas,
+    usuarios,
+    vagas,
+    webhook,
+)
 from app.core.logger import get_logger
 from app.db.ensure_admin import garantir_admin
 from app.db.init_extensions import criar_extensoes

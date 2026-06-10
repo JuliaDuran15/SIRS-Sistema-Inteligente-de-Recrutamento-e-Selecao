@@ -1,27 +1,33 @@
-from app.ai.market_analyzer import analisar_mercado
-from app.core.logger import get_logger
-
-logger = get_logger("VAGAS")
 import csv
 import io
 
+from app.ai.market_analyzer import analisar_mercado
 from app.ai.matching_engine import calcular_score_curriculo, calcular_score_final
 from app.ai.resume_parser import vetorizar_texto
 from app.ai.tasks import _recalcular_scores_mercado, atualizar_mercado_vaga
 from app.api.deps import DB
 from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL, get_usuario_atual
+from app.core.logger import get_logger
 from app.models.candidatura import Candidatura
 from app.models.curriculo import Curriculo
 from app.models.entrevista import Entrevista
 from app.models.usuario import PapelUsuario
 from app.models.vaga import Vaga
 from app.schemas.candidatura import CandidaturaRerankItem
-from app.schemas.vaga import RhsAutorizadosUpdate, VagaCreate, VagaResponse, VagaUpdatePesos, VagaUpdateRequisitos
+from app.schemas.vaga import (
+    RhsAutorizadosUpdate,
+    VagaCreate,
+    VagaResponse,
+    VagaUpdatePesos,
+    VagaUpdateRequisitos,
+)
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import case, or_
 from sqlalchemy.orm import Session
+
+logger = get_logger("VAGAS")
 
 router = APIRouter()
 
@@ -120,7 +126,7 @@ def listar_vagas(
         # none_as_null=True garante que Python None → SQL NULL (não JSON null).
         query = query.filter(
             or_(
-                Vaga.rhs_autorizados == None,
+                Vaga.rhs_autorizados == None,  # noqa: E711
                 Vaga.rhs_autorizados.contains([uid]),
             )
         )
@@ -322,6 +328,7 @@ def rerankar_candidaturas(
     Chamadas subsequentes são mais rápidas.
     """
     import time
+
     from app.ai.reranker import rerankar
     from app.core.config import settings
     from app.models.curriculo import Curriculo

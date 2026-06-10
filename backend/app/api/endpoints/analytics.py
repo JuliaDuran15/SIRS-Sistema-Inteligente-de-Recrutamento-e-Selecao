@@ -7,13 +7,13 @@ Dados filtrados pelas vagas visíveis ao usuário logado:
 """
 from app.api.deps import DB
 from app.core.auth import get_usuario_atual
-from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.candidato import Candidato
+from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.curriculo import Curriculo
 from app.models.entrevista import Entrevista
 from app.models.usuario import PapelUsuario
 from app.models.vaga import Vaga
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
@@ -101,7 +101,7 @@ def _vagas_ids_query(usuario, db: Session):
     elif usuario.papel == PapelUsuario.RH:
         q = q.filter(
             or_(
-                Vaga.rhs_autorizados == None,
+                Vaga.rhs_autorizados == None,  # noqa: E711
                 Vaga.rhs_autorizados.contains([uid]),
             )
         )

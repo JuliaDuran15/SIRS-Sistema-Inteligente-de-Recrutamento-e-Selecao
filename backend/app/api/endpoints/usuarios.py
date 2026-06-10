@@ -28,7 +28,7 @@ def criar_usuario(dados: UsuarioCreate, db: Session = DB, _=APENAS_ADMIN):
 
 @router.get("/", response_model=list[UsuarioResponse])
 def listar_usuarios(db: Session = DB, _=QUALQUER_PAPEL):
-    return db.query(Usuario).filter(Usuario.ativo == True).all()
+    return db.query(Usuario).filter(Usuario.ativo == True).all()  # noqa: E712
 
 
 @router.get("/{usuario_id}", response_model=UsuarioResponse)
@@ -47,10 +47,14 @@ def atualizar_usuario(usuario_id: str, dados: UsuarioUpdate, db: Session = DB, _
     if dados.email and dados.email != usuario.email:
         if db.query(Usuario).filter(Usuario.email == dados.email).first():
             raise HTTPException(status_code=400, detail="Email já está em uso")
-    if dados.nome  is not None: usuario.nome       = dados.nome
-    if dados.email is not None: usuario.email      = dados.email
-    if dados.papel is not None: usuario.papel      = dados.papel
-    if dados.senha is not None: usuario.senha_hash = pwd_context.hash(dados.senha)
+    if dados.nome  is not None:
+        usuario.nome       = dados.nome
+    if dados.email is not None:
+        usuario.email      = dados.email
+    if dados.papel is not None:
+        usuario.papel      = dados.papel
+    if dados.senha is not None:
+        usuario.senha_hash = pwd_context.hash(dados.senha)
     db.commit()
     db.refresh(usuario)
     return usuario

@@ -83,9 +83,12 @@ def gerar_explicacao(
     features_vaga   : dict | None = None,
 ) -> dict:
     def classificar(score: float) -> str:
-        if score >= 0.80: return "excelente"
-        if score >= 0.65: return "bom"
-        if score >= 0.50: return "regular"
+        if score >= 0.80:
+            return "excelente"
+        if score >= 0.65:
+            return "bom"
+        if score >= 0.50:
+            return "regular"
         return "baixo"
 
     contrib_rh      = round(score_rh * peso_rh * 100, 1)

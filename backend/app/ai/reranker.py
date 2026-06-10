@@ -14,7 +14,6 @@ trechos mais relevantes do CV (resumo + experiência + skills, ≤800 chars).
 """
 import logging
 import time
-from typing import Any
 
 import numpy as np
 
@@ -27,8 +26,8 @@ def _get_reranker():
     """Carrega o cross-encoder na primeira chamada (lazy load)."""
     global _reranker_model
     if _reranker_model is None:
-        from sentence_transformers.cross_encoder import CrossEncoder
         from app.core.config import settings
+        from sentence_transformers.cross_encoder import CrossEncoder
         logger.info("Carregando cross-encoder: %s", settings.RERANKER_MODEL)
         t0 = time.perf_counter()
         _reranker_model = CrossEncoder(settings.RERANKER_MODEL, max_length=512)

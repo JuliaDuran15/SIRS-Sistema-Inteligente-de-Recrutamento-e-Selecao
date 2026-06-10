@@ -150,7 +150,7 @@ _ALIASES: dict[str, str] = {
     'facebook ads': 'meta ads', 'instagram ads': 'meta ads',
     'google analytics 4': 'ga4', 'analytics 4': 'ga4',
     'tag manager': 'google tag manager',
-    'rd station': 'rd station', 'rds': 'rd station',
+    'rd station': 'rd station',
     'social media management': 'social media', 'redes sociais': 'social media',
     'gestão de social media': 'social media',
     'inbound': 'inbound marketing', 'outbound': 'outbound marketing',

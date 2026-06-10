@@ -90,7 +90,7 @@ def extrair_secoes(texto: str) -> dict[SecaoNome, str]:
     Segmenta o texto do currículo em seções e retorna um dict.
     Seções não detectadas retornam string vazia.
     """
-    linhas = [l.rstrip() for l in texto.splitlines()]
+    linhas = [linha.rstrip() for linha in texto.splitlines()]
     secoes = _segmentar_por_cabecalho(linhas)
 
     # Fallback: seções não encontradas → varredura por densidade

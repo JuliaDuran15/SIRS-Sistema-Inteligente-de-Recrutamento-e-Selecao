@@ -5,7 +5,10 @@ from app.models.candidatura import Candidatura
 from app.models.usuario import PapelUsuario
 from app.models.vaga import Vaga
 from app.schemas.candidato import (
-    CandidatoCreate, CandidatoListResponse, CandidatoResponse, CandidatoUpdate,
+    CandidatoCreate,
+    CandidatoListResponse,
+    CandidatoResponse,
+    CandidatoUpdate,
 )
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_

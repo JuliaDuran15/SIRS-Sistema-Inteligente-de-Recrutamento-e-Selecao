@@ -50,7 +50,7 @@ class Candidatura(Base):
     criado_em    : Mapped[datetime]          = mapped_column(DateTime, default=datetime.utcnow)
     atualizado_em: Mapped[datetime]          = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    candidato  : Mapped["Candidato"]        = relationship(back_populates="candidaturas")
-    vaga       : Mapped["Vaga"]             = relationship(back_populates="candidaturas")
-    entrevistas: Mapped[list["Entrevista"]] = relationship(back_populates="candidatura", order_by="Entrevista.agendada_para")
-    curriculo  : Mapped["Curriculo"]        = relationship(back_populates="candidatura", uselist=False)
+    candidato  : Mapped["Candidato"]        = relationship(back_populates="candidaturas")  # noqa: F821
+    vaga       : Mapped["Vaga"]             = relationship(back_populates="candidaturas")  # noqa: F821
+    entrevistas: Mapped[list["Entrevista"]] = relationship(back_populates="candidatura", order_by="Entrevista.agendada_para")  # noqa: F821
+    curriculo  : Mapped["Curriculo"]        = relationship(back_populates="candidatura", uselist=False)  # noqa: F821

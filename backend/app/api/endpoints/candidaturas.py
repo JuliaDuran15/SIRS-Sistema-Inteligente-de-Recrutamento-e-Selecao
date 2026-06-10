@@ -7,10 +7,10 @@ from app.api.deps import DB
 from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL, RH_OU_ADMIN, get_usuario_atual
 from app.models.candidato import Candidato
 from app.models.candidatura import Candidatura, StatusCandidatura
-from app.models.vaga import Vaga
 from app.models.curriculo import Curriculo
+from app.models.vaga import Vaga
 from app.schemas.candidatura import CandidaturaCreate, CandidaturaResponse, CurriculoDetalhado
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
