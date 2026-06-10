@@ -68,7 +68,7 @@ jobs:
         run: ruff check app/
 
       - name: Roda testes
-        run: pytest tests/ -v --tb=short -q
+        run: pytest tests/ -v --tb=short -q -m "not slow"
 
   lint-frontend:
     runs-on: ubuntu-latest

@@ -108,7 +108,8 @@ def mock_celery_tasks():
 def mock_vetorizar():
     """Evita carregar o modelo de embeddings durante testes de API."""
     with patch("app.ai.resume_parser.vetorizar_texto", return_value=[0.1] * 384), \
-         patch("app.api.endpoints.vagas.vetorizar_texto", return_value=[0.1] * 384):
+         patch("app.api.endpoints.vagas.vetorizar_texto", return_value=[0.1] * 384), \
+         patch("app.api.endpoints.webhook.vetorizar_texto", return_value=[0.1] * 384):
         yield
 
 

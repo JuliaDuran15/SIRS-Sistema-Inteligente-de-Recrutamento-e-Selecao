@@ -6,12 +6,12 @@ from pydantic import BaseModel, Field, field_validator
 
 class EntrevistaCreate(BaseModel):
     candidatura_id : UUID
-    tipo           : str       = Field(..., pattern=r"^(rh|tecnica)$")
+    tipo           : str
     agendada_para  : datetime
 
 
 class EntrevistaResultado(BaseModel):
-    score_manual  : float              = Field(..., ge=0, le=10)
+    score_manual  : float              = Field(...)
     anotacoes     : str                = Field(..., max_length=5000)
     pontos_fortes : list[str]          = []
     pontos_fracos : list[str]          = []
