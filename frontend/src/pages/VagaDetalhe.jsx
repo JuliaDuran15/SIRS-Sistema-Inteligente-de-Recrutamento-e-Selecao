@@ -114,6 +114,9 @@ export function VagaDetalhe({ usuario }) {
     if (filtroStatus === "_reprovados")  return STATUS_REPROVADOS.has(c.status)
     return c.status === filtroStatus
   }).sort((a, b) => {
+    const grupo = s => STATUS_REPROVADOS.has(s) ? 2 : s === "banco_de_talentos" ? 1 : 0
+    const gd = grupo(a.status) - grupo(b.status)
+    if (gd !== 0) return gd
     const sa = a.curriculo?.score_curriculo ?? a.score_total ?? 0
     const sb = b.curriculo?.score_curriculo ?? b.score_total ?? 0
     return sb - sa
@@ -477,6 +480,7 @@ export function VagaDetalhe({ usuario }) {
             )}
           </div>
           <div className="flex flex-wrap gap-2">
+          {/* Botão de refinar ranking (cross-encoder) — desativado até testes completos
           {podeEditarPesos && (
             <button
               onClick={handleRerankar}
@@ -497,6 +501,7 @@ export function VagaDetalhe({ usuario }) {
               ) : rerankado ? "✓ Ranking atualizado" : "Refinar ranking"}
             </button>
           )}
+          */}
           <button
             onClick={handleAnalisarMercado}
             disabled={analisando}
@@ -817,7 +822,7 @@ export function VagaDetalhe({ usuario }) {
                   </button>
                   <button onClick={() => aplicarTriagemLote("reprovado_triagem")} disabled={aplicandoLote}
                     className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
-                    style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)", color: "#FCA5A5" }}>
+                    style={{ background: "rgba(239,68,68,0.12)", border: "1.5px solid rgba(239,68,68,0.50)", color: "#EF4444" }}>
                     Reprovar todos
                   </button>
                   <button onClick={() => setSelecionados(new Set())}
@@ -954,9 +959,9 @@ export function VagaDetalhe({ usuario }) {
                   disabled={descartando || candidaturasParaDescartar.length === 0}
                   className="px-4 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-40"
                   style={{
-                    background: "rgba(239,68,68,0.14)",
-                    border: "1px solid rgba(239,68,68,0.28)",
-                    color: "#FCA5A5",
+                    background: "rgba(239,68,68,0.12)",
+                    border: "1.5px solid rgba(239,68,68,0.50)",
+                    color: "#EF4444",
                   }}>
                   {descartando
                     ? "Reprovando..."
@@ -989,16 +994,19 @@ export function VagaDetalhe({ usuario }) {
             </div>
           ) : (
             candidaturasFiltradas.map((c, i) => {
-                const curriculo   = c.curriculo
-                const scoreRH     = curriculo?.score_rh      ?? null
-                const scoreMkt    = curriculo?.score_mercado  ?? null
-                const scoreFinal  = curriculo?.score_curriculo ?? c.score_total ?? null
-                const processando = c.status === "processando_curriculo" ||
+                const curriculo      = c.curriculo
+                const scoreRH        = curriculo?.score_rh      ?? null
+                const scoreMkt       = curriculo?.score_mercado  ?? null
+                const scoreEntRH     = c.score_entrevista_rh  ?? null
+                const scoreEntTec    = c.score_entrevista_tec ?? null
+                const temEntrevistas = scoreEntRH !== null || scoreEntTec !== null
+                const scoreFinal     = c.score_total ?? curriculo?.score_curriculo ?? null
+                const processando    = c.status === "processando_curriculo" ||
                                     (c.status === "triagem_pendente" && scoreRH === null)
 
                 const scoreCor =
-                  scoreFinal >= 70 ? "#2EE8B4" :
-                  scoreFinal >= 50 ? "#FCD34D" : "#FCA5A5"
+                  scoreFinal >= 70 ? "var(--score-high)" :
+                  scoreFinal >= 50 ? "var(--score-mid)"  : "var(--score-low)"
 
                 const emTriagem = c.status === "triagem_pendente"
 
@@ -1064,8 +1072,25 @@ export function VagaDetalhe({ usuario }) {
                       </div>
                     ) : scoreRH !== null ? (
                       <div className="pl-11 space-y-2.5">
-                        <ScoreBar score={scoreRH}  label="Aderência aos requisitos da vaga" />
-                        <ScoreBar score={scoreMkt} label="Aderência ao mercado" />
+                        <ScoreBar score={scoreRH}  label={`Aderência aos requisitos (${Math.round(vaga.peso_rh * 100)}% do currículo)`} />
+                        <ScoreBar score={scoreMkt} label={`Aderência ao mercado (${Math.round(vaga.peso_mercado * 100)}% do currículo)`} />
+                        {temEntrevistas && (
+                          <div className="pt-1 space-y-2"
+                            style={{ borderTop: "1px solid var(--b-subtle)" }}>
+                            {scoreEntRH !== null && (
+                              <ScoreBar
+                                score={scoreEntRH * 10}
+                                label={`Entrevista RH: ${scoreEntRH}/10 (peso ${Math.round(vaga.peso_entrevista_rh * 100)}%)`}
+                              />
+                            )}
+                            {scoreEntTec !== null && (
+                              <ScoreBar
+                                score={scoreEntTec * 10}
+                                label={`Entrevista Técnica: ${scoreEntTec}/10 (peso ${Math.round(vaga.peso_entrevista_tec * 100)}%)`}
+                              />
+                            )}
+                          </div>
+                        )}
                         <ExplicacaoScore
                           explicacao={curriculo?.explicacao}
                           expandido={expandidos.has(c.id)}
@@ -1087,25 +1112,33 @@ export function VagaDetalhe({ usuario }) {
                       </div>
                     ) : null}
 
-                    <div className="flex items-center justify-between mt-3 pt-2.5"
+                    <div className="flex flex-wrap items-center justify-between gap-y-2 mt-3 pt-2.5"
                       style={{ borderTop: "1px solid var(--b-subtle)" }}>
 
                       {/* Botões de triagem rápida */}
                       {podeTriagem && c.status === "triagem_pendente" ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <button
                             onClick={() => handleTriagem(c.id, "aprovado_triagem")}
                             disabled={triagendo[c.id]}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
-                            style={{ background: "rgba(26,170,128,0.15)", border: "1px solid rgba(26,170,128,0.3)", color: "#2EE8B4" }}
+                            style={{ background: "rgba(26,170,128,0.20)", border: "1.5px solid rgba(26,170,128,0.50)", color: "#10B981" }}
                           >
                             {triagendo[c.id] ? "..." : "Aprovar"}
+                          </button>
+                          <button
+                            onClick={() => handleTriagem(c.id, "banco_de_talentos")}
+                            disabled={triagendo[c.id]}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+                            style={{ background: "rgba(139,92,246,0.18)", border: "1.5px solid rgba(139,92,246,0.55)", color: "#8B5CF6" }}
+                          >
+                            {triagendo[c.id] ? "..." : "Banco de talentos"}
                           </button>
                           <button
                             onClick={() => handleTriagem(c.id, "reprovado_triagem")}
                             disabled={triagendo[c.id]}
                             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
-                            style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.25)", color: "#FCA5A5" }}
+                            style={{ background: "rgba(239,68,68,0.12)", border: "1.5px solid rgba(239,68,68,0.50)", color: "#EF4444" }}
                           >
                             {triagendo[c.id] ? "..." : "Reprovar"}
                           </button>

@@ -116,12 +116,12 @@ html.light {
   --badge-gray-bg:  rgba(30,41,59,0.08);     --badge-gray-text:  #334155;  --badge-gray-dot:  #64748B;  --badge-gray-border:  rgba(30,41,59,0.18);
   --badge-purple-bg:rgba(109,40,217,0.1);    --badge-purple-text:#4C1D95;  --badge-purple-dot:#6D28D9;  --badge-purple-border:rgba(109,40,217,0.22);
 
-  --score-high:      #047857;
-  --score-mid:       #B45309;
-  --score-low:       #B91C1C;
-  --score-high-grad: linear-gradient(90deg, #047857, #059669);
-  --score-mid-grad:  linear-gradient(90deg, #B45309, #D97706);
-  --score-low-grad:  linear-gradient(90deg, #B91C1C, #DC2626);
+  --score-high:      rgba(5, 150, 105, 0.72);
+  --score-mid:       rgba(217, 119, 6, 0.72);
+  --score-low:       rgba(220, 38, 38, 0.72);
+  --score-high-grad: linear-gradient(90deg, rgba(5,150,105,0.55), rgba(16,185,129,0.65));
+  --score-mid-grad:  linear-gradient(90deg, rgba(217,119,6,0.55), rgba(245,158,11,0.65));
+  --score-low-grad:  linear-gradient(90deg, rgba(220,38,38,0.55), rgba(239,68,68,0.65));
 }
 
 @theme {

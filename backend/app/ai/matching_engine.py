@@ -122,7 +122,9 @@ def gerar_explicacao(
             "nivel_educacao"   : features_cv.get("nivel_educacao", 0),
         }
     if features_cv and features_vaga:
-        overlap = features_cv.get("habilidades", set()) & features_vaga.get("habilidades", set())
+        # Usa apenas skills do texto dos requisitos (não termos de mercado) para o display.
+        hab_vaga_display = features_vaga.get("habilidades_texto") or features_vaga.get("habilidades", set())
+        overlap = features_cv.get("habilidades", set()) & hab_vaga_display
         resultado["sinais_estruturais"]["habilidades_em_comum"] = sorted(overlap)
 
     return resultado
@@ -136,9 +138,15 @@ def calcular_score_final(
     peso_entrevista_rh  : float,
     peso_entrevista_tec : float,
 ) -> float:
-    sc  = score_curriculo / 100
-    srh = (score_entrevista_rh  / 10) if score_entrevista_rh  is not None else 0.0
-    stc = (score_entrevista_tec / 10) if score_entrevista_tec is not None else 0.0
+    soma        = (score_curriculo / 100) * peso_curriculo
+    peso_ativo  = peso_curriculo
 
-    score = (sc * peso_curriculo) + (srh * peso_entrevista_rh) + (stc * peso_entrevista_tec)
-    return round(score * 100, 1)
+    if score_entrevista_rh is not None:
+        soma       += (score_entrevista_rh  / 10) * peso_entrevista_rh
+        peso_ativo += peso_entrevista_rh
+
+    if score_entrevista_tec is not None:
+        soma       += (score_entrevista_tec / 10) * peso_entrevista_tec
+        peso_ativo += peso_entrevista_tec
+
+    return round((soma / peso_ativo) * 100, 1)

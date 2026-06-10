@@ -322,9 +322,10 @@
     <li><a href="#s7">Pipeline de status das candidaturas</a></li>
     <li><a href="#s8">Notificações por e-mail</a></li>
     <li><a href="#s9">Webhook de importação</a></li>
-    <li><a href="#s10">Segurança</a></li>
-    <li><a href="#s11">Testes</a></li>
-    <li><a href="#s12">Configuração e deploy</a></li>
+    <li><a href="#s10">Frontend — React SPA</a></li>
+    <li><a href="#s11">Segurança</a></li>
+    <li><a href="#s12">Testes</a></li>
+    <li><a href="#s13">Configuração e deploy</a></li>
   </ol>
 </div>
 
@@ -526,6 +527,14 @@ RH faz upload do PDF  OU  Webhook envia texto bruto
 </div>
 
 <h3 id="s3-3">Campos JSONB relevantes</h3>
+
+<div class="callout warn">
+  <strong>Armadilha crítica — mutação de JSONB no SQLAlchemy</strong>
+  O SQLAlchemy só detecta uma mudança num campo JSONB se o objeto Python atribuído for <em>diferente</em> do original. Fazer <code>field.append()</code> ou <code>field["key"] = value</code> sem reatribuição não marca o campo como dirty — a mudança é perdida no commit. Para qualquer campo JSONB (<code>historico</code>, <code>ranking_mercado</code>, <code>gestores_ids</code>), sempre crie uma nova lista/dict:
+  <br><br>
+  <code>candidatura.historico = list(candidatura.historico or [])</code><br>
+  em vez de mutação in-place sobre o objeto existente.
+</div>
 
 <p><strong><code>candidatura.historico</code></strong> — log de cada transição de status:</p>
 <pre><code>[
@@ -775,6 +784,11 @@ score_curriculo = clamp(
   <li>Anos de experiência e nível de senioridade extraídos</li>
 </ul>
 
+<div class="callout info">
+  <strong>Recálculo automático ao editar a vaga</strong>
+  Quando os <strong>pesos</strong> (<code>PATCH /vagas/{id}/pesos</code>) ou os <strong>requisitos</strong> (<code>PATCH /vagas/{id}/requisitos</code>) de uma vaga são alterados, a função <code>_recalcular_scores_vaga()</code> em <code>vagas.py</code> recalcula automaticamente <code>score_curriculo</code> <em>e</em> <code>explicacao</code> para todos os CVs da vaga — garantindo que o breakdown exibido ao RH reflita os pesos atuais.
+</div>
+
 <h3 id="s4-8">Reranking por cross-encoder (sob demanda)</h3>
 
 <p>Módulo: <code>reranker.py</code> — modelo <code>BAAI/bge-reranker-base</code></p>
@@ -805,6 +819,43 @@ score_curriculo = clamp(
 
 <p>Sobre os textos coletados aplica <strong>TF-IDF</strong> para extrair as skills mais discriminativas do cargo. Depois vetoriza a lista ponderada de skills e salva como <code>vaga.vetor_mercado</code>. O <code>score_mercado</code> mede o quanto o CV do candidato está alinhado a essas tendências de mercado.</p>
 
+<div class="callout tip">
+  <strong>Filtragem EEO e benefits</strong>
+  O dataset LinkedIn (Kaggle) mistura skills técnicas com texto EEO (<em>equal employment opportunity</em>) e benefícios no campo <code>skills_desc</code>. A função <code>limpar_skills_desc()</code> em <code>market_analyzer.py</code> aplica uma blacklist expandida que exclui termos como "health savings account", "401k", "parental leave", "disability", "stock options" e similares, além de filtrar fragmentos com mais de 5 palavras ou iniciados por preposições/verbos auxiliares — evitando que termos irrelevantes contaminem o vetor de mercado.
+</div>
+
+
+<h3 id="s4-10">Sumarização de transcrições (transcript_analyzer.py)</h3>
+
+<p>Módulo: <code>app/ai/transcript_analyzer.py</code> — sem dependências externas, sem chamadas a API de IA.</p>
+
+<p>Permite colar a transcrição de uma entrevista (Google Meet, Zoom, etc.) e obter automaticamente pontos fortes, pontos fracos e anotações pré-preenchidos para revisão antes de salvar.</p>
+
+<p><strong>Algoritmo (extrativo, não generativo):</strong></p>
+<ol>
+  <li><strong>Limpeza</strong> — remove timestamps (<code>[00:05:12]</code>, <code>0:00:08</code>), labels de falante (<code>Ana (RH):</code>, <code>Entrevistador:</code>), marcadores de ruído (<code>[inaudível]</code>, <code>[risos]</code>), tags HTML</li>
+  <li><strong>Segmentação</strong> — divide em sentenças por pontuação (<code>.!?</code>) ou parágrafo duplo; filtra sentenças &lt; 20 chars</li>
+  <li><strong>TF-IDF</strong> — pontua cada sentença por relevância (termos raros no contexto da transcrição pontuam mais)</li>
+  <li><strong>Classificação por dicionário</strong> — cada sentença é rotulada como <code>forte</code> / <code>fraco</code> / <code>neutro</code> via vocabulário PT+EN</li>
+  <li><strong>Extração</strong> — retorna top-4 por categoria, truncadas a 55 chars com <code>…</code>; anotações = top sentenças neutras concatenadas</li>
+</ol>
+
+<table>
+  <tr><th>Vocabulário</th><th>Exemplos (PT)</th><th>Exemplos (EN)</th></tr>
+  <tr><td><strong>Fortes</strong></td><td>liderança, implementei, certificado, domínio, excelente, fluente, resultado, autonomia</td><td>led, delivered, implemented, certified, excellent, ownership</td></tr>
+  <tr><td><strong>Fracos</strong></td><td>não tenho, básico, superficial, dificuldade, aprendi recentemente, preciso melhorar</td><td>never, limited, basic, struggle, lack, beginner</td></tr>
+</table>
+
+<div class="callout tip">
+  <strong>Retorna sentenças reais — sem alucinação</strong>
+  Por ser extrativo (copia trechos do texto original), o algoritmo nunca inventa conteúdo. O usuário revisa os campos pré-preenchidos antes de salvar via <code>PATCH /entrevistas/{id}/resultado</code>.
+</div>
+
+<div class="callout aviso">
+  <strong>Limitação conhecida — perguntas do entrevistador</strong>
+  Se o entrevistador perguntar "qual sua fraqueza?", a keyword <em>fraqueza</em> pode classificar a pergunta como ponto fraco. Com transcrições sem labels de falante bem formatados, algumas perguntas escapam da limpeza. A revisão manual antes de salvar mitiga isso.
+</div>
+
 
 <!-- ═══════════════════════════════════════════════
      5. API BACKEND
@@ -828,7 +879,8 @@ score_curriculo = clamp(
   <tr><th>Método</th><th>Rota</th><th>Acesso</th><th>Descrição</th></tr>
   <tr><td>POST</td><td><code>/vagas/</code></td><td>RH, admin</td><td>Cria vaga, vetoriza requisitos, dispara Market Analyzer async.</td></tr>
   <tr><td>GET</td><td><code>/vagas/</code></td><td>autenticado</td><td>Lista vagas filtradas por papel (gestor vê só as suas).</td></tr>
-  <tr><td>PATCH</td><td><code>/vagas/{id}/pesos</code></td><td>RH autorizado, admin</td><td>Ajusta pesos do score. Recalcula scores dos candidatos existentes.</td></tr>
+  <tr><td>PATCH</td><td><code>/vagas/{id}/requisitos</code></td><td>RH autorizado, admin</td><td>Edita nome e/ou requisitos_texto. Revectoriza a vaga e recalcula scores + explicações de todos os CVs.</td></tr>
+  <tr><td>PATCH</td><td><code>/vagas/{id}/pesos</code></td><td>RH autorizado, admin</td><td>Ajusta pesos do score. Recalcula scores e explicações XAI de todos os CVs existentes.</td></tr>
   <tr><td>PATCH</td><td><code>/vagas/{id}/gestores</code></td><td>RH autorizado, admin</td><td>Define gestores técnicos da vaga.</td></tr>
   <tr><td>PATCH</td><td><code>/vagas/{id}/rhs-autorizados</code></td><td>criador, admin</td><td>Define quais RHs podem acessar a vaga.</td></tr>
   <tr><td>POST</td><td><code>/vagas/{id}/rerankar</code></td><td>RH autorizado, admin</td><td>Reordena top-N candidatos com cross-encoder.</td></tr>
@@ -860,6 +912,8 @@ score_curriculo = clamp(
   <tr><td>POST</td><td><code>/entrevistas/</code></td><td>RH / gestor (técnica) / admin</td><td>Agenda entrevista. Avança status da candidatura. Envia e-mail.</td></tr>
   <tr><td>PATCH</td><td><code>/entrevistas/{id}/resultado</code></td><td>RH (rh) / gestor (técnica) / admin</td><td>Registra score 0–10, anotações, pontos fortes/fracos.</td></tr>
   <tr><td>PATCH</td><td><code>/entrevistas/{id}/anotacoes</code></td><td>RH / gestor / admin</td><td>Edita anotações pós-realização. Salva histórico de edições.</td></tr>
+  <tr><td>POST</td><td><code>/entrevistas/{id}/resumir-transcricao</code></td><td>qualquer papel autenticado</td><td>Analisa transcrição colada pelo usuário. Retorna <code>pontos_fortes</code>, <code>pontos_fracos</code> e <code>anotacoes</code> para pré-preencher o formulário. Não salva nada — apenas sugere.</td></tr>
+  <tr><td>GET</td><td><code>/entrevistas/candidatura/{id}</code></td><td>qualquer papel autenticado</td><td>Lista entrevistas de uma candidatura ordenadas por data.</td></tr>
 </table>
 
 <h3>Analytics <span class="badge roxo">admin para auditoria</span></h3>
@@ -993,9 +1047,43 @@ NOVO
 
 
 <!-- ═══════════════════════════════════════════════
-     10. SEGURANÇA
+     10. FRONTEND
 ═══════════════════════════════════════════════════ -->
-<h2 id="s10"><span class="num">10</span>Segurança</h2>
+<h2 id="s10"><span class="num">10</span>Frontend — React SPA</h2>
+
+<p>SPA React 18 + Vite + Tailwind. O proxy <code>/api/*</code> aponta para <code>api:8000</code> em dev. Toda comunicação com a API passa por <code>frontend/src/api.js</code>, que injeta o JWT via interceptor do axios.</p>
+
+<h3>Páginas principais</h3>
+<table>
+  <tr><th>Rota</th><th>Arquivo</th><th>Descrição</th></tr>
+  <tr><td><code>/vagas</code></td><td><code>pages/VagaLista.jsx</code></td><td>Lista de vagas com filtro. Botão criar vaga (RH/admin).</td></tr>
+  <tr><td><code>/vagas/:id</code></td><td><code>pages/VagaDetalhe.jsx</code></td><td>Candidatos ranqueados, triagem, editar vaga, pesos, gestores, breakdown de score.</td></tr>
+  <tr><td><code>/candidatos/:id</code></td><td><code>pages/CandidatoDetalhe.jsx</code></td><td>Histórico de candidaturas, scores, breakdown XAI via <code>ExplicacaoScore</code>.</td></tr>
+  <tr><td><code>/candidaturas/:id</code></td><td><code>pages/EntrevistaDetalhe.jsx</code></td><td>Entrevistas, formulário de resultado, analisador de transcrição, histórico de auditoria.</td></tr>
+  <tr><td><code>/analytics</code></td><td><code>pages/Analytics.jsx</code></td><td>Cards resumo, funil por etapa, distribuição de scores.</td></tr>
+  <tr><td><code>/auditoria</code></td><td><code>pages/Auditoria.jsx</code></td><td>Log completo de transições (admin). Botão de refresh explícito.</td></tr>
+</table>
+
+<h3>Componentes compartilhados</h3>
+<table>
+  <tr><th>Componente</th><th>Onde é usado</th><th>Função</th></tr>
+  <tr><td><code>ExplicacaoScore</code></td><td><code>VagaDetalhe</code>, <code>CandidatoDetalhe</code></td><td>Breakdown colapsável de score: barras de aderência à vaga e ao mercado, skills em comum, anos de experiência.</td></tr>
+  <tr><td><code>ComparacaoCandidatos</code></td><td><code>VagaDetalhe</code></td><td>Modal de comparação lado a lado de 2–3 candidatos.</td></tr>
+  <tr><td><code>BotaoTranscricao</code></td><td><code>EntrevistaDetalhe</code> (dentro do form de resultado)</td><td>Seção roxa colapsável. Cola transcrição → chama <code>POST /resumir-transcricao</code> → pré-preenche pontos fortes, pontos fracos e anotações para revisão antes de salvar.</td></tr>
+  <tr><td><code>Layout</code></td><td>todas as páginas autenticadas</td><td>Sidebar com links. Link Auditoria visível apenas para admin.</td></tr>
+  <tr><td><code>Badge</code>, <code>ScoreBar</code></td><td>diversas</td><td>Primitivos visuais reutilizáveis.</td></tr>
+</table>
+
+<div class="callout tip">
+  <strong>BotaoTranscricao — fluxo de uso</strong>
+  Ao registrar ou editar resultado de entrevista, o formulário exibe um botão "Preencher com transcrição" (identidade visual roxa, distinta dos outros campos). O usuário cola a transcrição exportada do Google Meet/Zoom, clica em "Analisar e preencher" e os campos são populados automaticamente. O usuário revisa e ajusta antes de salvar — nada é persistido automaticamente.
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     11. SEGURANÇA
+═══════════════════════════════════════════════════ -->
+<h2 id="s11"><span class="num">11</span>Segurança</h2>
 
 <table>
   <tr><th>Vetor</th><th>Medida implementada</th></tr>
@@ -1018,7 +1106,7 @@ NOVO
 <!-- ═══════════════════════════════════════════════
      11. TESTES
 ═══════════════════════════════════════════════════ -->
-<h2 id="s11"><span class="num">11</span>Testes</h2>
+<h2 id="s12"><span class="num">12</span>Testes</h2>
 
 <p>O sistema usa <strong>pytest</strong> com um banco PostgreSQL dedicado (<code>sirs_test_db</code>). Cada teste roda dentro de um savepoint — ao final, o savepoint é desfeito e o banco volta ao estado anterior. Testes de API não interferem no banco de desenvolvimento.</p>
 
@@ -1044,6 +1132,12 @@ NOVO
 <pre><code># Rodar testes rápidos (sem modelo)
 docker compose exec api pytest tests/ -v
 
+# Testes do reranker (cross-encoder mockado)
+docker compose exec api pytest tests/test_reranker.py -v
+
+# Testes do analisador de transcrições (sem dependências externas)
+docker compose exec api pytest tests/test_transcript_analyzer.py -v
+
 # Testes com embedding real
 docker compose exec api pytest tests/test_ai_curriculo.py tests/test_novos_curriculos.py -m slow -s -v
 
@@ -1051,10 +1145,30 @@ docker compose exec api pytest tests/test_ai_curriculo.py tests/test_novos_curri
 docker compose exec api pytest tests/test_novos_curriculos.py::TestPipelineNovos::test_relatorio_completo -m slow -s</code></pre>
 
 
+<h3>Cobertura por arquivo</h3>
+
+<table>
+  <tr><th>Arquivo</th><th>Testes</th><th>O que cobre</th></tr>
+  <tr><td><code>test_feature_extractor.py</code></td><td>62</td><td>Anos (3 estratégias), senioridade, skills, proficiência, bônus estrutural com penalidade de 0 overlap</td></tr>
+  <tr><td><code>test_ai_curriculo.py</code></td><td>34</td><td>Pipeline completo com 5 CVs × 2 vagas: features, bônus, scores semânticos, XAI</td></tr>
+  <tr><td><code>test_novos_curriculos.py</code></td><td>35</td><td>5 perfis novos (DevOps, Frontend, QA, Java, PM) × 2 vagas, relatório detalhado</td></tr>
+  <tr><td><code>test_matching_engine.py</code></td><td>29</td><td>Scores RH, mercado, multi-seção, XAI, score final</td></tr>
+  <tr><td><code>test_market_analyzer.py</code></td><td>26</td><td>Detecção de categoria, extração de skills, TF-IDF, filtragem EEO/benefits</td></tr>
+  <tr><td><code>test_transcript_analyzer.py</code></td><td>55</td><td>Limpeza de artefatos (timestamps, labels, ruído, HTML), segmentação, classificação PT+EN, truncamento, 6 transcrições realistas end-to-end</td></tr>
+  <tr><td><code>test_reranker.py</code></td><td>17</td><td>Unidade: ordenação por sigmoid, top-n, fallback em erro, logging. Endpoint: auth, 404, score_rerank, graceful fallback</td></tr>
+  <tr><td><code>test_auth.py</code></td><td>19</td><td>Login, hash/token, guards RBAC, reset senha single-use</td></tr>
+  <tr><td><code>test_vagas.py</code></td><td>43</td><td>CRUD, exclusividade RH, rhs_autorizados, recálculo de scores ao editar pesos/requisitos</td></tr>
+  <tr><td><code>test_candidatos.py</code></td><td>21</td><td>CRUD, webhook, gestor filtra</td></tr>
+  <tr><td><code>test_candidaturas.py</code></td><td>25</td><td>CRUD, máquina de estados, triagem em lote, historico JSONB persistido corretamente</td></tr>
+  <tr><td><code>test_entrevistas.py</code></td><td>37</td><td>Permissões por papel e por vaga</td></tr>
+  <tr><td><code>test_webhook.py</code></td><td>22</td><td>JSON, XML, upsert, erros parciais, origem</td></tr>
+</table>
+
+
 <!-- ═══════════════════════════════════════════════
      12. CONFIGURAÇÃO E DEPLOY
 ═══════════════════════════════════════════════════ -->
-<h2 id="s12"><span class="num">12</span>Configuração e deploy</h2>
+<h2 id="s13"><span class="num">13</span>Configuração e deploy</h2>
 
 <h3>Variáveis de ambiente críticas</h3>
 

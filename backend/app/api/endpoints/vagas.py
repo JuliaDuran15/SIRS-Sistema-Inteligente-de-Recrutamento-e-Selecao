@@ -192,11 +192,10 @@ def _recalcular_scores_vaga(vaga: Vaga, db: Session) -> int:
         score_rh_ent  = next((e.score_manual for e in entrevistas if e.tipo == "rh"),      None)
         score_tec_ent = next((e.score_manual for e in entrevistas if e.tipo == "tecnica"), None)
 
-        if score_rh_ent is not None or score_tec_ent is not None:
-            cand.score_total = calcular_score_final(
-                novo_score, score_rh_ent, score_tec_ent,
-                vaga.peso_curriculo, vaga.peso_entrevista_rh, vaga.peso_entrevista_tec,
-            )
+        cand.score_total = calcular_score_final(
+            novo_score, score_rh_ent, score_tec_ent,
+            vaga.peso_curriculo, vaga.peso_entrevista_rh, vaga.peso_entrevista_tec,
+        )
         atualizadas += 1
     return atualizadas
 

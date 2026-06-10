@@ -9,9 +9,14 @@ from app.models.usuario import PapelUsuario
 from app.models.vaga import Vaga
 from app.schemas.entrevista import AnotacoesUpdate, EntrevistaCreate, EntrevistaResponse, EntrevistaResultado
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 router = APIRouter()
+
+
+class TranscricaoInput(BaseModel):
+    transcricao: str
 
 
 STATUS_APOS_AGENDAR = {
@@ -140,16 +145,34 @@ def registrar_resultado(
     entrevista.pontos_fortes = dados.pontos_fortes
     entrevista.pontos_fracos = dados.pontos_fracos
 
+    candidatura = db.query(Candidatura).filter(
+        Candidatura.id == entrevista.candidatura_id
+    ).first()
+
     if not ja_realizada:
-        # Primeira vez: define status e avança candidatura
         entrevista.status       = "realizada"
         entrevista.realizada_em = datetime.utcnow()
-
-        candidatura = db.query(Candidatura).filter(
-            Candidatura.id == entrevista.candidatura_id
-        ).first()
         from app.api.endpoints.candidaturas import transicionar
         transicionar(candidatura, STATUS_APOS_REALIZAR[entrevista.tipo], ator=usuario.nome)
+
+    if candidatura:
+        if entrevista.tipo == "rh":
+            candidatura.score_entrevista_rh  = entrevista.score_manual
+        else:
+            candidatura.score_entrevista_tec = entrevista.score_manual
+
+        vaga     = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
+        curriculo = candidatura.curriculo
+        if vaga and curriculo and curriculo.score_curriculo is not None:
+            from app.ai.matching_engine import calcular_score_final
+            candidatura.score_total = calcular_score_final(
+                curriculo.score_curriculo,
+                candidatura.score_entrevista_rh,
+                candidatura.score_entrevista_tec,
+                vaga.peso_curriculo,
+                vaga.peso_entrevista_rh,
+                vaga.peso_entrevista_tec,
+            )
 
     db.commit()
     db.refresh(entrevista)
@@ -198,6 +221,28 @@ def editar_anotacoes(
     db.commit()
     db.refresh(entrevista)
     return entrevista
+
+
+@router.post("/{entrevista_id}/resumir-transcricao")
+def resumir_transcricao(
+    entrevista_id: str,
+    dados: TranscricaoInput,
+    db: Session = DB,
+    _=QUALQUER_PAPEL,
+):
+    """
+    Analisa uma transcrição colada pelo usuário e retorna pontos_fortes,
+    pontos_fracos e anotacoes pré-preenchidos para revisão.
+    Não salva nada — apenas retorna a sugestão.
+    """
+    entrevista = db.query(Entrevista).filter(Entrevista.id == entrevista_id).first()
+    if not entrevista:
+        raise HTTPException(status_code=404, detail="Entrevista não encontrada")
+    if not dados.transcricao.strip():
+        raise HTTPException(status_code=400, detail="Transcrição não pode estar vazia")
+
+    from app.ai.transcript_analyzer import analisar_transcricao
+    return analisar_transcricao(dados.transcricao)
 
 
 @router.get("/candidatura/{candidatura_id}", response_model=list[EntrevistaResponse])

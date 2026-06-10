@@ -1,0 +1,221 @@
+════════════════════════════════════════════════════════════════
+  SIRS v2 — Dados para teste manual via interface
+  Base URL: http://localhost:3000
+  Execute na ordem — cada bloco depende do anterior
+════════════════════════════════════════════════════════════════
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 0. LOGIN
+ Caminho: http://localhost:3000/login
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Email : admin@sirs.com
+  Senha : admin123
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 1. USUÁRIOS — Administração > Usuários
+ Caminho: http://localhost:3000/admin
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── Usuário RH ──────────────────────────────────────────────────
+  Nome  : Joana Ferreira
+  Email : joana.ferreira@empresa.com
+  Senha : senha123
+  Papel : RH
+
+── Usuário Gestor ──────────────────────────────────────────────
+  Nome  : Pedro Alves
+  Email : pedro.alves@empresa.com
+  Senha : senha123
+  Papel : Gestor
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 2. VAGAS — Nova Vaga
+ Caminho: http://localhost:3000/vagas  →  botão "Nova Vaga"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── Vaga 1: Tecnologia ──────────────────────────────────────────
+  Nome:
+    Desenvolvedor Python Pleno
+
+  Requisitos:
+    Desenvolvedor Python com 3 anos de experiência em FastAPI,
+    SQLAlchemy e PostgreSQL. Conhecimento em Docker, CI/CD e
+    boas práticas de API REST. Inglês para leitura técnica.
+
+  Gestor: Pedro Alves  (marcar o checkbox)
+
+  Pesos (deixar padrão ou ajustar):
+    Requisitos RH  : 60%
+    Mercado        : 40%
+    Currículo      : 50%
+    Entrev. RH     : 25%
+    Entrev. Tec.   : 25%
+
+── Vaga 2: Marketing ───────────────────────────────────────────
+  Nome:
+    Analista de Marketing Digital Pleno
+
+  Requisitos:
+    Analista de marketing digital com experiência em Google Ads,
+    Meta Ads, SEO, Google Analytics 4 e RD Station. Gestão de
+    redes sociais, copywriting e criação de conteúdo. Growth
+    hacking é diferencial.
+
+  Gestor: Pedro Alves  (marcar o checkbox)
+
+── Vaga 3: Financeiro ──────────────────────────────────────────
+  Nome:
+    Analista Financeiro Sênior
+
+  Requisitos:
+    Analista financeiro sênior com experiência em controladoria,
+    IFRS, planejamento orçamentário e fluxo de caixa. SAP FI,
+    Power BI e Excel avançado. CRC preferencial.
+
+  Gestor: Pedro Alves  (marcar o checkbox)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 3. CANDIDATOS — Novo Candidato
+ Caminho: http://localhost:3000/candidatos  →  botão "Novo Candidato"
+ (o campo "Vaga" cria a candidatura automaticamente)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── Candidato 1 — Dev Python ────────────────────────────────────
+  Nome     : Carlos Mendes
+  Email    : carlos.mendes@email.com
+  Telefone : 11 99201-3344
+  Cidade   : São Paulo
+  Vaga     : Desenvolvedor Python Pleno
+
+── Candidato 2 — Dev Python (fraco) ────────────────────────────
+  Nome     : Beatriz Souza
+  Email    : beatriz.souza@email.com
+  Cidade   : Campinas
+  Vaga     : Desenvolvedor Python Pleno
+
+── Candidato 3 — Marketing ─────────────────────────────────────
+  Nome     : Renata Lima
+  Email    : renata.lima@email.com
+  Telefone : 11 98877-6655
+  Cidade   : São Paulo
+  Vaga     : Analista de Marketing Digital Pleno
+
+── Candidato 4 — Financeiro ────────────────────────────────────
+  Nome     : Marcos Oliveira
+  Email    : marcos.oliveira@email.com
+  Cidade   : Rio de Janeiro
+  Vaga     : Analista Financeiro Sênior
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 4. CURRÍCULOS — upload PDF por candidatura
+ Caminho: clicar no candidato → seção "Currículo" → arrastar PDF
+ OU: abrir a vaga → clicar em "Candidaturas" → linha do candidato
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ⚠  A interface aceita apenas PDF.
+     Use um arquivo PDF real ou gere um pelo navegador
+     (Ctrl+P → Salvar como PDF) com o texto abaixo.
+
+── Currículo Carlos Mendes ──────────────────────────────────────
+  Desenvolvedor Python sênior com 5 anos de experiência.
+  FastAPI, SQLAlchemy, PostgreSQL, Docker. CI/CD com GitHub
+  Actions. Liderou migração de monolito para microsserviços.
+  Inglês intermediário. USP — Ciência da Computação, 2018.
+
+── Currículo Beatriz Souza ──────────────────────────────────────
+  Desenvolvedora backend com 1 ano. Python, Django, SQLite.
+  Conhecimento básico em Docker. Sem experiência com FastAPI.
+
+── Currículo Renata Lima ────────────────────────────────────────
+  Analista de marketing digital pleno. Google Analytics,
+  Google Ads, Meta Ads, RD Station, SEO on-page, gestão de
+  redes sociais. 6 anos de experiência. Pós em Marketing
+  Digital — ESPM, 2021.
+
+── Currículo Marcos Oliveira ────────────────────────────────────
+  Analista financeiro com 8 anos. Controladoria, IFRS, SAP FI,
+  Power BI, Excel avançado, planejamento orçamentário e fluxo
+  de caixa. CRC ativo. Pós em Controladoria — FGV-SP, 2017.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 5. TRIAGEM — após o currículo ser processado (~5 s)
+ Caminho: abrir candidatura → botão "Aprovar" ou "Reprovar"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Carlos Mendes  → Aprovar — agendar entrevista RH
+  Beatriz Souza  → Reprovar na triagem  (score baixo esperado)
+  Renata Lima    → Aprovar
+  Marcos Oliveira→ Aprovar
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 6. ENTREVISTA RH — agendar e registrar resultado
+ Caminho: candidatura aprovada → "Agendar Entrevista RH"
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Data/hora: 2026-07-10  14:00
+
+── Resultado RH — Carlos Mendes ────────────────────────────────
+  Score       : 8.5
+  Anotações   : Candidato comunicativo, boa profundidade técnica
+                em Python e FastAPI. Apresentou cases reais de
+                arquitetura de microsserviços. Inglês ok.
+  Pontos fortes: comunicação clara | experiência com APIs REST | proativo
+  Pontos fracos: pouca experiência com Kubernetes
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ 7. ENTREVISTA TÉCNICA — agendar (login como Gestor)
+ Credenciais gestor: pedro.alves@empresa.com / senha123
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Data/hora: 2026-07-15  10:00
+
+── Resultado Técnico — Carlos Mendes ───────────────────────────
+  Score       : 9.0
+  Anotações   : Excelente domínio de SQLAlchemy e modelagem
+                relacional. Resolveu corretamente o desafio de
+                query complexa com joins. Conhece boas práticas
+                de indexação.
+  Pontos fortes: SQLAlchemy avançado | resolução de problemas | raciocínio lógico
+  Pontos fracos: nunca trabalhou com sistemas de alta escala
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ LOGINS DE TESTE (seed)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  admin@sirs.com      admin123   → Admin
+  ana@sirs.com        senha123   → RH
+  bruno@sirs.com      senha123   → RH
+  carlos@sirs.com     senha123   → Gestor
+  daniela@sirs.com    senha123   → Gestor
+
+
+════════════════════════════════════════════════════════════════
+ ERROS / LIMITAÇÕES CONHECIDAS DA INTERFACE
+════════════════════════════════════════════════════════════════
+
+  1. Currículo em texto — sem campo na UI
+     O formulário de candidato não tem campo "texto do currículo".
+     Só é possível enviar PDF. Para testar sem PDF, use o curl:
+       curl -X POST .../candidaturas/{id}/curriculo/texto
+       -d '{"texto": "..."}'
+
+  2. Formação do candidato — sem campo na UI
+     O formulário "Novo Candidato" não tem seção de formação
+     acadêmica (curso/instituição). Precisa de curl para preencher.
+
+  3. editarAnotacoes (PATCH /entrevistas/{id}/anotacoes)
+     O endpoint existe no backend mas não há botão separado na UI.
+     A edição completa do resultado (score + anotações + pontos)
+     via "Editar resultado" já salva o histórico de edições.
+
+════════════════════════════════════════════════════════════════

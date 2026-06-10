@@ -192,6 +192,15 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
         curriculo.processado_em   = datetime.utcnow()
 
         candidatura.status = StatusCandidatura.TRIAGEM_PENDENTE
+        from app.ai.matching_engine import calcular_score_final
+        candidatura.score_total = calcular_score_final(
+            score_curriculo,
+            candidatura.score_entrevista_rh,
+            candidatura.score_entrevista_tec,
+            vaga.peso_curriculo,
+            vaga.peso_entrevista_rh,
+            vaga.peso_entrevista_tec,
+        )
 
         db.commit()
         logger.info(
@@ -339,6 +348,15 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
         curriculo.processado_em   = datetime.utcnow()
 
         candidatura.status = StatusCandidatura.TRIAGEM_PENDENTE
+        from app.ai.matching_engine import calcular_score_final
+        candidatura.score_total = calcular_score_final(
+            score_curriculo,
+            candidatura.score_entrevista_rh,
+            candidatura.score_entrevista_tec,
+            vaga.peso_curriculo,
+            vaga.peso_entrevista_rh,
+            vaga.peso_entrevista_tec,
+        )
 
         db.commit()
         logger.info(

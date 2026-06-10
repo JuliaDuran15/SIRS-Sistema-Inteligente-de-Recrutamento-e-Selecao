@@ -7,7 +7,7 @@ Cria:
  30 candidatos com formações e perfis variados
  ~55 candidaturas distribuídas em TODAS as etapas do pipeline
  Currículos processados (scores reais via embedding)
- Entrevistas agendadas e realizadas com notas e anotações
+ Entrevistas agendadas e realizadas com notas e histórico de edições
 
 Rode com:
   docker compose exec api python tests/seed_full.py
@@ -32,7 +32,7 @@ from app.ai.resume_parser  import vetorizar_texto
 from app.ai.market_analyzer import analisar_mercado
 from app.ai.matching_engine import (
     calcular_score_rh, calcular_score_mercado, calcular_score_curriculo,
-    gerar_explicacao,
+    calcular_score_final, gerar_explicacao,
 )
 from app.ai.feature_extractor import extrair_features_curriculo, extrair_features_vaga
 from app.core.auth import hash_senha
@@ -626,6 +626,7 @@ def criar_candidaturas(vagas, candidatos, usuarios):
         db.flush()
 
         # ── Currículo (para etapas após triagem) ─────────────────────────────
+        s_cv = None
         precisa_curriculo = etapa not in ("novo",)
         if precisa_curriculo:
             s_rh, s_mkt, s_cv, expl = _score(cv, vaga)
@@ -642,6 +643,7 @@ def criar_candidaturas(vagas, candidatos, usuarios):
             db.add(curriculo)
 
         # ── Entrevista RH ─────────────────────────────────────────────────────
+        rh_score = None
         if etapa in ("rh_agendada","rh_realizada","tec_agendada","tec_realizada",
                      "decisao_pendente","contratado","contratada","nao_aprovado","banco_talentos"):
             nota_rh = NOTAS_RH[idx_c % len(NOTAS_RH)]
@@ -662,13 +664,13 @@ def criar_candidaturas(vagas, candidatos, usuarios):
             db.add(ent_rh)
 
         # ── Entrevista Técnica ────────────────────────────────────────────────
+        tec_score = None
         if etapa in ("tec_agendada","tec_realizada","decisao_pendente",
                      "contratado","contratada","nao_aprovado","banco_talentos"):
             nota_tec = NOTAS_TEC[idx_c % len(NOTAS_TEC)]
             tec_status = "realizada" if etapa != "tec_agendada" else "agendada"
             tec_score  = round(7.0 + (idx_c % 3) * 0.5, 1) if tec_status == "realizada" else None
 
-            # Alguns registros com histórico de edição para demonstrar a feature
             historico_edicoes = []
             if tec_status == "realizada" and idx_c % 3 == 0:
                 historico_edicoes = [{
@@ -691,6 +693,17 @@ def criar_candidaturas(vagas, candidatos, usuarios):
                 historico_edicoes=historico_edicoes,
             )
             db.add(ent_tec)
+
+        # ── Scores consolidados na candidatura ───────────────────────────────
+        if rh_score is not None:
+            cand_obj.score_entrevista_rh = rh_score
+        if tec_score is not None:
+            cand_obj.score_entrevista_tec = tec_score
+        if s_cv is not None:
+            cand_obj.score_total = calcular_score_final(
+                s_cv, rh_score, tec_score,
+                vaga.peso_curriculo, vaga.peso_entrevista_rh, vaga.peso_entrevista_tec,
+            )
 
         criadas.append(cand_obj)
 

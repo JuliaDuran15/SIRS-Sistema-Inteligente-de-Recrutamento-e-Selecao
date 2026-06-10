@@ -48,9 +48,9 @@ export function CvPreview({ candidaturaId, temPdf, textoExtraido }) {
       <button
         onClick={() => setAberto(v => !v)}
         className="flex items-center gap-1.5 text-xs font-semibold transition-colors"
-        style={{ color: aberto ? "#4DC8E8" : "rgba(125,216,240,0.45)" }}
+        style={{ color: aberto ? "#4DC8E8" : "var(--t-muted2)" }}
       >
-        <span>{aberto ? "▾" : "▸"}</span>
+        <span style={{ fontSize: "10px" }}>{aberto ? "▾" : "▸"}</span>
         {aberto ? "Fechar currículo" : "Ver currículo"}
       </button>
 

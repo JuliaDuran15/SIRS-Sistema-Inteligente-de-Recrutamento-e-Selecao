@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { Link } from "react-router-dom"
-import { getCandidatos, createCandidato, getVagas, createCandidatura } from "../api"
+import { getCandidatos, createCandidato, getVagas, createCandidatura, uploadCurriculoTexto } from "../api"
 import { Badge } from "../components/Badge"
 import { IconSearch, IconUsers } from "../components/Icons"
 
@@ -18,7 +18,9 @@ export function Candidatos() {
   const [form, setForm]         = useState({
     nome: "", email: "", telefone: "",
     cidade: "", estado: "", vaga_id: "",
+    curriculo_texto: "",
   })
+  const [formacoes, setFormacoes] = useState([])
 
   const carregar = useCallback((off = 0, q = busca, orig = origem) => {
     setLoading(true)
@@ -43,13 +45,36 @@ export function Candidatos() {
     return e => setForm(f => ({ ...f, [key]: e.target.value }))
   }
 
+  function addFormacao() {
+    setFormacoes(f => [...f, { curso: "", instituicao: "", nivel: "graduacao", status: "concluido", ano_conclusao: "" }])
+  }
+  function updateFormacao(i, key, val) {
+    setFormacoes(f => f.map((item, idx) => idx === i ? { ...item, [key]: val } : item))
+  }
+  function removeFormacao(i) {
+    setFormacoes(f => f.filter((_, idx) => idx !== i))
+  }
+
   async function handleSubmit(e) {
     e.preventDefault()
-    const { vaga_id, ...dados } = form
+    const { vaga_id, curriculo_texto, ...dados } = form
+    const formacaoLimpa = formacoes
+      .filter(f => f.curso.trim() && f.instituicao.trim())
+      .map(f => ({ ...f, ano_conclusao: f.ano_conclusao ? parseInt(f.ano_conclusao) : null }))
+    if (formacaoLimpa.length) dados.formacao = formacaoLimpa
+
     const r = await createCandidato(dados)
-    if (vaga_id) await createCandidatura({ candidato_id: r.data.id, vaga_id })
+    let candidaturaId = null
+    if (vaga_id) {
+      const rc = await createCandidatura({ candidato_id: r.data.id, vaga_id })
+      candidaturaId = rc.data.id
+    }
+    if (curriculo_texto.trim() && candidaturaId) {
+      await uploadCurriculoTexto(candidaturaId, curriculo_texto.trim())
+    }
     setCriando(false)
-    setForm({ nome: "", email: "", telefone: "", cidade: "", estado: "", vaga_id: "" })
+    setForm({ nome: "", email: "", telefone: "", cidade: "", estado: "", vaga_id: "", curriculo_texto: "" })
+    setFormacoes([])
     carregar(0)
   }
 
@@ -128,6 +153,57 @@ export function Candidatos() {
                 </div>
               ))}
             </div>
+            {/* Formação acadêmica */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold text-brand-pale/65 uppercase tracking-wider">
+                  Formação acadêmica
+                </label>
+                <button type="button" onClick={addFormacao}
+                  className="text-xs font-bold px-2.5 py-1 rounded-lg transition-all"
+                  style={{ background: "rgba(26,139,191,0.14)", border: "1px solid rgba(26,139,191,0.25)", color: "#4DC8E8" }}>
+                  + Adicionar
+                </button>
+              </div>
+              {formacoes.length === 0 && (
+                <p className="text-xs text-brand-pale/30 italic">Nenhuma formação adicionada.</p>
+              )}
+              <div className="space-y-3">
+                {formacoes.map((f, i) => (
+                  <div key={i} className="rounded-xl p-3 space-y-2"
+                    style={{ background: "rgba(14,80,104,0.18)", border: "1px solid rgba(77,200,232,0.1)" }}>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input value={f.curso} onChange={e => updateFormacao(i, "curso", e.target.value)}
+                        placeholder="Curso" className={inputClass} />
+                      <input value={f.instituicao} onChange={e => updateFormacao(i, "instituicao", e.target.value)}
+                        placeholder="Instituição" className={inputClass} />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <select value={f.nivel} onChange={e => updateFormacao(i, "nivel", e.target.value)} className={inputClass}>
+                        <option value="tecnico">Técnico</option>
+                        <option value="graduacao">Graduação</option>
+                        <option value="pos_graduacao">Pós-graduação</option>
+                        <option value="mestrado">Mestrado</option>
+                        <option value="doutorado">Doutorado</option>
+                      </select>
+                      <select value={f.status} onChange={e => updateFormacao(i, "status", e.target.value)} className={inputClass}>
+                        <option value="concluido">Concluído</option>
+                        <option value="em_andamento">Em andamento</option>
+                        <option value="trancado">Trancado</option>
+                      </select>
+                      <input value={f.ano_conclusao} onChange={e => updateFormacao(i, "ano_conclusao", e.target.value)}
+                        placeholder="Ano" type="number" min="1950" max="2030" className={inputClass} />
+                    </div>
+                    <button type="button" onClick={() => removeFormacao(i)}
+                      className="text-xs text-red-400/60 hover:text-red-400 transition-colors">
+                      Remover
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Vaga */}
             <div>
               <label className="block text-xs font-bold text-brand-pale/65 uppercase tracking-wider mb-1.5">
                 Vincular à vaga
@@ -137,6 +213,23 @@ export function Candidatos() {
                 {vagas.map(v => <option key={v.id} value={v.id}>{v.nome}</option>)}
               </select>
             </div>
+
+            {/* Currículo em texto */}
+            {form.vaga_id && (
+              <div>
+                <label className="block text-xs font-bold text-brand-pale/65 uppercase tracking-wider mb-1.5">
+                  Currículo (texto) <span className="text-brand-pale/35 normal-case font-normal">— opcional, processado pela IA</span>
+                </label>
+                <textarea
+                  value={form.curriculo_texto}
+                  onChange={set("curriculo_texto")}
+                  rows={4}
+                  placeholder="Cole aqui o currículo em texto livre..."
+                  className={inputClass + " resize-y"}
+                />
+              </div>
+            )}
+
             <div className="flex items-center gap-3 pt-1">
               <button type="submit"
                 className="px-5 py-2.5 text-brand-black text-sm font-bold rounded-xl hover:opacity-90"

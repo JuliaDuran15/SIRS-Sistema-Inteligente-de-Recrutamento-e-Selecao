@@ -34,8 +34,9 @@ class Candidatura(Base):
     candidato_id : Mapped[uuid.UUID]         = mapped_column(UUID(as_uuid=True), ForeignKey("candidatos.id"))
     vaga_id      : Mapped[uuid.UUID]         = mapped_column(UUID(as_uuid=True), ForeignKey("vagas.id"))
     status       : Mapped[StatusCandidatura] = mapped_column(SAEnum(StatusCandidatura), default=StatusCandidatura.NOVO)
-    score_total  : Mapped[float | None]      = mapped_column(Float)
-    # score consolidado final — calculado após todas as entrevistas
+    score_total          : Mapped[float | None] = mapped_column(Float)
+    score_entrevista_rh  : Mapped[float | None] = mapped_column(Float)
+    score_entrevista_tec : Mapped[float | None] = mapped_column(Float)
 
     historico    : Mapped[dict | None]       = mapped_column(JSONB, default=list)
     # log de todas as transições de estado para auditoria

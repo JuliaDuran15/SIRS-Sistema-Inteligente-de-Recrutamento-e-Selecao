@@ -75,16 +75,18 @@ class CandidaturaCreate(BaseModel):
 
 
 class CandidaturaResponse(BaseModel):
-    id           : UUID
-    candidato_id : UUID
-    vaga_id      : UUID
-    status       : StatusCandidatura
-    score_total  : float | None
-    historico    : list | None
-    origem       : str
-    fonte        : str | None
-    criado_em    : datetime
-    atualizado_em: datetime
+    id                   : UUID
+    candidato_id         : UUID
+    vaga_id              : UUID
+    status               : StatusCandidatura
+    score_total          : float | None
+    score_entrevista_rh  : float | None
+    score_entrevista_tec : float | None
+    historico            : list | None
+    origem               : str
+    fonte                : str | None
+    criado_em            : datetime
+    atualizado_em        : datetime
 
     candidato    : CandidatoMin | None
     vaga         : VagaMin | None

@@ -78,6 +78,28 @@ _HABILIDADES_TECH: frozenset[str] = frozenset({
     'planejamento orçamentário', 'fluxo de caixa', 'demonstrações financeiras',
     # Metodologias
     'agile', 'scrum', 'kanban', 'lean', 'safe', 'xp',
+    # Marketing digital — mídia paga
+    'google ads', 'meta ads', 'facebook ads', 'linkedin ads', 'tiktok ads',
+    'youtube ads', 'programmatic', 'display ads', 'mídia paga', 'sem',
+    # Marketing digital — orgânico / SEO
+    'seo', 'seo on-page', 'seo off-page', 'link building', 'google search console',
+    'semrush', 'ahrefs', 'screaming frog', 'yoast',
+    # Analytics & dados de marketing
+    'google analytics', 'ga4', 'google analytics 4', 'google tag manager', 'gtm',
+    'google data studio', 'looker studio', 'hotjar', 'mixpanel', 'amplitude',
+    'similarweb', 'data studio', 'pixel',
+    # CRM & automação de marketing
+    'hubspot', 'rd station', 'rdstation', 'mailchimp', 'activecampaign',
+    'salesforce marketing cloud', 'marketo', 'klavio', 'brevo', 'sendgrid',
+    'email marketing', 'automação de marketing', 'marketing automation', 'crm',
+    # Conteúdo & social media
+    'social media', 'gestão de redes sociais', 'instagram', 'linkedin', 'tiktok',
+    'copywriting', 'criação de conteúdo', 'content marketing', 'inbound marketing',
+    'outbound marketing', 'growth hacking', 'growth marketing',
+    # Conversão & UX
+    'cro', 'a/b test', 'teste a/b', 'otimização de conversão', 'landing page',
+    # Design para marketing
+    'canva', 'adobe photoshop', 'adobe illustrator', 'after effects', 'premiere',
 })
 
 # ── Aliases → forma canônica ──────────────────────────────────────────────────
@@ -123,6 +145,18 @@ _ALIASES: dict[str, str] = {
     # Negócio
     'power automate': 'erp',  # automação de processos
     'sharepoint': 'erp',
+    # Marketing digital — aliases
+    'adwords': 'google ads', 'google adwords': 'google ads',
+    'facebook ads': 'meta ads', 'instagram ads': 'meta ads',
+    'google analytics 4': 'ga4', 'analytics 4': 'ga4',
+    'tag manager': 'google tag manager',
+    'rd station': 'rd station', 'rds': 'rd station',
+    'social media management': 'social media', 'redes sociais': 'social media',
+    'gestão de social media': 'social media',
+    'inbound': 'inbound marketing', 'outbound': 'outbound marketing',
+    'growth': 'growth hacking',
+    'seo on page': 'seo on-page', 'seo offpage': 'seo off-page',
+    'photoshop': 'adobe photoshop', 'illustrator': 'adobe illustrator',
 }
 
 
@@ -160,8 +194,13 @@ def extrair_features_vaga(
     """
     Extrai features estruturadas de um texto de requisitos de vaga.
     termos_mercado: lista de dicts {"termo": str, "frequencia": int} do ranking_mercado.
+
+    habilidades_texto — skills extraídas APENAS do requisitos_texto (usado para
+    habilidades_em_comum na explicação, reflete exatamente o que o recrutador escreveu).
+    habilidades       — versão enriquecida com termos de mercado (usada no bônus estrutural).
     """
-    habilidades = _extrair_habilidades(texto)
+    habilidades_texto = _extrair_habilidades(texto)
+    habilidades = set(habilidades_texto)
 
     # Enriquece com termos do ranking de mercado (já validados externamente)
     if termos_mercado:
@@ -171,9 +210,10 @@ def extrair_features_vaga(
                 habilidades.add(termo)
 
     return {
-        "anos_minimos"    : _extrair_anos_minimos_vaga(texto),
-        "nivel_esperado"  : _extrair_nivel(texto),
-        "habilidades"     : habilidades,
+        "anos_minimos"     : _extrair_anos_minimos_vaga(texto),
+        "nivel_esperado"   : _extrair_nivel(texto),
+        "habilidades"      : habilidades,
+        "habilidades_texto": habilidades_texto,
     }
 
 

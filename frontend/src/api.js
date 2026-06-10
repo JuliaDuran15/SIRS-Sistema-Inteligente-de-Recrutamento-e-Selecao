@@ -28,16 +28,19 @@ export const analisarMercado  = (id)        => api.post(`/vagas/${id}/analisar-m
 export const rerankarVaga     = (id)        => api.post(`/vagas/${id}/rerankar`)
 export const exportarVaga     = (id)        => api.get(`/vagas/${id}/exportar`, { responseType: "blob" })
 
-export const getCandidatos   = (params)   => api.get("/candidatos/", { params })
-export const createCandidato = (data)     => api.post("/candidatos/", data)
-export const getCandidato    = (id)       => api.get(`/candidatos/${id}`)
+export const getCandidatos    = (params)      => api.get("/candidatos/", { params })
+export const createCandidato  = (data)        => api.post("/candidatos/", data)
+export const getCandidato     = (id)          => api.get(`/candidatos/${id}`)
+export const updateCandidato  = (id, data)    => api.patch(`/candidatos/${id}`, data)
 
 export const getCandidaturas    = (vagaId)      => api.get(`/candidaturas/?vaga_id=${vagaId}`)
 export const getCandidaturasPorCandidato = (cid)=> api.get(`/candidaturas/?candidato_id=${cid}`)
 export const createCandidatura  = (data)        => api.post("/candidaturas/", data)
 export const getCandidatura     = (id)          => api.get(`/candidaturas/${id}`)
-export const getCurriculo       = (candidaturaId)=> api.get(`/candidaturas/${candidaturaId}/curriculo`)
-export const getCurriculoPdf    = (candidaturaId)=> api.get(`/candidaturas/${candidaturaId}/curriculo/pdf`, { responseType: "blob" })
+export const deleteCandidatura  = (id)          => api.delete(`/candidaturas/${id}`)
+export const getCurriculo          = (candidaturaId)       => api.get(`/candidaturas/${candidaturaId}/curriculo`)
+export const getCurriculoPdf       = (candidaturaId)       => api.get(`/candidaturas/${candidaturaId}/curriculo/pdf`, { responseType: "blob" })
+export const uploadCurriculoTexto  = (candidaturaId, texto)=> api.post(`/candidaturas/${candidaturaId}/curriculo/texto`, { texto })
 export const atualizarStatusCandidatura = (id, novoStatus, ator) =>
   api.patch(`/candidaturas/${id}/status?novo_status=${novoStatus}&ator=${encodeURIComponent(ator)}`)
 export const triagemEmLote = (candidatura_ids, novo_status, ator) =>
@@ -47,6 +50,7 @@ export const getEntrevistas     = (candidaturaId) => api.get(`/entrevistas/candi
 export const agendarEntrevista  = (data)           => api.post("/entrevistas/", data)
 export const registrarResultado = (id, data)       => api.patch(`/entrevistas/${id}/resultado`, data)
 export const editarAnotacoes    = (id, anotacoes)  => api.patch(`/entrevistas/${id}/anotacoes`, { anotacoes })
+export const resumirTranscricao = (id, transcricao)=> api.post(`/entrevistas/${id}/resumir-transcricao`, { transcricao })
 
 export const getUsuarios    = ()         => api.get("/usuarios/")
 export const createUsuario  = (data)     => api.post("/usuarios/", data)

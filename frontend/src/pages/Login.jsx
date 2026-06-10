@@ -122,14 +122,12 @@ return (
         </div>
       </form>
 
-      {/* Divider */}
+      {/* Divider + Contas de teste (desativado em produção)
       <div className="my-7 flex w-full items-center gap-3">
         <div className="h-px flex-1 bg-white/10" />
         <span className="text-[10px] font-bold uppercase tracking-widest text-white/25">Acesso Rápido</span>
         <div className="h-px flex-1 bg-white/10" />
       </div>
-
-      {/* Contas de teste */}
       <div className="w-full space-y-2">
         {[
           { email: "ana@sirs.com", papel: "RH" },
@@ -149,6 +147,7 @@ return (
           </button>
         ))}
       </div>
+      */}
     </div>
   </div>
 )

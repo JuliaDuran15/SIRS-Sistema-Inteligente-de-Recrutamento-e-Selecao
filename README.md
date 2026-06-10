@@ -562,13 +562,13 @@ sirs/
 │       │   │                        # bonus_estrutural aplicado ao score combinado final
 │       │   ├── feature_extractor.py # Anos (3 estratégias), senioridade, skills + proficiência,
 │       │   │                        # bônus com penalidade por 0 overlap e escala por relevância
-│       │   ├── reranker.py          # Cross-encoder (lazy load, sob demanda)
-│       │   └── market_analyzer.py   # Kaggle/Adzuna + TF-IDF → vetor de mercado
+│       │   ├── reranker.py          # Cross-encoder (lazy load, sob demanda) + logging detalhado
+│       │   └── market_analyzer.py   # Kaggle/Adzuna + TF-IDF → vetor de mercado; blacklist EEO/benefits
 │       ├── api/endpoints/
 │       │   ├── auth.py              # Login, reset senha single-use (fingerprint do hash)
-│       │   ├── vagas.py             # inclui POST /vagas/{id}/rerankar
+│       │   ├── vagas.py             # PATCH /requisitos (editar vaga + recalc scores/explicações)
 │       │   ├── candidatos.py        # GET com busca (nome/e-mail) + paginação + filtros
-│       │   ├── candidaturas.py      # Pipeline completo + triagem em lote
+│       │   ├── candidaturas.py      # Pipeline completo + triagem em lote; fix JSONB mutation tracking
 │       │   ├── entrevistas.py       # Agendamento + resultado + e-mails transacionais
 │       │   ├── analytics.py         # Resumo, funil, scores, auditoria (admin)
 │       │   └── webhook.py           # POST /webhook/importar (JSON + XML)
@@ -589,13 +589,15 @@ sirs/
 │   ├── api.js
 │   ├── pages/
 │   │   ├── VagaDetalhe.jsx          # Ranking, pesos, gestores, Reordenar (IA),
-│   │   │                            # triagem em lote, comparação lado a lado
+│   │   │                            # triagem em lote, comparação lado a lado, editar vaga (RH/admin)
+│   │   ├── CandidatoDetalhe.jsx     # Perfil, candidaturas e breakdown de score (ExplicacaoScore)
 │   │   ├── Candidatos.jsx           # Busca por nome/e-mail, filtro origem, paginação
 │   │   ├── EntrevistaDetalhe.jsx    # Scores + currículo, entrevistas, audit trail
-│   │   ├── Auditoria.jsx            # Log completo de ações (apenas admin)
+│   │   ├── Auditoria.jsx            # Log completo de ações (apenas admin) + botão atualizar
 │   │   ├── Dashboard.jsx
 │   │   └── AdminUsuarios.jsx
 │   ├── components/
+│   │   ├── ExplicacaoScore.jsx      # Breakdown de score reutilizável (VagaDetalhe + CandidatoDetalhe)
 │   │   ├── ComparacaoCandidatos.jsx # Modal de comparação lado a lado (2–3 candidatos)
 │   │   └── Layout.jsx               # Sidebar com link Auditoria para admin
 │   └── index.css                    # Tema claro: paleta cream/quente, sem branco puro
@@ -628,7 +630,8 @@ Documentação interativa: `http://localhost:8000/docs`
 |---|---|---|---|
 | POST | `/vagas/` | RH, admin | Criar vaga |
 | GET | `/vagas/` | autenticado | Listar (filtrado por papel e autorização) |
-| PATCH | `/vagas/{id}/pesos` | RH autorizado, admin | Ajustar pesos do score |
+| PATCH | `/vagas/{id}/requisitos` | RH autorizado, admin | Editar nome e/ou requisitos; recalcula scores e explicações |
+| PATCH | `/vagas/{id}/pesos` | RH autorizado, admin | Ajustar pesos do score; recalcula scores e explicações |
 | PATCH | `/vagas/{id}/gestores` | RH autorizado, admin | Atribuir gestores técnicos |
 | PATCH | `/vagas/{id}/rhs-autorizados` | criador, admin | Gerenciar analistas |
 | POST | `/vagas/{id}/rerankar` | RH autorizado, admin | Reordenar top-N por cross-encoder |
@@ -677,10 +680,10 @@ Documentação interativa: `http://localhost:8000/docs`
 |---|---|---|
 | `/login` | público | Login |
 | `/` | autenticado | Lista de vagas |
-| `/vagas/:id` | autenticado | Ranking, market skills, pesos, triagem em lote, **comparação lado a lado** |
+| `/vagas/:id` | autenticado | Ranking, market skills, pesos, triagem em lote, **comparação lado a lado**, editar vaga (RH/admin) |
 | `/vagas/:id/kanban` | autenticado | Visão Kanban do pipeline |
 | `/candidatos` | autenticado | Lista com busca, filtro e paginação |
-| `/candidatos/:id` | autenticado | Perfil e histórico de candidaturas |
+| `/candidatos/:id` | autenticado | Perfil, histórico de candidaturas e **breakdown de score** |
 | `/candidaturas/:id/entrevistas` | autenticado | Scores, currículo, entrevistas, audit trail |
 | `/dashboard` | autenticado | Funil, histograma de scores, cards de resumo |
 | `/admin` | **admin** | Gerenciar usuários |
@@ -719,6 +722,7 @@ docker compose exec api pytest tests/test_feature_extractor.py::TestProficiencia
 | `test_novos_curriculos.py` | 35 | 5 perfis novos (DevOps, Frontend, QA, Java, PM) × 2 vagas, relatório detalhado |
 | `test_matching_engine.py` | 29 | Scores RH, mercado, multi-seção, XAI, score final |
 | `test_market_analyzer.py` | 26 | Detecção de categoria, extração de skills, TF-IDF |
+| `test_reranker.py` | 17 | Cross-encoder unidade (ordenação, sigmoid, top-n, fallback em erro) + endpoint (auth, 404, score_rerank, logging) |
 | `test_auth.py` | 19 | Login, hash/token, guards RBAC |
 | `test_vagas.py` | 43 | CRUD + exclusividade RH + rhs_autorizados |
 | `test_candidatos.py` | 21 | CRUD + webhook + gestor filtra |

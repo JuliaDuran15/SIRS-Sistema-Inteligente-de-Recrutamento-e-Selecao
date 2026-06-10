@@ -4,7 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 from app.api.deps import DB
-from app.core.auth import QUALQUER_PAPEL, RH_OU_ADMIN, get_usuario_atual
+from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL, RH_OU_ADMIN, get_usuario_atual
 from app.models.candidato import Candidato
 from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.vaga import Vaga
@@ -142,6 +142,47 @@ def upload_curriculo(candidatura_id: str, arquivo: UploadFile = File(...),
     return candidatura
 
 
+class CurriculoTextoInput(BaseModel):
+    texto: str
+
+
+@router.post("/{candidatura_id}/curriculo/texto", response_model=CandidaturaResponse)
+def upload_curriculo_texto(
+    candidatura_id: str,
+    dados: CurriculoTextoInput,
+    db: Session = DB,
+    _=RH_OU_ADMIN,
+):
+    if not dados.texto.strip():
+        raise HTTPException(status_code=400, detail="Texto do currículo não pode estar vazio")
+
+    candidatura = db.query(Candidatura).filter(Candidatura.id == candidatura_id).first()
+    if not candidatura:
+        raise HTTPException(status_code=404, detail="Candidatura não encontrada")
+
+    curriculo = db.query(Curriculo).filter(Curriculo.candidatura_id == candidatura_id).first()
+    if not curriculo:
+        curriculo = Curriculo(candidatura_id=candidatura_id)
+        db.add(curriculo)
+
+    historico = list(candidatura.historico or [])
+    historico.append({
+        "de"  : candidatura.status,
+        "para": StatusCandidatura.AGUARDANDO_PROC,
+        "ator": "sistema",
+        "em"  : datetime.utcnow().isoformat(),
+    })
+    candidatura.historico = historico
+    candidatura.status = StatusCandidatura.AGUARDANDO_PROC
+    db.commit()
+
+    from app.ai.tasks import processar_curriculo_texto
+    processar_curriculo_texto.delay(str(candidatura_id), dados.texto)
+
+    db.refresh(candidatura)
+    return candidatura
+
+
 @router.get("/{candidatura_id}/curriculo", response_model=CurriculoDetalhado)
 def get_curriculo(candidatura_id: str, db: Session = DB, _=QUALQUER_PAPEL):
     curriculo = db.query(Curriculo).filter(
@@ -274,3 +315,22 @@ def atualizar_status(
             )
 
     return candidatura
+
+
+@router.delete("/{candidatura_id}", status_code=204)
+def desvincular_candidatura(
+    candidatura_id: str,
+    db: Session = DB,
+    _=APENAS_ADMIN,
+):
+    """Remove a candidatura e todos os seus dados associados (currículo, entrevistas).
+    Exclusivo para Admin — usar apenas para corrigir erros de vínculo."""
+    candidatura = db.query(Candidatura).filter(Candidatura.id == candidatura_id).first()
+    if not candidatura:
+        raise HTTPException(status_code=404, detail="Candidatura não encontrada")
+
+    from app.models.entrevista import Entrevista
+    db.query(Entrevista).filter(Entrevista.candidatura_id == candidatura_id).delete()
+    db.query(Curriculo).filter(Curriculo.candidatura_id == candidatura_id).delete()
+    db.delete(candidatura)
+    db.commit()

@@ -7,11 +7,12 @@ import {
   registrarResultado,
   atualizarStatusCandidatura,
   uploadCurriculo,
-  getCurriculo,
-  editarAnotacoes,
+  uploadCurriculoTexto,
+  // resumirTranscricao,  // TODO: habilitar quando feature de transcrição for ativada
 } from "../api"
 import { Badge } from "../components/Badge"
 import { ScoreBar } from "../components/ScoreBar"
+import { CvPreview } from "../components/CvPreview"
 
 const TIPO_LABEL = { rh: "Entrevista RH", tecnica: "Entrevista Técnica" }
 const STATUS_COR = { agendada: "blue", realizada: "green", cancelada: "red" }
@@ -24,123 +25,19 @@ const STATUS_COR_CAND = {
   decisao_pendente: "amber", contratado: "green", nao_aprovado: "red", banco_de_talentos: "purple",
 }
 
+const LABEL_STATUS = {
+  novo: "Novo", aguardando_processamento: "Processando", processando_curriculo: "Processando",
+  triagem_pendente: "Triagem pendente", aprovado_triagem: "Ag. Entrevista RH",
+  reprovado_triagem: "Reprovado triagem",
+  entrevista_rh_agendada: "Entrevista RH", entrevista_rh_realizada: "Ag. Entrevista Téc.",
+  reprovado_rh: "Reprovado RH",
+  entrevista_tec_agendada: "Entrevista Téc.", entrevista_tec_realizada: "Ag. decisão",
+  reprovado_tecnico: "Reprovado Téc.",
+  decisao_pendente: "Decisão pendente", contratado: "Contratado",
+  nao_aprovado: "Não aprovado", banco_de_talentos: "Banco de talentos",
+}
+
 const PROCESSANDO = new Set(["aguardando_processamento", "processando_curriculo"])
-
-const STATUS_LABEL_AUDIT = {
-  novo: "Candidatura criada",
-  aguardando_processamento: "Currículo enviado — aguardando processamento",
-  processando_curriculo: "Processando currículo",
-  triagem_pendente: "Triagem pendente",
-  aprovado_triagem: "Aprovado na triagem",
-  reprovado_triagem: "Reprovado na triagem",
-  entrevista_rh_agendada: "Entrevista RH agendada",
-  entrevista_rh_realizada: "Entrevista RH realizada",
-  reprovado_rh: "Reprovado na entrevista RH",
-  entrevista_tec_agendada: "Entrevista Técnica agendada",
-  entrevista_tec_realizada: "Entrevista Técnica realizada",
-  reprovado_tecnico: "Reprovado na entrevista técnica",
-  decisao_pendente: "Aguardando decisão final",
-  contratado: "Contratado",
-  nao_aprovado: "Não aprovado",
-  banco_de_talentos: "Banco de talentos",
-  curriculo_processado: "Currículo processado pela IA",
-}
-
-const COR_EVENTO = {
-  contratado: "#2EE8B4",
-  aprovado_triagem: "#4DC8E8",
-  entrevista_rh_agendada: "#4DC8E8",
-  entrevista_tec_agendada: "#4DC8E8",
-  entrevista_rh_realizada: "#4DC8E8",
-  entrevista_tec_realizada: "#4DC8E8",
-  curriculo_processado: "#A78BFA",
-  decisao_pendente: "#FCD34D",
-  reprovado_triagem: "#FCA5A5",
-  reprovado_rh: "#FCA5A5",
-  reprovado_tecnico: "#FCA5A5",
-  nao_aprovado: "#FCA5A5",
-  banco_de_talentos: "#C4B5FD",
-}
-
-// ── Histórico de auditoria ────────────────────────────────────────────────────
-function HistoricoTimeline({ historico }) {
-  const [aberto, setAberto] = useState(false)
-  if (!historico?.length) return null
-
-  const eventos = [...historico].reverse()
-
-  return (
-    <div className="card-glass rounded-2xl overflow-hidden">
-      <button
-        onClick={() => setAberto(a => !a)}
-        className="w-full flex items-center justify-between px-5 py-4 text-left transition-colors"
-        style={{ borderBottom: aberto ? "1px solid var(--b-subtle)" : "none" }}>
-        <span className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">
-          Histórico de auditoria
-        </span>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-brand-pale/35 font-mono">{historico.length} eventos</span>
-          <span className="text-brand-pale/35 text-sm">{aberto ? "▲" : "▼"}</span>
-        </div>
-      </button>
-
-      {aberto && (
-        <div className="p-5">
-          <div className="relative">
-            {/* Linha vertical */}
-            <div className="absolute left-2.5 top-0 bottom-0 w-px"
-              style={{ background: "var(--b-normal)" }} />
-
-            <div className="space-y-4">
-              {eventos.map((ev, i) => {
-                const chave  = ev.para ?? ev.evento ?? ""
-                const cor    = COR_EVENTO[chave] ?? "#7DD8F0"
-                const label  = STATUS_LABEL_AUDIT[chave] ?? chave.replace(/_/g, " ")
-                const data   = ev.em ? new Date(ev.em).toLocaleString("pt-BR", {
-                  day: "2-digit", month: "2-digit", year: "numeric",
-                  hour: "2-digit", minute: "2-digit",
-                }) : null
-
-                return (
-                  <div key={i} className="flex items-start gap-4 pl-1">
-                    {/* Ponto na timeline */}
-                    <div className="w-4 h-4 rounded-full flex-shrink-0 mt-0.5 border-2 z-10"
-                      style={{
-                        background: `${cor}22`,
-                        borderColor: cor,
-                      }} />
-
-                    <div className="flex-1 min-w-0 -mt-0.5">
-                      <p className="text-sm font-semibold" style={{ color: cor }}>{label}</p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        {ev.ator && ev.ator !== "sistema" && (
-                          <span className="text-xs text-brand-pale/55 font-medium">{ev.ator}</span>
-                        )}
-                        {ev.ator === "sistema" && (
-                          <span className="text-xs text-brand-pale/35 italic">automático</span>
-                        )}
-                        {data && (
-                          <span className="text-xs text-brand-pale/30 font-mono">{data}</span>
-                        )}
-                        {/* Score quando é evento de currículo processado */}
-                        {ev.explicacao?.score_final && (
-                          <span className="text-xs font-mono px-2 py-0.5 rounded-lg"
-                            style={{ background: "rgba(167,139,250,0.15)", color: "#A78BFA" }}>
-                            score: {ev.explicacao.score_final}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ── Tag input ────────────────────────────────────────────────────────────────
 function TagInput({ tags, onChange, placeholder }) {
@@ -181,100 +78,58 @@ function TagInput({ tags, onChange, placeholder }) {
   )
 }
 
-// ── Botão + modal visualizar conteúdo do currículo ───────────────────────────
-function VerCurriculoBtn({ candidaturaId }) {
-  const [aberto, setAberto]   = useState(false)
-  const [texto, setTexto]     = useState(null)
-  const [loading, setLoading] = useState(false)
-
-  async function abrir() {
-    setAberto(true)
-    if (texto !== null) return
-    setLoading(true)
-    try {
-      const r = await getCurriculo(candidaturaId)
-      setTexto(r.data.texto_extraido ?? "(Texto não disponível)")
-    } catch {
-      setTexto("Erro ao carregar o conteúdo do currículo.")
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return (
-    <>
-      <button onClick={abrir}
-        className="text-xs font-bold px-3 py-1.5 rounded-lg transition-all"
-        style={{ background: "rgba(26,139,191,0.14)", border: "1px solid rgba(26,139,191,0.25)", color: "#4DC8E8" }}>
-        Ver currículo
-      </button>
-
-      {aberto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(7,17,26,0.8)", backdropFilter: "blur(4px)" }}>
-          <div className="card-glass rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between p-5 border-b"
-              style={{ borderColor: "var(--b-subtle)" }}>
-              <h3 className="text-sm font-bold text-brand-cloud">Conteúdo extraído do currículo</h3>
-              <button onClick={() => setAberto(false)}
-                className="text-brand-pale/40 hover:text-brand-pale text-xl leading-none">×</button>
-            </div>
-            <div className="flex-1 overflow-auto p-5">
-              {loading ? (
-                <div className="flex items-center gap-2 text-brand-pale/45 text-sm">
-                  <span className="w-4 h-4 border-2 rounded-full animate-spin"
-                    style={{ borderColor: "var(--b-normal)", borderTopColor: "#4DC8E8" }} />
-                  Carregando...
-                </div>
-              ) : (
-                <pre className="text-xs text-brand-pale/70 leading-relaxed whitespace-pre-wrap font-mono">
-                  {texto}
-                </pre>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </>
-  )
-}
-
-
 // ── Seção upload currículo ───────────────────────────────────────────────────
 function UploadCurriculo({ candidaturaId, status, curriculo, podeUpload, onAtualizado }) {
-  const [enviando, setEnviando]   = useState(false)
-  const [erro, setErro]           = useState(null)
-  const [arquivo, setArquivo]     = useState(null)
-  const [drag, setDrag]           = useState(false)
-  const inputRef                  = useRef(null)
+  const [enviando, setEnviando] = useState(false)
+  const [erro, setErro]         = useState(null)
+  const [arquivo, setArquivo]   = useState(null)
+  const [drag, setDrag]         = useState(false)
+  const [modo, setModo]         = useState("pdf")   // "pdf" | "texto"
+  const [texto, setTexto]       = useState("")
+  const inputRef                = useRef(null)
 
-  const jaProcessado  = curriculo?.score_curriculo != null
-  // processando: status em fila OU texto já chegou mas score ainda não foi calculado
-  const processando   = PROCESSANDO.has(status) ||
+  const jaProcessado = curriculo?.score_curriculo != null
+  const processando  = PROCESSANDO.has(status) ||
     (curriculo?.texto_extraido != null && curriculo?.score_curriculo == null)
 
-  async function enviar(file) {
+  async function enviarPdf(file) {
     if (!file || !file.name.toLowerCase().endsWith(".pdf")) {
       setErro("Selecione um arquivo PDF"); return
     }
-    setArquivo(file)
-    setEnviando(true)
-    setErro(null)
+    setArquivo(file); setEnviando(true); setErro(null)
     try {
       const r = await uploadCurriculo(candidaturaId, file)
       onAtualizado(r.data)
     } catch (err) {
       setErro(err.response?.data?.detail ?? "Erro no upload")
-    } finally {
-      setEnviando(false)
-    }
+    } finally { setEnviando(false) }
   }
 
-  function onDrop(e) {
-    e.preventDefault(); setDrag(false)
-    const f = e.dataTransfer.files[0]
-    if (f) enviar(f)
+  async function enviarTexto() {
+    if (!texto.trim()) return
+    setEnviando(true); setErro(null)
+    try {
+      const r = await uploadCurriculoTexto(candidaturaId, texto.trim())
+      onAtualizado(r.data)
+      setTexto("")
+    } catch (err) {
+      setErro(err.response?.data?.detail ?? "Erro ao enviar texto")
+    } finally { setEnviando(false) }
   }
+
+  const Toggle = () => podeUpload ? (
+    <div className="flex items-center gap-1.5">
+      {["pdf", "texto"].map(m => (
+        <button key={m} type="button" onClick={() => { setModo(m); setErro(null) }}
+          className="px-2.5 py-1 rounded-lg text-xs font-semibold transition-all"
+          style={modo === m
+            ? { background: "rgba(26,139,191,0.25)", color: "#4DC8E8", border: "1px solid rgba(26,139,191,0.4)" }
+            : { background: "var(--s-chip)", color: "var(--t-muted2)", border: "1px solid var(--b-subtle)" }}>
+          {m === "pdf" ? "PDF" : "Texto"}
+        </button>
+      ))}
+    </div>
+  ) : null
 
   if (processando) return (
     <div className="card-glass rounded-2xl p-6">
@@ -296,8 +151,8 @@ function UploadCurriculo({ candidaturaId, status, curriculo, podeUpload, onAtual
         <span className="text-xs px-2.5 py-1 rounded-lg font-semibold"
           style={{ background: "rgba(26,170,128,0.18)", color: "#2EE8B4" }}>✓ Processado</span>
       </div>
-      <ScoreBar score={curriculo.score_rh}       label="Aderência aos requisitos da vaga" />
-      <ScoreBar score={curriculo.score_mercado}  label="Aderência ao mercado" />
+      <ScoreBar score={curriculo.score_rh}      label="Aderência aos requisitos da vaga" />
+      <ScoreBar score={curriculo.score_mercado} label="Aderência ao mercado" />
       <div className="flex items-center justify-between pt-1">
         <span className="text-xs text-brand-pale/40">Score currículo</span>
         <span className="text-xl font-bold font-mono"
@@ -310,71 +165,157 @@ function UploadCurriculo({ candidaturaId, status, curriculo, podeUpload, onAtual
           Processado em {new Date(curriculo.processado_em).toLocaleString("pt-BR")}
         </p>
       )}
-      <div className="flex items-center gap-3 pt-1">
-        <VerCurriculoBtn candidaturaId={candidaturaId} />
-        {podeUpload && (
-          <>
-            <button onClick={() => inputRef.current?.click()}
-              className="text-xs text-brand-pale/35 hover:text-brand-sky transition-colors">
-              Substituir PDF ↑
-            </button>
-            <input ref={inputRef} type="file" accept=".pdf" className="hidden"
-              onChange={e => e.target.files[0] && enviar(e.target.files[0])} />
-          </>
-        )}
-      </div>
+      <CvPreview
+        candidaturaId={candidaturaId}
+        temPdf={!!curriculo?.arquivo_pdf}
+        textoExtraido={curriculo?.texto_extraido}
+      />
+      {podeUpload && (
+        <div className="flex items-center gap-3 pt-1 flex-wrap">
+          <span className="text-xs text-brand-pale/30">Substituir:</span>
+          <Toggle />
+        </div>
+      )}
+      {podeUpload && modo === "pdf" && (
+        <>
+          <input ref={inputRef} type="file" accept=".pdf" className="hidden"
+            onChange={e => e.target.files[0] && enviarPdf(e.target.files[0])} />
+          <button onClick={() => inputRef.current?.click()} disabled={enviando}
+            className="text-xs text-brand-pale/35 hover:text-brand-sky transition-colors disabled:opacity-50">
+            {enviando ? "Enviando..." : "↑ Selecionar PDF"}
+          </button>
+        </>
+      )}
+      {podeUpload && modo === "texto" && (
+        <div className="space-y-2">
+          <textarea value={texto} onChange={e => setTexto(e.target.value)}
+            rows={4} placeholder="Cole o currículo em texto livre..."
+            className="w-full rounded-xl px-3 py-2 text-sm resize-y" />
+          <button onClick={enviarTexto} disabled={enviando || !texto.trim()}
+            className="px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50"
+            style={{ background: "rgba(26,139,191,0.14)", border: "1px solid rgba(26,139,191,0.25)", color: "#4DC8E8" }}>
+            {enviando ? "Enviando..." : "Enviar texto"}
+          </button>
+        </div>
+      )}
+      {erro && <p className="text-xs text-red-400">{erro}</p>}
     </div>
   )
 
-  // Sem currículo e sem permissão de upload → não mostrar nada
   if (!podeUpload) return null
 
   return (
     <div className="card-glass rounded-2xl p-5 space-y-3">
-      <h2 className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">Enviar Currículo (PDF)</h2>
-
-      <div
-        onDragOver={e => { e.preventDefault(); setDrag(true) }}
-        onDragLeave={() => setDrag(false)}
-        onDrop={onDrop}
-        onClick={() => !enviando && inputRef.current?.click()}
-        className="rounded-2xl p-8 text-center cursor-pointer transition-all"
-        style={{
-          border: `2px dashed ${drag ? "rgba(77,200,232,0.6)" : "var(--b-strong)"}`,
-          background: drag ? "rgba(26,139,191,0.08)" : "var(--s-content)",
-        }}
-      >
-        {enviando ? (
-          <div className="flex flex-col items-center gap-2">
-            <span className="w-8 h-8 border-2 rounded-full animate-spin"
-              style={{ borderColor: "var(--b-normal)", borderTopColor: "#4DC8E8" }} />
-            <p className="text-sm text-brand-pale/60">Enviando {arquivo?.name}...</p>
-          </div>
-        ) : (
-          <>
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3"
-              style={{ background: "rgba(26,139,191,0.14)" }}>
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                style={{ color: "#4DC8E8" }}>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-            </div>
-            <p className="text-sm font-semibold text-brand-pale/70">
-              Arraste o PDF aqui ou <span style={{ color: "#4DC8E8" }}>clique para selecionar</span>
-            </p>
-            <p className="text-xs text-brand-pale/35 mt-1">Somente arquivos .pdf</p>
-          </>
-        )}
+      <div className="flex items-center justify-between">
+        <h2 className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">Enviar Currículo</h2>
+        <Toggle />
       </div>
 
-      <input ref={inputRef} type="file" accept=".pdf" className="hidden"
-        onChange={e => e.target.files[0] && enviar(e.target.files[0])} />
+      {modo === "pdf" ? (
+        <>
+          <div
+            onDragOver={e => { e.preventDefault(); setDrag(true) }}
+            onDragLeave={() => setDrag(false)}
+            onDrop={e => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f) enviarPdf(f) }}
+            onClick={() => !enviando && inputRef.current?.click()}
+            className="rounded-2xl p-8 text-center cursor-pointer transition-all"
+            style={{
+              border: `2px dashed ${drag ? "rgba(77,200,232,0.6)" : "var(--b-strong)"}`,
+              background: drag ? "rgba(26,139,191,0.08)" : "var(--s-content)",
+            }}>
+            {enviando ? (
+              <div className="flex flex-col items-center gap-2">
+                <span className="w-8 h-8 border-2 rounded-full animate-spin"
+                  style={{ borderColor: "var(--b-normal)", borderTopColor: "#4DC8E8" }} />
+                <p className="text-sm text-brand-pale/60">Enviando {arquivo?.name}...</p>
+              </div>
+            ) : (
+              <>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-3"
+                  style={{ background: "rgba(26,139,191,0.14)" }}>
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: "#4DC8E8" }}>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <p className="text-sm font-semibold text-brand-pale/70">
+                  Arraste o PDF aqui ou <span style={{ color: "#4DC8E8" }}>clique para selecionar</span>
+                </p>
+                <p className="text-xs text-brand-pale/35 mt-1">Somente arquivos .pdf</p>
+              </>
+            )}
+          </div>
+          <input ref={inputRef} type="file" accept=".pdf" className="hidden"
+            onChange={e => e.target.files[0] && enviarPdf(e.target.files[0])} />
+        </>
+      ) : (
+        <div className="space-y-2">
+          <textarea value={texto} onChange={e => setTexto(e.target.value)}
+            rows={6} placeholder="Cole o currículo em texto livre..."
+            className="w-full rounded-xl px-3 py-2 text-sm resize-y" />
+          <button onClick={enviarTexto} disabled={enviando || !texto.trim()}
+            className="px-4 py-2 rounded-xl text-sm font-bold text-brand-black transition-all disabled:opacity-50"
+            style={{ background: "linear-gradient(135deg,#1A8BBF,#4DC8E8)" }}>
+            {enviando ? "Enviando..." : "Enviar texto"}
+          </button>
+        </div>
+      )}
 
       {erro && <p className="text-xs text-red-400">{erro}</p>}
     </div>
   )
 }
+
+// ── Análise de transcrição (desativado) ──────────────────────────────────────
+// function BotaoTranscricao({ entrevistaId, onPreenchido }) {
+//   const [aberto, setAberto]           = useState(false)
+//   const [transcricao, setTranscricao] = useState("")
+//   const [carregando, setCarregando]   = useState(false)
+//   const [erro, setErro]               = useState(null)
+//
+//   async function analisar() {
+//     if (!transcricao.trim()) return
+//     setCarregando(true); setErro(null)
+//     try {
+//       const r = await resumirTranscricao(entrevistaId, transcricao)
+//       onPreenchido(r.data)
+//       setAberto(false); setTranscricao("")
+//     } catch (err) {
+//       setErro(err.response?.data?.detail ?? "Erro ao analisar transcrição")
+//     } finally { setCarregando(false) }
+//   }
+//
+//   return (
+//     <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(167,139,250,0.25)" }}>
+//       <button type="button" onClick={() => setAberto(a => !a)}
+//         className="w-full flex items-center justify-between px-4 py-3 text-left"
+//         style={{ background: "rgba(167,139,250,0.08)" }}>
+//         <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#A78BFA" }}>
+//           Preencher com transcrição
+//         </span>
+//         <span className="text-sm" style={{ color: "rgba(167,139,250,0.5)" }}>{aberto ? "▲" : "▼"}</span>
+//       </button>
+//       {aberto && (
+//         <div className="p-4 space-y-3" style={{ background: "rgba(167,139,250,0.04)" }}>
+//           <p className="text-xs text-brand-pale/45">
+//             Cole a transcrição — pontos fortes, fracos e anotações extraídos automaticamente. Revise antes de salvar.
+//           </p>
+//           <textarea value={transcricao} onChange={e => setTranscricao(e.target.value)}
+//             rows={6} placeholder="Cole a transcrição aqui..."
+//             className="w-full px-3 py-2 rounded-xl text-sm resize-y font-mono"
+//             style={{ fontSize: "0.72rem" }} />
+//           {erro && <p className="text-xs text-red-400">{erro}</p>}
+//           <button type="button" onClick={analisar}
+//             disabled={carregando || !transcricao.trim()}
+//             className="px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 transition-all"
+//             style={{ background: "rgba(167,139,250,0.2)", color: "#A78BFA", border: "1px solid rgba(167,139,250,0.35)" }}>
+//             {carregando ? "Analisando..." : "Analisar e preencher"}
+//           </button>
+//         </div>
+//       )}
+//     </div>
+//   )
+// }
 
 // ── Card entrevista ──────────────────────────────────────────────────────────
 function CardEntrevista({ entrevista: initial, usuario, candidatura, onResultadoSalvo }) {
@@ -524,11 +465,11 @@ function CardEntrevista({ entrevista: initial, usuario, candidatura, onResultado
               )}
               {entrevista.pontos_fracos?.length > 0 && (
                 <div>
-                  <p className="text-xs font-bold text-red-400/70 uppercase tracking-wider mb-2">Pontos fracos</p>
+                  <p className="text-xs font-bold text-red-500 uppercase tracking-wider mb-2">Pontos fracos</p>
                   <div className="flex flex-wrap gap-1.5">
                     {entrevista.pontos_fracos.map(t => (
                       <span key={t} className="px-2.5 py-1 rounded-lg text-xs font-semibold"
-                        style={{ background: "rgba(252,165,165,0.15)", color: "#FCA5A5" }}>{t}</span>
+                        style={{ background: "rgba(239,68,68,0.15)", color: "#f87171" }}>{t}</span>
                     ))}
                   </div>
                 </div>
@@ -559,6 +500,14 @@ function CardEntrevista({ entrevista: initial, usuario, candidatura, onResultado
             <button type="button" onClick={() => setOpen(false)}
               className="text-brand-pale/35 hover:text-brand-pale transition-colors text-lg leading-none">×</button>
           </div>
+          {/* <BotaoTranscricao
+            entrevistaId={entrevista.id}
+            onPreenchido={({ pontos_fortes, pontos_fracos, anotacoes: an }) => {
+              if (pontos_fortes?.length) setFortes(pontos_fortes)
+              if (pontos_fracos?.length) setFracos(pontos_fracos)
+              if (an) setAnotacoes(an)
+            }}
+          /> */}
           <div>
             <label className="block text-xs font-bold text-brand-pale/55 uppercase tracking-wider mb-2">
               Score (0–10)
@@ -583,7 +532,7 @@ function CardEntrevista({ entrevista: initial, usuario, candidatura, onResultado
               placeholder="ex: comunicação clara (Enter)" />
           </div>
           <div>
-            <label className="block text-xs font-bold text-red-400/60 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-bold text-red-500 uppercase tracking-wider mb-2">
               Pontos fracos
             </label>
             <TagInput tags={fracos} onChange={setFracos}
@@ -709,17 +658,27 @@ export function EntrevistaDetalhe({ usuario }) {
   }
 
   function onResultadoSalvo(atualizada) {
+    const eraAgendada = entrevistas.find(e => e.id === atualizada.id)?.status === "agendada"
     setEntrevistas(prev => prev.map(e => e.id === atualizada.id ? atualizada : e))
-    setCandidatura(prev => ({
-      ...prev,
-      status: atualizada.tipo === "rh" ? "entrevista_rh_realizada" : "entrevista_tec_realizada",
-    }))
+    if (eraAgendada) {
+      setCandidatura(prev => ({
+        ...prev,
+        status: atualizada.tipo === "rh" ? "entrevista_rh_realizada" : "entrevista_tec_realizada",
+      }))
+    }
   }
 
   async function tomarDecisao(novoStatus) {
     setDecisaoErr(null)
+    const ator = usuario?.nome ?? "rh"
+    const finais = new Set(["contratado", "nao_aprovado", "banco_de_talentos"])
     try {
-      const r = await atualizarStatusCandidatura(candidaturaId, novoStatus, usuario?.nome ?? "rh")
+      if (status === "entrevista_tec_realizada" && finais.has(novoStatus)) {
+        await atualizarStatusCandidatura(candidaturaId, "decisao_pendente", ator)
+      } else if (status === "entrevista_rh_realizada" && novoStatus === "banco_de_talentos") {
+        await atualizarStatusCandidatura(candidaturaId, "reprovado_rh", ator)
+      }
+      const r = await atualizarStatusCandidatura(candidaturaId, novoStatus, ator)
       setCandidatura(r.data)
     } catch (err) {
       setDecisaoErr(err.response?.data?.detail ?? "Erro ao atualizar status")
@@ -763,8 +722,9 @@ export function EntrevistaDetalhe({ usuario }) {
   // RH pode reprovar após entrevista de RH realizada (antes de agendar técnica)
   const podeReprovarRH = rhFeita && !tecAgendada && !tecFeita &&
     status === "entrevista_rh_realizada" && ehRhAutorizado
-  // Gestor também pode tomar a decisão final nas suas vagas
-  const podeDecisao    = status === "decisao_pendente" &&
+  const podeDecisaoPosTec = tecFeita && status === "entrevista_tec_realizada" &&
+    (ehRhAutorizado || (usuario?.papel === "gestor" && ehGestorDaVaga))
+  const podeDecisao    = (status === "decisao_pendente" || podeDecisaoPosTec) &&
     (ehRhAutorizado || (usuario?.papel === "gestor" && ehGestorDaVaga))
 
   const podeUpload         = ehRhAutorizado
@@ -793,7 +753,7 @@ export function EntrevistaDetalhe({ usuario }) {
           </div>
           <div className="text-right space-y-1">
             <Badge cor={STATUS_COR_CAND[status] ?? "gray"}>
-              {status?.replace(/_/g, " ")}
+              {LABEL_STATUS[status] ?? status?.replace(/_/g, " ")}
             </Badge>
             {vaga && <p className="text-xs text-brand-pale/35 mt-1">{vaga.nome}</p>}
           </div>
@@ -852,13 +812,13 @@ export function EntrevistaDetalhe({ usuario }) {
             <button
               onClick={() => tomarDecisao("reprovado_triagem")}
               className="px-5 py-2.5 rounded-xl text-sm font-bold"
-              style={{ background: "rgba(252,165,165,0.12)", border: "1px solid rgba(252,165,165,0.25)", color: "#FCA5A5" }}>
+              style={{ background: "rgba(239,68,68,0.12)", border: "1.5px solid rgba(239,68,68,0.50)", color: "#EF4444" }}>
               ✕ Reprovar na triagem
             </button>
             <button
               onClick={() => tomarDecisao("banco_de_talentos")}
               className="px-5 py-2.5 rounded-xl text-sm font-bold"
-              style={{ background: "rgba(167,139,250,0.12)", border: "1px solid rgba(167,139,250,0.25)", color: "#C4B5FD" }}>
+              style={{ background: "rgba(139,92,246,0.18)", border: "1.5px solid rgba(139,92,246,0.55)", color: "#8B5CF6" }}>
               Banco de talentos
             </button>
           </div>
@@ -903,12 +863,17 @@ export function EntrevistaDetalhe({ usuario }) {
             </div>
           )}
           {podeReprovarRH && (
-            <div className="flex items-center gap-4 pt-1"
+            <div className="flex items-center gap-3 pt-1 flex-wrap"
               style={{ borderTop: podeAgendarTec ? "1px solid var(--b-subtle)" : "none" }}>
               {podeAgendarTec && <span className="text-xs text-brand-pale/30 flex-shrink-0">ou</span>}
+              <button onClick={() => tomarDecisao("banco_de_talentos")}
+                className="px-4 py-2 rounded-xl text-sm font-bold"
+                style={{ background: "rgba(139,92,246,0.18)", border: "1.5px solid rgba(139,92,246,0.55)", color: "#8B5CF6" }}>
+                Banco de talentos
+              </button>
               <button onClick={() => tomarDecisao("reprovado_rh")}
                 className="px-4 py-2 rounded-xl text-sm font-bold"
-                style={{ background: "rgba(252,165,165,0.12)", border: "1px solid rgba(252,165,165,0.25)", color: "#FCA5A5" }}>
+                style={{ background: "rgba(239,68,68,0.12)", border: "1.5px solid rgba(239,68,68,0.50)", color: "#EF4444" }}>
                 Reprovar entrevista RH
               </button>
             </div>
@@ -936,7 +901,7 @@ export function EntrevistaDetalhe({ usuario }) {
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">Decisão Final</h2>
             <span className="text-xs text-brand-pale/30">
-              {usuario?.papel === "gestor" ? "como gestor técnico" : "como analista de RH"}
+              {usuario?.papel === "gestor" ? "como gestor técnico" : usuario?.papel === "admin" ? "como Administrador" : "como analista de RH"}
             </span>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -945,14 +910,15 @@ export function EntrevistaDetalhe({ usuario }) {
               style={{ background: "linear-gradient(135deg, #1AAA80, #2EE8B4)" }}>
               Contratar
             </button>
-            <button onClick={() => tomarDecisao("nao_aprovado")}
+            <button
+              onClick={() => tomarDecisao(podeDecisaoPosTec ? "reprovado_tecnico" : "nao_aprovado")}
               className="px-5 py-2.5 rounded-xl text-sm font-bold"
-              style={{ background: "rgba(252,165,165,0.15)", border: "1px solid rgba(252,165,165,0.3)", color: "#FCA5A5" }}>
-              Não aprovado
+              style={{ background: "rgba(239,68,68,0.12)", border: "1.5px solid rgba(239,68,68,0.50)", color: "#EF4444" }}>
+              {podeDecisaoPosTec ? "Reprovar técnico" : "Não aprovado"}
             </button>
             <button onClick={() => tomarDecisao("banco_de_talentos")}
               className="px-5 py-2.5 rounded-xl text-sm font-bold"
-              style={{ background: "rgba(167,139,250,0.15)", border: "1px solid rgba(167,139,250,0.3)", color: "#A78BFA" }}>
+              style={{ background: "rgba(139,92,246,0.18)", border: "1.5px solid rgba(139,92,246,0.55)", color: "#8B5CF6" }}>
               Banco de talentos
             </button>
           </div>
@@ -960,8 +926,6 @@ export function EntrevistaDetalhe({ usuario }) {
         </div>
       )}
 
-      {/* Histórico de auditoria — sempre visível, colapsável */}
-      <HistoricoTimeline historico={candidatura.historico} />
     </div>
   )
 }

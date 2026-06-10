@@ -520,3 +520,5 @@ Testes do webhook XML — o parser XML tem casos de borda não cobertos (atribut
 WEBHOOK_SECRET_KEY obrigatório em produção — hoje é opcional mesmo no README; se ENVIRONMENT=production e a chave estiver vazia, a API não deveria subir
 
 docker compose exec api pytest tests/test_setores_especificos.py::TestPipelineSetores::test_relatorio_setores -m slow -s
+
+docker compose exec api pytest tests/test_entrevistas.py -v -s
