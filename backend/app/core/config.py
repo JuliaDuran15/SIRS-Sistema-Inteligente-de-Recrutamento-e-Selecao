@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     RERANKER_MODEL  : str = "BAAI/bge-reranker-base"
     RERANKER_TOP_N  : int = 20                     # quantos candidatos reordenar
 
+    UPLOAD_DIR: str = "/app/uploads/curriculos"
+
     # Webhook — deixe vazio para desabilitar autenticação (dev)
     WEBHOOK_SECRET_KEY : str = ""
 

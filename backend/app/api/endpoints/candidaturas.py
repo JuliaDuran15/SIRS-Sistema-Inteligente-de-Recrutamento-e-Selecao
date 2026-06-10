@@ -5,6 +5,7 @@ from pathlib import Path
 
 from app.api.deps import DB
 from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL, RH_OU_ADMIN, get_usuario_atual
+from app.core.config import settings
 from app.models.candidato import Candidato
 from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.curriculo import Curriculo
@@ -98,7 +99,7 @@ def buscar_candidatura(candidatura_id: str, db: Session = DB, _=QUALQUER_PAPEL):
     return candidatura
 
 
-UPLOAD_DIR = Path("/app/uploads/curriculos")
+UPLOAD_DIR = Path(settings.UPLOAD_DIR)
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.post("/{candidatura_id}/curriculo", response_model=CandidaturaResponse)
