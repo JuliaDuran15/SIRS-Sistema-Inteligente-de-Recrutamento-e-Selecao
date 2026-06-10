@@ -1,7 +1,7 @@
 from app.api.deps import DB
 from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL
 from app.models.usuario import PapelUsuario, Usuario
-from app.schemas.usuario import UsuarioCreate, UsuarioResponse
+from app.schemas.usuario import UsuarioCreate, UsuarioResponse, UsuarioUpdate
 from fastapi import APIRouter, HTTPException
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
@@ -36,6 +36,23 @@ def buscar_usuario(usuario_id: str, db: Session = DB, _=QUALQUER_PAPEL):
     usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    return usuario
+
+
+@router.patch("/{usuario_id}", response_model=UsuarioResponse)
+def atualizar_usuario(usuario_id: str, dados: UsuarioUpdate, db: Session = DB, _=APENAS_ADMIN):
+    usuario = db.query(Usuario).filter(Usuario.id == usuario_id).first()
+    if not usuario:
+        raise HTTPException(status_code=404, detail="Usuário não encontrado")
+    if dados.email and dados.email != usuario.email:
+        if db.query(Usuario).filter(Usuario.email == dados.email).first():
+            raise HTTPException(status_code=400, detail="Email já está em uso")
+    if dados.nome  is not None: usuario.nome       = dados.nome
+    if dados.email is not None: usuario.email      = dados.email
+    if dados.papel is not None: usuario.papel      = dados.papel
+    if dados.senha is not None: usuario.senha_hash = pwd_context.hash(dados.senha)
+    db.commit()
+    db.refresh(usuario)
     return usuario
 
 

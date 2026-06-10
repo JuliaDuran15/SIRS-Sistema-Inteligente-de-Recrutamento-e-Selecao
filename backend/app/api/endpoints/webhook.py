@@ -14,8 +14,9 @@ Fluxo por chamada:
 """
 import json
 import re
-import xml.etree.ElementTree as ET
 from datetime import date
+
+import defusedxml.ElementTree as ET
 
 _RE_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -36,8 +37,12 @@ from app.schemas.webhook import (
     ImportacaoResultado,
     VagaImport,
 )
+from app.core.logger import get_logger
+from app.core.rate_limit import checar_rate_limit
 from fastapi import APIRouter, Header, HTTPException, Request
 from sqlalchemy.orm import Session
+
+logger = get_logger("WEBHOOK")
 
 router = APIRouter()
 
@@ -47,7 +52,8 @@ router = APIRouter()
 def _checar_api_key(api_key: str | None) -> None:
     chave = settings.WEBHOOK_SECRET_KEY
     if not chave:
-        return  # não configurada → modo aberto (dev)
+        logger.warning("WEBHOOK_SECRET_KEY não configurada — endpoint aberto (inseguro em produção)")
+        return
     if api_key != chave:
         raise HTTPException(status_code=401, detail="X-Webhook-Key inválida ou ausente")
 
@@ -126,9 +132,14 @@ def _parse_xml(body: bytes) -> ImportacaoPayload:
 # ── Lógica de importação ──────────────────────────────────────────────────────
 
 def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
+    logger.info(
+        f"fonte={dados.fonte or 'sem-fonte'} | "
+        f"vagas={len(dados.vagas)} candidatos={len(dados.candidatos)}"
+    )
     resultado = ImportacaoResultado()
     erros: list[ErroImportacao] = []
     vagas_map: dict[str, Vaga] = {}  # external_id → instância Vaga
+    tasks_pendentes: list = []       # (func, args) — despachadas após db.commit()
 
     # ── 1. Vagas ──────────────────────────────────────────────────────────────
     for vd in dados.vagas:
@@ -143,7 +154,7 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
                 )
                 db.add(vaga)
                 db.flush()
-                atualizar_mercado_vaga.delay(str(vaga.id))
+                tasks_pendentes.append((atualizar_mercado_vaga, [str(vaga.id)]))
                 resultado.vagas_criadas += 1
             if vd.external_id:
                 vagas_map[vd.external_id] = vaga
@@ -234,7 +245,7 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
                 # Avança status para ativar o spinner no frontend enquanto a task roda
                 if candidatura.status == StatusCandidatura.NOVO:
                     candidatura.status = StatusCandidatura.AGUARDANDO_PROC
-                processar_curriculo_texto.delay(str(candidatura.id), cd.curriculo_texto)
+                tasks_pendentes.append((processar_curriculo_texto, [str(candidatura.id), cd.curriculo_texto]))
                 resultado.curriculos_processados += 1
 
             sp.commit()
@@ -248,6 +259,25 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
             ))
 
     db.commit()
+
+    # Despacha tasks somente após commit — evita race condition onde o worker
+    # tenta ler registros que ainda não foram visíveis para outras sessões.
+    for task_fn, task_args in tasks_pendentes:
+        task_fn.delay(*task_args)
+
+    if erros:
+        logger.warning(
+            f"fonte={dados.fonte or 'sem-fonte'} | {len(erros)} erro(s): "
+            + "; ".join(f"{e.tipo}/{e.identificador}: {e.detalhe}" for e in erros[:5])
+        )
+    logger.info(
+        f"fonte={dados.fonte or 'sem-fonte'} | importação concluída | "
+        f"vagas_criadas={resultado.vagas_criadas} "
+        f"candidatos_criados={resultado.candidatos_criados} "
+        f"candidatos_atualizados={resultado.candidatos_atualizados} "
+        f"candidaturas_criadas={resultado.candidaturas_criadas} "
+        f"curriculos={resultado.curriculos_processados}"
+    )
     return ImportacaoResponse(
         importados  = resultado,
         erros       = erros,
@@ -307,6 +337,7 @@ async def importar(
     ```
     """
     _checar_api_key(api_key)
+    await checar_rate_limit(request, max_por_hora=120, max_por_minuto=15)
 
     content_type = request.headers.get("content-type", "").lower()
     body = await request.body()

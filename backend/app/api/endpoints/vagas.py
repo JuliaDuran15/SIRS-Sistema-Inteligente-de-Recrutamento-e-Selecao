@@ -1,7 +1,13 @@
 from app.ai.market_analyzer import analisar_mercado
+from app.core.logger import get_logger
+
+logger = get_logger("VAGAS")
+import csv
+import io
+
 from app.ai.matching_engine import calcular_score_curriculo, calcular_score_final
 from app.ai.resume_parser import vetorizar_texto
-from app.ai.tasks import atualizar_mercado_vaga
+from app.ai.tasks import _recalcular_scores_mercado, atualizar_mercado_vaga
 from app.api.deps import DB
 from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL, get_usuario_atual
 from app.models.candidatura import Candidatura
@@ -9,8 +15,10 @@ from app.models.curriculo import Curriculo
 from app.models.entrevista import Entrevista
 from app.models.usuario import PapelUsuario
 from app.models.vaga import Vaga
-from app.schemas.vaga import RhsAutorizadosUpdate, VagaCreate, VagaResponse, VagaUpdatePesos
+from app.schemas.candidatura import CandidaturaRerankItem
+from app.schemas.vaga import RhsAutorizadosUpdate, VagaCreate, VagaResponse, VagaUpdatePesos, VagaUpdateRequisitos
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import case, or_
 from sqlalchemy.orm import Session
@@ -69,7 +77,7 @@ def criar_vaga(dados: VagaCreate, db: Session = DB, usuario=Depends(get_usuario_
 @router.patch("/{vaga_id}/requisitos", response_model=VagaResponse)
 def atualizar_requisitos(
     vaga_id: str,
-    requisitos_texto: str,
+    dados: VagaUpdateRequisitos,
     db: Session = DB,
     usuario=Depends(get_usuario_atual),
 ):
@@ -78,8 +86,16 @@ def atualizar_requisitos(
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
     if not _pode_editar_vaga(usuario, vaga):
         raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta vaga")
-    vaga.requisitos_texto = requisitos_texto
-    vaga.vetor_vaga       = vetorizar_texto(requisitos_texto)
+
+    if dados.nome is not None:
+        vaga.nome = dados.nome
+
+    if dados.requisitos_texto is not None:
+        vaga.requisitos_texto = dados.requisitos_texto
+        vaga.vetor_vaga       = vetorizar_texto(dados.requisitos_texto)
+        # Requisitos mudaram → recalcula scores e explicações de todos os CVs
+        _recalcular_scores_vaga(vaga, db)
+
     db.commit()
     db.refresh(vaga)
     return vaga
@@ -121,6 +137,20 @@ def buscar_vaga(vaga_id: str, db: Session = DB, _=QUALQUER_PAPEL):
 
 
 def _recalcular_scores_vaga(vaga: Vaga, db: Session) -> int:
+    from app.ai.feature_extractor import (
+        calcular_bonus_estrutural,
+        extrair_features_curriculo,
+        extrair_features_vaga,
+    )
+    from app.ai.matching_engine import (
+        calcular_score_rh,
+        calcular_score_rh_multi_secao,
+        gerar_explicacao,
+    )
+
+    termos = [t["termo"] for t in (vaga.ranking_mercado or {}).get("termos", [])]
+    feat_vaga = extrair_features_vaga(vaga.requisitos_texto or "", termos)
+
     candidaturas = db.query(Candidatura).filter(Candidatura.vaga_id == vaga.id).all()
     atualizadas = 0
     for cand in candidaturas:
@@ -128,13 +158,32 @@ def _recalcular_scores_vaga(vaga: Vaga, db: Session) -> int:
         if not curriculo or curriculo.score_rh is None:
             continue
 
+        # Recalcula score_rh semântico a partir dos vetores quando disponível
+        if curriculo.vetor_embedding is not None and vaga.vetor_vaga is not None:
+            s_rh = (
+                calcular_score_rh_multi_secao(curriculo.vetor_embedding, vaga.vetor_vaga, curriculo.vetor_secao_exp)
+                if curriculo.vetor_secao_exp is not None
+                else calcular_score_rh(curriculo.vetor_embedding, vaga.vetor_vaga)
+            )
+        else:
+            s_rh = curriculo.score_rh / 100
+
+        s_mkt  = (curriculo.score_mercado or 0) / 100
+        feat_cv = extrair_features_curriculo(curriculo.texto_extraido or "")
+        bonus   = calcular_bonus_estrutural(feat_cv, feat_vaga)
+
         novo_score = calcular_score_curriculo(
-            curriculo.score_rh     / 100,
-            curriculo.score_mercado / 100,
+            s_rh, s_mkt,
             vaga.peso_rh,
             vaga.peso_mercado,
+            bonus,
         )
         curriculo.score_curriculo = novo_score
+        curriculo.explicacao = gerar_explicacao(
+            s_rh, s_mkt, novo_score,
+            vaga.peso_rh, vaga.peso_mercado,
+            features_cv=feat_cv, features_vaga=feat_vaga,
+        )
 
         entrevistas = db.query(Entrevista).filter(
             Entrevista.candidatura_id == cand.id,
@@ -143,11 +192,10 @@ def _recalcular_scores_vaga(vaga: Vaga, db: Session) -> int:
         score_rh_ent  = next((e.score_manual for e in entrevistas if e.tipo == "rh"),      None)
         score_tec_ent = next((e.score_manual for e in entrevistas if e.tipo == "tecnica"), None)
 
-        if score_rh_ent is not None or score_tec_ent is not None:
-            cand.score_total = calcular_score_final(
-                novo_score, score_rh_ent, score_tec_ent,
-                vaga.peso_curriculo, vaga.peso_entrevista_rh, vaga.peso_entrevista_tec,
-            )
+        cand.score_total = calcular_score_final(
+            novo_score, score_rh_ent, score_tec_ent,
+            vaga.peso_curriculo, vaga.peso_entrevista_rh, vaga.peso_entrevista_tec,
+        )
         atualizadas += 1
     return atualizadas
 
@@ -256,6 +304,109 @@ def deletar_vaga(vaga_id: str, db: Session = DB, _=APENAS_ADMIN):
     db.commit()
 
 
+@router.post("/{vaga_id}/rerankar", response_model=list[CandidaturaRerankItem])
+def rerankar_candidaturas(
+    vaga_id : str,
+    db      : Session = DB,
+    usuario = Depends(get_usuario_atual),
+):
+    """
+    Reordena os candidatos da vaga usando cross-encoder (mais preciso que bi-encoder).
+
+    Fluxo:
+      1. Carrega os top-N candidaturas ordenadas por score_curriculo (bi-encoder)
+      2. Aplica o cross-encoder sobre (vaga_requisitos, trecho_cv) de cada uma
+      3. Retorna a lista reordenada com score_rerank adicionado
+
+    O cross-encoder é carregado na primeira chamada (~2–5s) e fica em memória.
+    Chamadas subsequentes são mais rápidas.
+    """
+    import time
+    from app.ai.reranker import rerankar
+    from app.core.config import settings
+    from app.models.curriculo import Curriculo
+
+    t_inicio = time.perf_counter()
+
+    vaga = db.query(Vaga).filter(Vaga.id == vaga_id).first()
+    if not vaga:
+        raise HTTPException(status_code=404, detail="Vaga não encontrada")
+
+    logger.info("rerankar endpoint: vaga_id=%s, usuário=%s", vaga_id, getattr(usuario, "email", "?"))
+
+    # Carrega candidaturas com curriculo processado, ordenadas por score
+    candidaturas = (
+        db.query(Candidatura)
+        .filter(Candidatura.vaga_id == vaga_id)
+        .all()
+    )
+
+    logger.info("rerankar endpoint: %d candidatura(s) carregada(s) para a vaga.", len(candidaturas))
+
+    top_n   = settings.RERANKER_TOP_N
+    cur_map = {
+        str(c.candidatura_id): c
+        for c in db.query(Curriculo)
+            .filter(Curriculo.candidatura_id.in_([str(ca.id) for ca in candidaturas]))
+            .all()
+    }
+
+    logger.debug("rerankar endpoint: %d currículo(s) encontrado(s). top_n=%s", len(cur_map), top_n)
+
+    # Prepara lista para o reranker
+    items = []
+    sem_curriculo = 0
+    for ca in candidaturas:
+        cur = cur_map.get(str(ca.id))
+        if cur is None:
+            sem_curriculo += 1
+        items.append({
+            "id"               : str(ca.id),
+            "candidatura"      : ca,
+            "curriculo"        : cur,
+            "texto_curriculo"  : (cur.texto_extraido or "") if cur else "",
+            "score_curriculo"  : (cur.score_curriculo or 0) if cur else 0,
+        })
+
+    if sem_curriculo:
+        logger.warning(
+            "rerankar endpoint: %d candidatura(s) sem currículo processado (serão enviadas com texto vazio).",
+            sem_curriculo,
+        )
+
+    # Ordena por score bi-encoder e pega top-N
+    items_sorted = sorted(items, key=lambda x: x["score_curriculo"], reverse=True)
+
+    reranked = rerankar(
+        texto_vaga   = vaga.requisitos_texto,
+        candidaturas = items_sorted,
+        top_n        = top_n,
+    )
+
+    resultado = []
+    for item in reranked:
+        ca  = item["candidatura"]
+        cur = item["curriculo"]
+        resultado.append(CandidaturaRerankItem(
+            id              = ca.id,
+            candidato_id    = ca.candidato_id,
+            vaga_id         = ca.vaga_id,
+            status          = ca.status,
+            score_total     = ca.score_total,
+            score_curriculo = (cur.score_curriculo if cur else None),
+            score_rerank    = item.get("score_rerank"),
+            candidato       = ca.candidato,
+            curriculo       = cur,
+        ))
+
+    logger.info(
+        "rerankar endpoint: concluído em %.2fs — %d item(ns) retornado(s).",
+        time.perf_counter() - t_inicio, len(resultado),
+    )
+
+    return resultado
+
+
 @router.post("/{vaga_id}/analisar-mercado", response_model=VagaResponse)
 async def analisar_mercado_vaga(
     vaga_id: str,
@@ -273,7 +424,102 @@ async def analisar_mercado_vaga(
         "termos"                : resultado["termos_frequentes"],
         "total_vagas_analisadas": resultado["total_vagas_analisadas"],
         "fonte"                 : resultado["fonte"],
+        "atualizado_em"         : __import__("datetime").datetime.utcnow().isoformat(),
     }
     db.commit()
+    logger.info(
+        f"vaga={vaga_id} nome='{vaga.nome}' | mercado atualizado | "
+        f"{resultado['total_vagas_analisadas']} vagas analisadas | fonte={resultado['fonte']}"
+    )
+
+    # Recalcula scores de mercado dos CVs já processados com o novo vetor
+    recalculados = _recalcular_scores_mercado(db, vaga)
+    if recalculados:
+        logger.info(f"vaga={vaga_id} | {recalculados} CVs recalculados com novo vetor de mercado")
+    else:
+        logger.info(f"vaga={vaga_id} | nenhum CV processado para recalcular")
+
     db.refresh(vaga)
     return vaga
+
+
+@router.get("/{vaga_id}/exportar")
+def exportar_candidatos(
+    vaga_id: str,
+    db: Session = DB,
+    _=QUALQUER_PAPEL,
+):
+    """Exporta candidatos da vaga como CSV com scores e skills."""
+    vaga = db.query(Vaga).filter(Vaga.id == vaga_id).first()
+    if not vaga:
+        raise HTTPException(status_code=404, detail="Vaga não encontrada")
+
+    candidaturas = (
+        db.query(Candidatura)
+        .filter(Candidatura.vaga_id == vaga_id)
+        .order_by(
+            Candidatura.score_total.desc().nullslast(),
+        )
+        .all()
+    )
+
+    buf = io.StringIO()
+    w   = csv.writer(buf)
+    w.writerow([
+        "Nome", "E-mail", "Telefone", "Cidade", "Estado",
+        "Status", "Score currículo", "Score RH", "Score mercado",
+        "Score total", "Anos experiência", "Skills em comum",
+    ])
+
+    STATUS_PT = {
+        "novo": "Novo", "triagem_pendente": "Triagem pendente",
+        "aprovado_triagem": "Aprovado triagem", "reprovado_triagem": "Reprovado triagem",
+        "entrevista_rh_agendada": "Entrevista RH agendada",
+        "entrevista_rh_realizada": "Entrevista RH realizada",
+        "reprovado_rh": "Reprovado RH",
+        "entrevista_tec_agendada": "Entrevista técnica agendada",
+        "entrevista_tec_realizada": "Entrevista técnica realizada",
+        "reprovado_tecnico": "Reprovado técnico",
+        "decisao_pendente": "Decisão pendente",
+        "contratado": "Contratado", "nao_aprovado": "Não aprovado",
+        "banco_de_talentos": "Banco de talentos",
+    }
+
+    def _csv_str(value) -> str:
+        """Evita CSV formula injection prefixando valores que iniciam com =+-@"""
+        s = str(value) if value is not None else ""
+        if s and s[0] in ("=", "+", "-", "@", "\t", "\r"):
+            return "'" + s
+        return s
+
+    for cand in candidaturas:
+        c   = cand.candidato
+        cur = cand.curriculo
+        expl = cur.explicacao if cur else None
+        sinais = (expl or {}).get("sinais_estruturais", {})
+        skills = ", ".join(sinais.get("habilidades_em_comum", []))
+        anos   = sinais.get("anos_experiencia", "")
+        status_val = str(cand.status.value if hasattr(cand.status, "value") else cand.status)
+        w.writerow([
+            _csv_str(c.nome if c else ""),
+            _csv_str(c.email if c else ""),
+            _csv_str(c.telefone or "" if c else ""),
+            _csv_str(c.cidade or "" if c else ""),
+            _csv_str(c.estado or "" if c else ""),
+            STATUS_PT.get(status_val, status_val),
+            cur.score_curriculo if cur else "",
+            cur.score_rh        if cur else "",
+            cur.score_mercado   if cur else "",
+            cand.score_total or "",
+            anos,
+            _csv_str(skills),
+        ])
+
+    buf.seek(0)
+    import re as _re
+    nome_arquivo = _re.sub(r'[^\w\-]', '_', vaga.nome.lower())[:40]
+    return StreamingResponse(
+        iter([buf.getvalue().encode("utf-8-sig")]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{nome_arquivo}_candidatos.csv"'},
+    )

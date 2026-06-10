@@ -56,15 +56,15 @@ def _resumo(r: dict) -> None:
         print(f"  HTTP {r['erro_http']}: {r.get('detalhe')}")
 
 
-# ── Demo 1: importação via JSON ───────────────────────────────────────────────
+# ── 1: importação via JSON ────────────────────────────────────────────────────
 def demo_json():
-    _cabecalho("DEMO 1 — JSON: vaga + candidatos com currículo")
+    _cabecalho("1 — JSON: vaga + candidatos com currículo")
     payload = {
         "fonte": "greenhouse",
         "vagas": [
             {
-                "external_id": "demo_v1",
-                "nome": "Demo Dev Python",
+                "external_id": "wh_v1",
+                "nome": "Desenvolvedor Python Pleno",
                 "requisitos_texto": (
                     "Desenvolvedor Python com experiência em FastAPI, SQLAlchemy, "
                     "PostgreSQL, Docker e boas práticas de API REST. "
@@ -74,9 +74,9 @@ def demo_json():
         ],
         "candidatos": [
             {
-                "external_id": "demo_c1",
-                "nome": "Alice Demo",
-                "email": "alice.demo@externo.com",
+                "external_id": "wh_c1",
+                "nome": "Fernanda Oliveira",
+                "email": "fernanda.oliveira@email.com",
                 "telefone": "11999990001",
                 "cidade": "São Paulo",
                 "estado": "SP",
@@ -94,19 +94,19 @@ def demo_json():
                     "Trabalhou com FastAPI, SQLAlchemy, PostgreSQL e Docker em "
                     "projetos de APIs REST. Inglês avançado."
                 ),
-                "vaga_external_id": "demo_v1",
+                "vaga_external_id": "wh_v1",
             },
             {
-                "external_id": "demo_c2",
-                "nome": "Bruno Demo",
-                "email": "bruno.demo@externo.com",
+                "external_id": "wh_c2",
+                "nome": "Rafael Costa",
+                "email": "rafael.costa@email.com",
                 "cidade": "Campinas",
                 "estado": "SP",
                 "curriculo_texto": (
                     "Backend developer com 2 anos. Python, Django, PostgreSQL. "
                     "Iniciante em FastAPI e Docker."
                 ),
-                "vaga_external_id": "demo_v1",
+                "vaga_external_id": "wh_v1",
             },
         ],
     }
@@ -114,15 +114,15 @@ def demo_json():
     _resumo(resultado)
 
 
-# ── Demo 2: upsert — atualiza candidato já existente ─────────────────────────
+# ── 2: upsert — atualiza candidato já existente ───────────────────────────────
 def demo_upsert():
-    _cabecalho("DEMO 2 — Upsert: atualiza candidato alice.demo@externo.com")
+    _cabecalho("2 — Upsert: atualiza candidato fernanda.oliveira@email.com")
     payload = {
         "fonte": "linkedin",
         "candidatos": [
             {
-                "nome": "Alice Demo Atualizada",
-                "email": "alice.demo@externo.com",
+                "nome": "Fernanda Oliveira",
+                "email": "fernanda.oliveira@email.com",
                 "telefone": "11988880001",
                 "cidade": "Campinas",
                 "estado": "SP",
@@ -133,20 +133,20 @@ def demo_upsert():
     _resumo(resultado)
 
 
-# ── Demo 3: XML ───────────────────────────────────────────────────────────────
+# ── 3: XML ────────────────────────────────────────────────────────────────────
 def demo_xml():
-    _cabecalho("DEMO 3 — XML: vaga + candidato (formato SAP/Oracle)")
+    _cabecalho("3 — XML: vaga + candidato (formato SAP/Oracle)")
     xml = """<importacao fonte="sap_hcm">
   <vagas>
-    <vaga external_id="demo_xml_v1">
-      <nome>Demo Analista Financeiro</nome>
+    <vaga external_id="xml_v1">
+      <nome>Analista Financeiro</nome>
       <requisitos_texto>Excel avancado, SAP FI, Power BI, IFRS, fluxo de caixa, CRC preferencial</requisitos_texto>
     </vaga>
   </vagas>
   <candidatos>
-    <candidato external_id="demo_xml_c1" vaga_external_id="demo_xml_v1">
-      <nome>Carla Demo XML</nome>
-      <email>carla.xml@externo.com</email>
+    <candidato external_id="xml_c1" vaga_external_id="xml_v1">
+      <nome>Mariana Santos</nome>
+      <email>mariana.santos@email.com</email>
       <telefone>21988880001</telefone>
       <cidade>Rio de Janeiro</cidade>
       <estado>RJ</estado>
@@ -164,29 +164,29 @@ def demo_xml():
     _resumo(resultado)
 
 
-# ── Demo 4: erros parciais — email inválido não interrompe os demais ──────────
+# ── 4: erros parciais — email inválido não interrompe os demais ───────────────
 def demo_erros_parciais():
-    _cabecalho("DEMO 4 — Erros parciais: 1 inválido + 2 válidos")
+    _cabecalho("4 — Erros parciais: 1 inválido + 2 válidos")
     payload = {
         "candidatos": [
-            {"nome": "OK Um",    "email": "ok1.demo@externo.com"},
-            {"nome": "Invalido", "email": "nao-e-um-email"},
-            {"nome": "OK Dois",  "email": "ok2.demo@externo.com"},
+            {"nome": "Juliana Pires",  "email": "juliana.pires@email.com"},
+            {"nome": "Registro Inválido", "email": "nao-e-um-email"},
+            {"nome": "Marcos Almeida", "email": "marcos.almeida@email.com"},
         ]
     }
     resultado = _post(payload)
     _resumo(resultado)
 
 
-# ── Demo 5: candidatura vinculada a vaga existente por nome ──────────────────
+# ── 5: candidatura vinculada a vaga existente por nome ───────────────────────
 def demo_vaga_por_nome():
-    _cabecalho("DEMO 5 — Vincula a vaga existente pelo nome")
+    _cabecalho("5 — Vincula a vaga existente pelo nome")
     payload = {
         "fonte": "gupy",
         "candidatos": [
             {
-                "nome": "Diego Demo",
-                "email": "diego.demo@externo.com",
+                "nome": "Lucas Ferreira",
+                "email": "lucas.ferreira@email.com",
                 "cidade": "Belo Horizonte",
                 "estado": "MG",
                 "curriculo_texto": "DevOps com 5 anos. Kubernetes, Terraform, AWS, CI/CD.",

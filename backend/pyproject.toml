@@ -1,3 +1,6 @@
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths  = ["tests"]
+markers    = [
+    "slow: testes com modelo de embedding real (~30s na 1ª execução)",
+]

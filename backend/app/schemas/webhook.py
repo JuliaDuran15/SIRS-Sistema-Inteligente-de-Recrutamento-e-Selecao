@@ -1,43 +1,55 @@
 """Schemas de entrada e saída para o webhook de importação."""
 from datetime import date
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 
 class FormacaoImport(BaseModel):
-    curso         : str
-    instituicao   : str
-    nivel         : str = "graduacao"
-    status        : str = "concluido"
-    ano_conclusao : int | None = None
+    curso         : str           = Field(..., min_length=1, max_length=200)
+    instituicao   : str           = Field(..., min_length=1, max_length=200)
+    nivel         : str           = Field("graduacao", max_length=50)
+    status        : str           = Field("concluido", max_length=50)
+    ano_conclusao : int | None    = Field(None, ge=1900, le=2100)
 
 
 class VagaImport(BaseModel):
-    external_id      : str | None = None
-    nome             : str
-    requisitos_texto : str
+    external_id      : str | None = Field(None, max_length=100)
+    nome             : str        = Field(..., min_length=1, max_length=200)
+    requisitos_texto : str        = Field(..., min_length=1, max_length=20_000)
+
+    @field_validator("nome", "requisitos_texto", mode="before")
+    @classmethod
+    def strip_strings(cls, v):
+        return v.strip() if isinstance(v, str) else v
 
 
 class CandidatoImport(BaseModel):
-    external_id     : str | None = None
-    nome            : str
-    email           : str   # validado individualmente no processamento para suportar erros parciais
-    telefone        : str | None = None
+    external_id     : str | None  = Field(None, max_length=100)
+    nome            : str         = Field(..., min_length=1, max_length=200)
+    email           : str         = Field(..., max_length=254)
+    # email validado individualmente no processamento para suportar erros parciais
+    telefone        : str | None  = Field(None, max_length=30)
     data_nascimento : date | None = None
-    logradouro      : str | None = None
-    bairro          : str | None = None
-    cidade          : str | None = None
-    estado          : str | None = None
-    cep             : str | None = None
+    logradouro      : str | None  = Field(None, max_length=200)
+    bairro          : str | None  = Field(None, max_length=100)
+    cidade          : str | None  = Field(None, max_length=100)
+    estado          : str | None  = Field(None, max_length=2)
+    cep             : str | None  = Field(None, max_length=10)
     formacao        : list[FormacaoImport] = []
-    curriculo_texto : str | None = None
+    curriculo_texto : str | None  = Field(None, max_length=100_000)
     # Referências para vincular a uma vaga
-    vaga_external_id : str | None = None   # referencia VagaImport.external_id no mesmo payload
-    vaga_nome        : str | None = None   # fallback: busca por nome no banco
+    vaga_external_id : str | None = Field(None, max_length=100)
+    vaga_nome        : str | None = Field(None, max_length=200)
+
+    @field_validator("nome", "email", "telefone", "logradouro", "bairro",
+                     "cidade", "estado", "cep", mode="before")
+    @classmethod
+    def strip_strings(cls, v):
+        return v.strip() if isinstance(v, str) else v
 
 
 class ImportacaoPayload(BaseModel):
     """Envelope completo aceito pelo endpoint /webhook/importar (JSON)."""
-    fonte      : str | None = None
+    fonte      : str | None = Field(None, max_length=100)
     vagas      : list[VagaImport] = []
     candidatos : list[CandidatoImport] = []
 

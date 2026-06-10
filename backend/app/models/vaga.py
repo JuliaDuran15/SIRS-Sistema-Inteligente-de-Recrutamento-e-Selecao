@@ -8,15 +8,20 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
+def _dim() -> int:
+    from app.core.config import settings
+    return settings.EMBEDDING_DIM
+
+
 class Vaga(Base):
     __tablename__ = "vagas"
 
     id               : Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     nome             : Mapped[str]       = mapped_column(String(200), nullable=False)
     requisitos_texto : Mapped[str]       = mapped_column(Text, nullable=False)
-    vetor_vaga                           = mapped_column(Vector(384), nullable=True)
+    vetor_vaga                           = mapped_column(Vector(_dim()), nullable=True)
     ranking_mercado  : Mapped[dict | None] = mapped_column(JSONB)
-    vetor_mercado                        = mapped_column(Vector(384), nullable=True)
+    vetor_mercado                        = mapped_column(Vector(_dim()), nullable=True)
 
     peso_rh          : Mapped[float]    = mapped_column(Float, default=0.6)
     peso_mercado     : Mapped[float]    = mapped_column(Float, default=0.4)

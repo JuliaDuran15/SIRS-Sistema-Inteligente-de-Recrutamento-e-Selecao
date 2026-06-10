@@ -7,7 +7,6 @@ import numpy as np
 from app.ai.resume_parser import get_model
 from app.core.config import settings
 
-# ── Tradução ───────────────────────────────────────────────────────────────
 
 def traduzir_para_ingles(texto: str) -> str:
     """Traduz texto para inglês usando deep-translator (sem API key)."""
@@ -150,6 +149,12 @@ def detectar_categoria(titulo_vaga: str) -> str:
 
 # ── Extração de skills ─────────────────────────────────────────────────────
 
+_EEO_MARKERS = {
+    "without regard", "equal employment", "qualified applicants",
+    "regardless of race", "discrimination on the basis",
+    "equal opportunity employer", "affirmative action",
+}
+
 def limpar_skills_desc(texto: str) -> list[str]:
     """
     Processa o skills_desc do LinkedIn.
@@ -158,20 +163,48 @@ def limpar_skills_desc(texto: str) -> list[str]:
     - "Python, Docker, AWS" (com espaços)
     - Texto corrido com frases longas
     """
+    # Trunca antes de qualquer boilerplate EEO para evitar que termos como
+    # "color", "religion", "age" sejam interpretados como skills.
+    texto_lower = texto.lower()
+    for marker in _EEO_MARKERS:
+        idx = texto_lower.find(marker)
+        if idx != -1:
+            comma_before = texto[:idx].rfind(",")
+            texto = texto[:comma_before] if comma_before > 0 else ""
+            break
+
+    if not texto.strip():
+        return []
+
     # Divide por vírgula
     partes = [p.strip() for p in texto.split(",")]
+
+    _PRIMEIRA_PALAVRA_FRASE = {
+        "we", "our", "this", "the", "a", "an", "at", "and", "without",
+        "to", "for", "in", "of", "on", "by", "as", "is", "are", "be",
+        "must", "may", "will", "should", "have", "has", "please",
+        "qualifications", "requirements", "responsibilities",
+        "preferred", "required", "ability", "experience",
+        "work", "working", "including", "perform",
+    }
 
     skills_limpas = []
     for parte in partes:
         # Ignora frases longas (texto corrido, não skill)
-        if len(parte) > 50:
+        if len(parte) > 45:
             continue
         # Ignora muito curto
         if len(parte) < 2:
             continue
-        # Ignora se começa com artigo/pronome (texto corrido)
+        # Ignora se começa com palavra de frase/artigo/pronome
         primeira_palavra = parte.split()[0].lower() if parte.split() else ""
-        if primeira_palavra in {"we", "our", "this", "the", "a", "an", "at", "and"}:
+        if primeira_palavra in _PRIMEIRA_PALAVRA_FRASE:
+            continue
+        # Ignora se tem muitas palavras (phrase, not a skill)
+        if len(parte.split()) > 5:
+            continue
+        # Ignora se parece concatenação sem espaço (ex: "qualificationsto")
+        if re.search(r'[a-z]{3,}to[a-z]|[a-z]{3,}the[a-z]|[a-z]{3,}for[a-z]', parte):
             continue
 
         skills_limpas.append(parte.lower().strip())
@@ -284,6 +317,44 @@ def extrair_de_adzuna(textos: list[str], top_n: int = 30) -> list[tuple[str, int
     return resultado
 
 
+_EEO_BLACKLIST = {
+    # Classes protegidas (EEO / anti-discriminação)
+    "race", "color", "colour", "religion", "national origin",
+    "sex", "gender", "sexual orientation", "gender identity",
+    "gender expression", "gender identity or expression",
+    "disability", "age", "veteran", "veteran status",
+    "protected veteran status", "genetic information",
+    "marital status", "pregnancy", "citizenship",
+    "ethnicity", "ancestry", "creed",
+    # Fragmentos de frases EEO que passam pelo split
+    "without regard", "equal opportunity", "equal employment",
+    "affirmative action", "qualified applicants",
+    # Benefícios trabalhistas — saúde e seguros
+    "dental", "vision", "medical", "health", "healthcare",
+    "life insurance", "group life", "group accident",
+    "group critical illness", "critical illness",
+    "ad&d", "accidental death", "short-term disability",
+    "long-term disability", "std", "ltd",
+    "health savings account", "hsa", "flexible spending account", "fsa",
+    "employee assistance program", "eap",
+    "group legal", "legal insurance", "identity theft",
+    "identify theft protection", "id theft",
+    # Benefícios trabalhistas — financeiros / mobilidade
+    "401k", "401(k)", "403b", "roth", "retirement", "pension",
+    "profit sharing", "equity", "stock options", "espp",
+    "pto", "paid time off", "paid vacation", "sick leave",
+    "parental leave", "maternity", "paternity",
+    "tuition reimbursement", "education reimbursement",
+    "commuter account", "commuter benefit", "commuter",
+    "transit", "parking", "wellness",
+    # Termos genéricos de RH / benefícios
+    "benefits", "compensation", "perks", "package",
+    "base salary", "bonus", "overtime",
+    "engineering",   # genérico demais para ser uma skill
+    "negotiation",   # aparece como soft skill mas não é técnica
+    "qualifications",
+}
+
 def extrair_de_kaggle(textos: list[str], top_n: int = 30) -> list[tuple[str, int]]:
     """
     Extrai skills do formato LinkedIn (lista separada por vírgula).
@@ -299,7 +370,7 @@ def extrair_de_kaggle(textos: list[str], top_n: int = 30) -> list[tuple[str, int
         "tools", "various", "experience", "knowledge", "skills",
         "strong", "work", "working", "role", "team", "business",
         "including", "communication", "verbal", "written",
-    }
+    } | _EEO_BLACKLIST
 
     for texto in textos:
         skills = limpar_skills_desc(texto)

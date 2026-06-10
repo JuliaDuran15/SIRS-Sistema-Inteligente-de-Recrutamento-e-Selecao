@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SIRS — Documentação Técnica</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --azul:    #1270A8;
+    --azul-lt: #EBF4FB;
+    --cinza:   #374151;
+    --cinza-lt:#F9FAFB;
+    --borda:   #E5E7EB;
+    --verde:   #065F46;
+    --roxo:    #4C1D95;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.7;
+    color: #1F2937;
+    background: #fff;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 48px 48px 80px;
+  }
+
+  /* Capa */
+  .capa {
+    text-align: center;
+    padding: 60px 0 48px;
+    border-bottom: 2px solid var(--azul);
+    margin-bottom: 48px;
+  }
+  .capa .tag {
+    display: inline-block;
+    background: var(--azul);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+  }
+  .capa h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #0D1B2A;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .capa .subtitulo {
+    font-size: 16px;
+    color: #6B7280;
+    font-weight: 400;
+    margin-bottom: 32px;
+  }
+  .capa .meta {
+    display: flex;
+    justify-content: center;
+    gap: 32px;
+    font-size: 13px;
+    color: #6B7280;
+  }
+  .capa .meta span strong { color: #374151; }
+
+  /* Índice */
+  .indice {
+    background: var(--cinza-lt);
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    padding: 24px 28px;
+    margin-bottom: 48px;
+  }
+  .indice h2 { font-size: 13px; font-weight: 600; color: #6B7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+  .indice ol { padding-left: 20px; }
+  .indice li { margin-bottom: 4px; }
+  .indice a { color: var(--azul); text-decoration: none; font-weight: 500; }
+  .indice a:hover { text-decoration: underline; }
+  .indice .sub { margin-top: 4px; }
+  .indice .sub li { font-size: 13px; color: #6B7280; margin-bottom: 2px; }
+  .indice .sub a { color: #6B7280; font-weight: 400; }
+
+  /* Headings */
+  h1 { font-size: 24px; font-weight: 700; color: #0D1B2A; }
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #0D1B2A;
+    margin-top: 56px;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--azul);
+  }
+  h2 .num {
+    display: inline-block;
+    background: var(--azul);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  h3 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1F2937;
+    margin-top: 28px;
+    margin-bottom: 10px;
+  }
+  h3::before { content: "▸ "; color: var(--azul); }
+  h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-top: 20px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  p { margin-bottom: 12px; color: #374151; }
+
+  /* Code */
+  code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    background: var(--cinza-lt);
+    border: 1px solid var(--borda);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #B91C1C;
+  }
+  pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    background: #0D1B2A;
+    color: #DFF0F6;
+    padding: 20px 24px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 16px 0 20px;
+    line-height: 1.6;
+  }
+  pre code { background: none; border: none; padding: 0; color: #DFF0F6; }
+  pre .kw  { color: #4DC8E8; }
+  pre .str { color: #2EE8B4; }
+  pre .cm  { color: #7DD8F0; opacity: 0.5; }
+  pre .num { color: #FCD34D; }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0 24px;
+    font-size: 13px;
+  }
+  th {
+    background: var(--azul);
+    color: #fff;
+    font-weight: 600;
+    padding: 9px 14px;
+    text-align: left;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--borda);
+    vertical-align: top;
+  }
+  tr:nth-child(even) td { background: var(--cinza-lt); }
+  td code { font-size: 11.5px; }
+
+  /* Callouts */
+  .callout {
+    border-left: 4px solid;
+    border-radius: 0 8px 8px 0;
+    padding: 14px 18px;
+    margin: 16px 0 20px;
+    font-size: 13.5px;
+  }
+  .callout.info  { border-color: var(--azul); background: var(--azul-lt); }
+  .callout.tip   { border-color: #059669; background: #ECFDF5; }
+  .callout.warn  { border-color: #D97706; background: #FFFBEB; }
+  .callout strong { display: block; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .callout.info strong  { color: var(--azul); }
+  .callout.tip strong   { color: #059669; }
+  .callout.warn strong  { color: #D97706; }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin: 0 2px;
+  }
+  .badge.azul   { background: var(--azul-lt); color: var(--azul); border: 1px solid #BFDBFE; }
+  .badge.verde  { background: #D1FAE5; color: var(--verde); border: 1px solid #A7F3D0; }
+  .badge.roxo   { background: #EDE9FE; color: var(--roxo); border: 1px solid #C4B5FD; }
+  .badge.cinza  { background: #F3F4F6; color: #374151; border: 1px solid #D1D5DB; }
+  .badge.laranja{ background: #FEF3C7; color: #92400E; border: 1px solid #FCD34D; }
+
+  /* Fórmula box */
+  .formula {
+    background: #F0F4FF;
+    border: 1px solid #C7D2FE;
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    margin: 16px 0 20px;
+    color: #1E3A8A;
+    line-height: 1.8;
+  }
+
+  /* Pipeline visual */
+  .pipeline {
+    background: var(--cinza-lt);
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    padding: 20px 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 2;
+    margin: 16px 0 20px;
+    color: #374151;
+  }
+
+  /* Grid de cards */
+  .cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin: 16px 0 24px;
+  }
+  .card {
+    border: 1px solid var(--borda);
+    border-radius: 8px;
+    padding: 16px 18px;
+    background: #fff;
+  }
+  .card h4 { margin-top: 0; font-size: 12px; }
+  .card p { font-size: 13px; margin-bottom: 0; }
+
+  ul, ol { padding-left: 22px; margin-bottom: 12px; }
+  li { margin-bottom: 4px; color: #374151; }
+  li strong { color: #1F2937; }
+
+  /* Print */
+  @media print {
+    body { padding: 20px 30px; max-width: 100%; }
+    h2 { page-break-before: always; }
+    .capa, .indice { page-break-after: avoid; }
+    pre { white-space: pre-wrap; }
+  }
+
+  .divider { border: none; border-top: 1px solid var(--borda); margin: 32px 0; }
+  .right { text-align: right; }
+  .muted { color: #6B7280; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ CAPA ═══════════════ -->
+<div class="capa">
+  <div class="tag">Documentação Técnica</div>
+  <h1>SIRS</h1>
+  <p class="subtitulo">Sistema Inteligente de Recrutamento e Seleção</p>
+  <div class="meta">
+    <span><strong>Versão</strong> 2.0</span>
+    <span><strong>Stack</strong> FastAPI · PostgreSQL · React · Celery</span>
+    <span><strong>Modelo IA</strong> multilingual-MiniLM-L12-v2 · bge-reranker-base</span>
+  </div>
+</div>
+
+<!-- ═══════════════ ÍNDICE ═══════════════ -->
+<div class="indice">
+  <h2>Índice</h2>
+  <ol>
+    <li><a href="#s1">Visão geral e objetivos</a></li>
+    <li><a href="#s2">Arquitetura e componentes</a>
+      <ol class="sub">
+        <li><a href="#s2-1">Diagrama de componentes</a></li>
+        <li><a href="#s2-2">Fluxo de dados</a></li>
+      </ol>
+    </li>
+    <li><a href="#s3">Banco de dados</a>
+      <ol class="sub">
+        <li><a href="#s3-1">Esquema relacional</a></li>
+        <li><a href="#s3-2">Vetores pgvector</a></li>
+        <li><a href="#s3-3">Campos JSONB relevantes</a></li>
+      </ol>
+    </li>
+    <li><a href="#s4">Pipeline de IA — detalhado</a>
+      <ol class="sub">
+        <li><a href="#s4-1">Etapa 1: Extração de texto (PDF)</a></li>
+        <li><a href="#s4-2">Etapa 2: Segmentação em seções</a></li>
+        <li><a href="#s4-3">Etapa 3: Vetorização (bi-encoder)</a></li>
+        <li><a href="#s4-4">Etapa 4: Extração de features estruturais</a></li>
+        <li><a href="#s4-5">Etapa 5: Cálculo de scores semânticos</a></li>
+        <li><a href="#s4-6">Etapa 6: Bônus estrutural</a></li>
+        <li><a href="#s4-7">Etapa 7: Score final e explicação XAI</a></li>
+        <li><a href="#s4-8">Reranking por cross-encoder (sob demanda)</a></li>
+        <li><a href="#s4-9">Market Analyzer</a></li>
+      </ol>
+    </li>
+    <li><a href="#s5">API Backend — endpoints</a></li>
+    <li><a href="#s6">Sistema de autenticação e autorização</a></li>
+    <li><a href="#s7">Pipeline de status das candidaturas</a></li>
+    <li><a href="#s8">Notificações por e-mail</a></li>
+    <li><a href="#s9">Webhook de importação</a></li>
+    <li><a href="#s10">Frontend — React SPA</a></li>
+    <li><a href="#s11">Segurança</a></li>
+    <li><a href="#s12">Testes</a></li>
+    <li><a href="#s13">Configuração e deploy</a></li>
+  </ol>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     1. VISÃO GERAL
+═══════════════════════════════════════════════════ -->
+<h2 id="s1"><span class="num">1</span>Visão geral e objetivos</h2>
+
+<p>O SIRS automatiza o processo de recrutamento e seleção através de uma pipeline de avaliação em camadas, combinando análise semântica de currículos com extração de features estruturais baseada em regras. O sistema não substitui a decisão humana — ele ordena e pontua candidatos para que o RH concentre esforço nos perfis mais alinhados à vaga.</p>
+
+<div class="cards">
+  <div class="card">
+    <h4>Problema resolvido</h4>
+    <p>Triagem manual de currículos em volume — lenta, subjetiva e propensa a inconsistências. Com 50+ candidatos por vaga, o RH não consegue analisar todos com a mesma profundidade.</p>
+  </div>
+  <div class="card">
+    <h4>Abordagem adotada</h4>
+    <p>Similaridade semântica vetorial (sem datasets rotulados) + sinais estruturais baseados em regras + análise de mercado em tempo real como proxy de relevância.</p>
+  </div>
+  <div class="card">
+    <h4>Três camadas de avaliação</h4>
+    <p><strong>1.</strong> Score curricular automático (bi-encoder + bônus)<br>
+    <strong>2.</strong> Entrevistas com score 0–10<br>
+    <strong>3.</strong> Score consolidado ponderado</p>
+  </div>
+  <div class="card">
+    <h4>Pesos configuráveis</h4>
+    <p>Cada vaga define seus próprios pesos para requisitos vs. mercado, e para currículo vs. entrevistas. O sistema se adapta ao perfil de cada processo seletivo.</p>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     2. ARQUITETURA
+═══════════════════════════════════════════════════ -->
+<h2 id="s2"><span class="num">2</span>Arquitetura e componentes</h2>
+
+<h3 id="s2-1">Diagrama de componentes</h3>
+
+<pre>
+┌─────────────────────────────────────────────────┐
+│              React SPA  (Vite + Tailwind)       │
+│  /vagas  /candidatos  /dashboard  /auditoria    │
+└───────────────────────┬─────────────────────────┘
+                        │ HTTPS  /api/*
+┌───────────────────────▼─────────────────────────┐
+│           FastAPI  (Python 3.11)                │
+│  JWT Auth · RBAC por papel + por vaga           │
+│  REST endpoints · Webhook JSON/XML              │
+│  Rate limiting (Redis)                          │
+└───┬───────────────────────────────┬─────────────┘
+    │ SQLAlchemy ORM                │ .delay()
+┌───▼──────────────┐    ┌───────────▼─────────────┐
+│   PostgreSQL 16  │    │     Celery Worker        │
+│   + pgvector     │    │                          │
+│                  │    │  processar_curriculo      │
+│  usuarios        │    │  processar_curriculo_texto│
+│  vagas           │    │  atualizar_mercado_vaga   │
+│    vetor_vaga    │    └───────────┬──────────────┘
+│    vetor_mercado │                │ usa
+│  candidatos      │    ┌───────────▼──────────────┐
+│  candidaturas    │    │        Motor de IA        │
+│    historico     │    │                          │
+│  curriculos      │    │  resume_parser            │
+│    vetor_embedding    │    PDF→texto→vetores      │
+│    vetor_secao_exp    │  section_extractor        │
+│    vetor_secao_skills │    segmenta seções        │
+│    explicacao    │    │  feature_extractor        │
+│  entrevistas     │    │    anos/nível/skills/prof │
+└──────────────────┘    │  matching_engine          │
+                        │    scores semânticos      │
+┌─────────────┐         │    bônus estrutural       │
+│    Redis    │         │  reranker (cross-enc.)    │
+│  (broker +  │         │  market_analyzer          │
+│  rate limit)│         │    Kaggle/Adzuna+TF-IDF   │
+└─────────────┘         └──────────────────────────┘
+</pre>
+
+<h3 id="s2-2">Fluxo de dados — processamento de um currículo</h3>
+
+<div class="pipeline">
+RH faz upload do PDF  OU  Webhook envia texto bruto
+        │
+        ▼
+  FastAPI recebe
+        │
+        ├─ salva arquivo em /app/uploads/curriculos/
+        ├─ cria registro Curriculo no banco
+        ├─ avança status: NOVO → AGUARDANDO_PROCESSAMENTO
+        └─ .delay() → Celery broker (Redis)
+                │
+                ▼
+        Celery Worker pega a tarefa
+                │
+  [PDF]  PyMuPDF.open()  →  texto bruto
+  [TXT]  texto já disponível
+                │
+                ▼
+        section_extractor.extrair_secoes()
+        ├─ tenta detectar cabeçalhos (EXPERIÊNCIA, HABILIDADES...)
+        └─ fallback: densidade de keywords por parágrafo
+                │
+                ▼
+        resume_parser.vetorizar_texto()     → vetor_embedding (384d)
+        resume_parser.vetorizar_secoes()    → vetor_secao_exp, vetor_secao_skills
+                │
+                ▼
+        feature_extractor.extrair_features_curriculo()
+        ├─ anos de experiência (3 estratégias)
+        ├─ nível de senioridade (0–6)
+        ├─ skills detectadas + proficiência (0.3/1.0/1.3)
+        └─ nível de educação (0–6)
+
+        feature_extractor.extrair_features_vaga()
+        feature_extractor.calcular_bonus_estrutural()
+                │
+                ▼
+        matching_engine.calcular_score_rh_multi_secao()  → score_rh
+        matching_engine.calcular_score_mercado()          → score_mercado
+        matching_engine.calcular_score_curriculo()        → score_curriculo (0–100)
+        matching_engine.gerar_explicacao()                → JSON XAI
+                │
+                ▼
+        Salva no banco:
+        ├─ curriculo.vetor_embedding, vetor_secao_exp, vetor_secao_skills
+        ├─ curriculo.score_rh, score_mercado, score_curriculo
+        ├─ curriculo.explicacao (JSON com componentes + sinais)
+        └─ avança status: AGUARDANDO_PROC → TRIAGEM_PENDENTE
+                │
+                ▼
+        email_cv_processado() → RH (se SMTP configurado)
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     3. BANCO DE DADOS
+═══════════════════════════════════════════════════ -->
+<h2 id="s3"><span class="num">3</span>Banco de dados</h2>
+
+<h3 id="s3-1">Esquema relacional</h3>
+
+<table>
+  <tr><th>Tabela</th><th>Colunas principais</th><th>Tipo</th><th>Observação</th></tr>
+  <tr>
+    <td><code>usuarios</code></td>
+    <td>id, nome, email, senha_hash, papel, ativo, criado_em</td>
+    <td>—</td>
+    <td>papel: <code>rh | gestor | admin</code></td>
+  </tr>
+  <tr>
+    <td><code>vagas</code></td>
+    <td>id, nome, requisitos_texto, vetor_vaga, vetor_mercado, ranking_mercado, pesos (5 campos), status, gestores_ids, criado_por_id, rhs_autorizados, criado_em</td>
+    <td>Vector(384) × 2, JSONB × 2</td>
+    <td>status: <code>aberta | pausada | fechada</code></td>
+  </tr>
+  <tr>
+    <td><code>candidatos</code></td>
+    <td>id, nome, email, telefone, endereço (6 campos), data_nascimento, formacao, criado_em</td>
+    <td>JSONB (formacao)</td>
+    <td>formacao: lista de FormacaoItem</td>
+  </tr>
+  <tr>
+    <td><code>candidaturas</code></td>
+    <td>id, candidato_id, vaga_id, status, score_total, historico, origem, fonte, criado_em, atualizado_em</td>
+    <td>JSONB (historico)</td>
+    <td>origem: <code>manual | externo</code></td>
+  </tr>
+  <tr>
+    <td><code>curriculos</code></td>
+    <td>id, candidatura_id, texto_extraido, vetor_embedding, vetor_secao_exp, vetor_secao_skills, arquivo_pdf, score_rh, score_mercado, score_curriculo, explicacao, processado_em, criado_em</td>
+    <td>Vector(384) × 3, JSONB (explicacao), Text</td>
+    <td>1 por candidatura (unique)</td>
+  </tr>
+  <tr>
+    <td><code>entrevistas</code></td>
+    <td>id, candidatura_id, entrevistador_id, tipo, status, score_manual, anotacoes, pontos_fortes, pontos_fracos, historico_edicoes, agendada_para, realizada_em, criado_em</td>
+    <td>ARRAY(String) × 2, JSONB</td>
+    <td>tipo: <code>rh | tecnica</code></td>
+  </tr>
+</table>
+
+<h3 id="s3-2">Vetores pgvector</h3>
+
+<p>A extensão <code>pgvector</code> adiciona o tipo <code>vector(N)</code> ao PostgreSQL, permitindo armazenar e comparar embeddings diretamente no banco. O sistema usa 384 dimensões (configurável via <code>EMBEDDING_DIM</code>).</p>
+
+<table>
+  <tr><th>Campo</th><th>O que representa</th><th>Quando é None</th></tr>
+  <tr><td><code>curriculos.vetor_embedding</code></td><td>CV completo vetorizado</td><td>Antes do processamento</td></tr>
+  <tr><td><code>curriculos.vetor_secao_exp</code></td><td>Seção Experiência do CV</td><td>Seção não detectada no CV</td></tr>
+  <tr><td><code>curriculos.vetor_secao_skills</code></td><td>Seção Habilidades do CV</td><td>Seção não detectada no CV</td></tr>
+  <tr><td><code>vagas.vetor_vaga</code></td><td>Requisitos da vaga vetorizados</td><td>Nunca (criado junto com a vaga)</td></tr>
+  <tr><td><code>vagas.vetor_mercado</code></td><td>Skills de mercado vetorizadas</td><td>Antes de "Analisar mercado" ser acionado</td></tr>
+</table>
+
+<div class="callout info">
+  <strong>Por que vetorizar seções separadas?</strong>
+  O CV de um sênior tem muito texto. Comparar o vetor completo com o vetor da vaga dilui a parte relevante (experiência técnica) com ruído (objetivos, hobbies). Vetorizar a seção Experiência isoladamente e dar peso maior (60%) melhora a precisão sem precisar de um modelo diferente.
+</div>
+
+<h3 id="s3-3">Campos JSONB relevantes</h3>
+
+<div class="callout warn">
+  <strong>Armadilha crítica — mutação de JSONB no SQLAlchemy</strong>
+  O SQLAlchemy só detecta uma mudança num campo JSONB se o objeto Python atribuído for <em>diferente</em> do original. Fazer <code>field.append()</code> ou <code>field["key"] = value</code> sem reatribuição não marca o campo como dirty — a mudança é perdida no commit. Para qualquer campo JSONB (<code>historico</code>, <code>ranking_mercado</code>, <code>gestores_ids</code>), sempre crie uma nova lista/dict:
+  <br><br>
+  <code>candidatura.historico = list(candidatura.historico or [])</code><br>
+  em vez de mutação in-place sobre o objeto existente.
+</div>
+
+<p><strong><code>candidatura.historico</code></strong> — log de cada transição de status:</p>
+<pre><code>[
+  {
+    "de":   "triagem_pendente",
+    "para": "aprovado_triagem",
+    "ator": "Ana RH",
+    "em":   "2026-05-15T14:32:00"
+  }
+]</code></pre>
+
+<p><strong><code>curriculo.explicacao</code></strong> — breakdown do score calculado pela IA:</p>
+<pre><code>{
+  "score_final": 72.5,
+  "componentes": {
+    "aderencia_vaga": {
+      "score": 78.2, "peso": "60%",
+      "contribuicao": 46.9, "classificacao": "bom"
+    },
+    "aderencia_mercado": {
+      "score": 64.1, "peso": "40%",
+      "contribuicao": 25.6, "classificacao": "bom"
+    }
+  },
+  "sinais_estruturais": {
+    "anos_experiencia":  8.0,
+    "nivel_senioridade": 3,
+    "nivel_educacao":    3,
+    "habilidades":       ["aws", "docker", "fastapi", "python"],
+    "habilidades_em_comum": ["docker", "fastapi", "python"]
+  },
+  "resumo": "Score 72.5/100 — 46.9 pts da vaga e 25.6 pts do mercado."
+}</code></pre>
+
+<p><strong><code>vaga.ranking_mercado</code></strong> — resultado da análise de mercado:</p>
+<pre><code>{
+  "termos":  [{"termo": "python", "frequencia": 89}, {"termo": "docker", "frequencia": 72}],
+  "total_vagas_analisadas": 450,
+  "fonte": "kaggle",
+  "categoria": "tech"
+}</code></pre>
+
+
+<!-- ═══════════════════════════════════════════════
+     4. PIPELINE DE IA
+═══════════════════════════════════════════════════ -->
+<h2 id="s4"><span class="num">4</span>Pipeline de IA — detalhado</h2>
+
+<p>O processamento de cada currículo passa por 7 etapas sequenciais. As etapas 1–3 são de transformação de dados; 4–7 são de scoring e explicação.</p>
+
+<h3 id="s4-1">Etapa 1 — Extração de texto do PDF</h3>
+
+<p>Módulo: <code>resume_parser.extrair_texto_pdf()</code> usando <strong>PyMuPDF (fitz)</strong>.</p>
+
+<p>O PDF é percorrido página a página. Cada página que contém texto extraível é convertida em string. PDFs escaneados (imagens) não são suportados e geram exceção <code>ValueError</code>.</p>
+
+<pre><code>doc = fitz.open(caminho_pdf)
+partes = [p.get_text("text") for p in doc if p.get_text("text").strip()]
+texto = "\n".join(partes)</code></pre>
+
+<h3 id="s4-2">Etapa 2 — Segmentação em seções</h3>
+
+<p>Módulo: <code>section_extractor.extrair_secoes()</code></p>
+
+<p>O texto do CV é dividido em quatro seções temáticas: <code>experiencia</code>, <code>habilidades</code>, <code>educacao</code>, <code>resumo</code>. A segmentação usa dois mecanismos em sequência:</p>
+
+<h4>Estratégia 1 — Detecção por cabeçalho</h4>
+<p>Varre as linhas do CV procurando por padrões de cabeçalho (linhas curtas ≤60 chars, maiúsculas, ou que batem com regex conhecidas). Exemplos detectados:</p>
+
+<table>
+  <tr><th>Padrão detectado</th><th>Seção atribuída</th></tr>
+  <tr><td><code>EXPERIÊNCIA PROFISSIONAL</code>, <code>work experience</code></td><td>experiencia</td></tr>
+  <tr><td><code>HABILIDADES TÉCNICAS</code>, <code>skills</code>, <code>stack tecnológico</code></td><td>habilidades</td></tr>
+  <tr><td><code>FORMAÇÃO ACADÊMICA</code>, <code>education</code></td><td>educacao</td></tr>
+  <tr><td><code>RESUMO PROFISSIONAL</code>, <code>perfil</code>, <code>objetivo</code></td><td>resumo</td></tr>
+</table>
+
+<h4>Estratégia 2 — Fallback por densidade semântica</h4>
+<p>Para seções não encontradas por cabeçalho, divide o texto em parágrafos e atribui cada um à seção com maior densidade de palavras-chave características. Por exemplo, um parágrafo com muitos nomes de tecnologias vai para <code>habilidades</code>.</p>
+
+<div class="callout info">
+  <strong>Impacto no score</strong>
+  CVs com cabeçalhos explícitos recebem scoring mais preciso — o vetor da seção Experiência representa diretamente o histórico profissional, sem misturar com formação ou hobbies. CVs sem cabeçalhos usam o vetor completo como fallback (menor precisão, mesma fórmula).
+</div>
+
+<h3 id="s4-3">Etapa 3 — Vetorização (bi-encoder)</h3>
+
+<p>Módulo: <code>resume_parser.vetorizar_texto()</code></p>
+
+<p><strong>Modelo:</strong> <code>paraphrase-multilingual-MiniLM-L12-v2</code> — multilingual (PT/EN/ES/etc.), 384 dimensões, carregado em memória no primeiro uso (lazy load).</p>
+
+<p>Cada texto (CV completo, seção experiência, seção habilidades, requisitos da vaga) é transformado em um vetor de 384 números reais com norma 1 (<em>normalize_embeddings=True</em>). A similaridade entre dois textos é calculada pelo produto escalar dos vetores, que com vetores normalizados equivale ao cosseno.</p>
+
+<div class="formula">
+sim(a, b) = a · b = Σ(aᵢ × bᵢ)  ∈ [−1, 1]
+</div>
+
+<p>A escolha do modelo multilingual é deliberada: CVs brasileiros misturam português e inglês técnico ("desenvolvi APIs em Python para processamento de NLP"). Um modelo exclusivamente em inglês perderia contexto em português; um exclusivamente em português não captaria os termos técnicos. O multilingual captura ambos.</p>
+
+<h3 id="s4-4">Etapa 4 — Extração de features estruturais</h3>
+
+<p>Módulo: <code>feature_extractor</code></p>
+
+<p>O embedding capta semântica mas ignora fatos estruturais: dois CVs com textos parecidos mas 2 vs 15 anos de experiência terão vetores próximos. O feature extractor usa regex e heurísticas para extrair sinais que o modelo ignora.</p>
+
+<h4>4.1 — Anos de experiência</h4>
+<p>Três estratégias em ordem de prioridade:</p>
+
+<table>
+  <tr><th>#</th><th>Estratégia</th><th>Exemplo</th><th>Resultado</th></tr>
+  <tr><td>1</td><td>Declaração explícita</td><td>"12 anos de experiência em ciência de dados"</td><td>12.0</td></tr>
+  <tr><td>2</td><td>Soma de intervalos detectados</td><td>2015–2019 + 2019–2023 (sem sobreposição)</td><td>8.0</td></tr>
+  <tr><td>3</td><td>Fallback conservador</td><td>Menor ano no texto: 2017 → span/1.4</td><td>estimativa</td></tr>
+</table>
+
+<p>Intervalos sobrepostos são <em>mergeados</em> antes de somar: <code>[(2015,2019),(2017,2022)] → [(2015,2022)] = 7 anos</code>, não 9.</p>
+<p>Datas de formação acadêmica são excluídas quando a seção de experiência é detectada — evita contar anos de faculdade como experiência profissional.</p>
+
+<h4>4.2 — Nível de senioridade</h4>
+<p>Detecta o <em>maior</em> nível encontrado no texto:</p>
+
+<table>
+  <tr><th>Nível</th><th>Keywords detectadas</th><th>Anos típicos (fallback)</th></tr>
+  <tr><td>0 — Estágio/Trainee</td><td>estagiário, trainee, aprendiz</td><td>0</td></tr>
+  <tr><td>1 — Júnior</td><td>júnior, junior</td><td>1</td></tr>
+  <tr><td>2 — Pleno</td><td>pleno</td><td>3</td></tr>
+  <tr><td>3 — Sênior</td><td>sênior, senior, especialista</td><td>6</td></tr>
+  <tr><td>4 — Lead/Staff</td><td>tech lead, lead, staff, arquiteto</td><td>9</td></tr>
+  <tr><td>5 — Gestão</td><td>head, coordenador, gerente</td><td>12</td></tr>
+  <tr><td>6 — Direção</td><td>diretor, vp, cto</td><td>15</td></tr>
+</table>
+
+<h4>4.3 — Skills técnicas</h4>
+<p>Catálogo de 100+ skills canônicas (linguagens, frameworks, bancos de dados, cloud, DevOps, ferramentas de negócio, metodologias). Aliases normalizam variações: <code>k8s → kubernetes</code>, <code>next.js → nextjs</code>, <code>devops → ci/cd</code>, <code>spring boot → springboot</code>.</p>
+
+<p>A detecção usa word-boundaries customizados que incluem pontos — necessário para detectar <code>node.js</code> sem fazer falso positivo com substrings.</p>
+
+<h4>4.4 — Proficiência por skill</h4>
+<p>Para cada skill detectada, analisa uma janela de <strong>±70 caracteres</strong> ao redor da menção:</p>
+
+<table>
+  <tr><th>Modificadores</th><th>Peso</th><th>Exemplo</th></tr>
+  <tr><td>básico, iniciante, noções, beginner</td><td>0.3</td><td>"Python básico para scripts"</td></tr>
+  <tr><td><em>(sem modificador)</em></td><td>1.0</td><td>"Experiência com Python"</td></tr>
+  <tr><td>avançado, expert, sólido, domínio</td><td>1.3</td><td>"Python avançado, 8 anos"</td></tr>
+</table>
+
+<div class="callout warn">
+  <strong>Limitação conhecida</strong>
+  A janela de ±70 chars pode "sangrar" entre skills próximas no texto. "Python avançado, Docker básico" pode fazer Python receber peso 0.3 (o "básico" do Docker entra na janela do Python). Para evitar isso, as skills devem estar separadas por mais de 70 chars, o que normalmente acontece em CVs bem estruturados.
+</div>
+
+<h3 id="s4-5">Etapa 5 — Scores semânticos</h3>
+
+<p>Módulo: <code>matching_engine</code></p>
+
+<h4>Score RH (aderência à vaga)</h4>
+
+<div class="formula">
+<span style="color:#1270A8;font-weight:600">Com seção de experiência detectada:</span>
+  score_rh = 0.60 × sim(vetor_secao_exp, vetor_vaga)
+           + 0.40 × sim(vetor_embedding, vetor_vaga)
+
+<span style="color:#1270A8;font-weight:600">Sem seção (fallback):</span>
+  score_rh = sim(vetor_embedding, vetor_vaga)
+</div>
+
+<h4>Score Mercado (aderência ao mercado)</h4>
+
+<div class="formula">
+<span style="color:#1270A8;font-weight:600">Com seção de habilidades detectada:</span>
+  score_mercado = 0.60 × sim(vetor_secao_skills, vetor_mercado)
+               + 0.40 × sim(vetor_embedding, vetor_mercado)
+
+<span style="color:#1270A8;font-weight:600">Sem seção:</span>
+  score_mercado = sim(vetor_embedding, vetor_mercado)
+</div>
+
+<p>O <code>vetor_mercado</code> é gerado pelo Market Analyzer e representa as skills mais demandadas no mercado para o cargo daquela vaga. Se ainda não foi calculado, usa o próprio <code>vetor_vaga</code> como fallback.</p>
+
+<h3 id="s4-6">Etapa 6 — Bônus estrutural</h3>
+
+<p>Módulo: <code>feature_extractor.calcular_bonus_estrutural()</code></p>
+
+<p>O bônus compensa limitações do embedding — dois CVs semanticamente similares mas com perfis estruturais muito diferentes (um sênior e um estagiário) receberão pontuações diferentes graças a este componente.</p>
+
+<div class="callout info">
+  <strong>Ordem de cálculo importa</strong>
+  O overlap de skills é calculado <em>antes</em> dos outros dois componentes porque condiciona o bônus de experiência — experiência em área irrelevante (0 overlap de skills) não deve ser premiada.
+</div>
+
+<h4>Componente 1 — Skills overlap (calculado primeiro)</h4>
+<div class="formula">
+skills_comuns = habilidades_cv ∩ habilidades_vaga
+
+<span style="color:#dc2626;font-weight:600">SE skills_comuns = ∅ E habilidades_vaga ≠ ∅:</span>
+  bonus -= 0.15   ← penalidade por irrelevância completa
+
+<span style="color:#065f46;font-weight:600">SE skills_comuns ≠ ∅:</span>
+  peso_total = Σ proficiência(skill) para cada skill em skills_comuns
+  overlap    = peso_total / |habilidades_vaga|
+  bonus     += overlap × 0.08   ← max +0.08 com overlap=1 e prof=1
+</div>
+
+<h4>Componente 2 — Experiência (escalada pelo overlap)</h4>
+<div class="formula">
+ratio  = anos_candidato / anos_requeridos_vaga
+escala = max(overlap, 0.3)   ← experiência irrelevante vale ≥30% menos
+
+SE ratio ≥ 1.0:   bonus += 0.08 × escala   ← cumpre/supera
+SE ratio ≥ 0.7:   bonus += 0.03 × escala   ← próximo do requisito
+SE ratio &lt; 0.35:  bonus -= 0.10            ← muito aquém (não escalado)
+</div>
+
+<h4>Componente 3 — Senioridade</h4>
+<div class="formula">
+diff = nivel_candidato − nivel_requerido_vaga
+
+diff == 0:  bonus += 0.07   ← nível exato
+diff == 1:  bonus += 0.03   ← um nível acima (ok)
+diff > 1:   bonus -= 0.01   ← overqualification
+diff == -1: bonus -= 0.05   ← um nível abaixo
+diff == -2: bonus -= 0.10   ← dois níveis abaixo
+diff ≤ -3:  bonus -= 0.15   ← mismatch severo
+
+bonus = clamp(bonus, -0.25, +0.25)
+</div>
+
+<h3 id="s4-7">Etapa 7 — Score final e explicação XAI</h3>
+
+<p>Módulo: <code>matching_engine.calcular_score_curriculo()</code> e <code>gerar_explicacao()</code></p>
+
+<div class="formula">
+score_curriculo = clamp(
+    score_rh × peso_rh + score_mercado × peso_mercado + bonus_estrutural,
+    0.0, 1.0
+) × 100
+</div>
+
+<p>O bônus é aplicado ao score <em>combinado</em> (não apenas ao score_rh), garantindo que os sinais estruturais influenciem o resultado independentemente dos pesos configurados na vaga.</p>
+
+<p>A <strong>explicação XAI</strong> é gerada junto e salva em <code>curriculo.explicacao</code>. Ela mostra ao RH:</p>
+<ul>
+  <li>Contribuição em pontos de cada componente</li>
+  <li>Classificação semântica: <em>excelente</em> (≥80%), <em>bom</em> (≥65%), <em>regular</em> (≥50%), <em>baixo</em></li>
+  <li>Skills detectadas no CV em comum com a vaga</li>
+  <li>Anos de experiência e nível de senioridade extraídos</li>
+</ul>
+
+<div class="callout info">
+  <strong>Recálculo automático ao editar a vaga</strong>
+  Quando os <strong>pesos</strong> (<code>PATCH /vagas/{id}/pesos</code>) ou os <strong>requisitos</strong> (<code>PATCH /vagas/{id}/requisitos</code>) de uma vaga são alterados, a função <code>_recalcular_scores_vaga()</code> em <code>vagas.py</code> recalcula automaticamente <code>score_curriculo</code> <em>e</em> <code>explicacao</code> para todos os CVs da vaga — garantindo que o breakdown exibido ao RH reflita os pesos atuais.
+</div>
+
+<h3 id="s4-8">Reranking por cross-encoder (sob demanda)</h3>
+
+<p>Módulo: <code>reranker.py</code> — modelo <code>BAAI/bge-reranker-base</code></p>
+
+<p>O bi-encoder gera vetores isolados para cada texto — rápido, mas perde interações entre os dois textos. O cross-encoder lê o par <code>(requisitos_vaga, trecho_cv)</code> juntos em uma única passagem pelo modelo, capturando relações cruzadas.</p>
+
+<table>
+  <tr><th></th><th>Bi-encoder</th><th>Cross-encoder</th></tr>
+  <tr><td><strong>Como funciona</strong></td><td>Vetoriza cada texto independentemente; compara por produto escalar</td><td>Lê os dois textos juntos no mesmo forward pass</td></tr>
+  <tr><td><strong>Complexidade</strong></td><td>O(1) na leitura (vetor já salvo)</td><td>O(N) — processa cada par na chamada</td></tr>
+  <tr><td><strong>Precisão</strong></td><td>Boa para retrieval em escala</td><td>Mais preciso para reranking de top-N</td></tr>
+  <tr><td><strong>Quando usar</strong></td><td>Ordenação automática de todos os candidatos</td><td>Refinamento dos top-20 sob demanda</td></tr>
+</table>
+
+<p>O modelo é carregado em memória apenas na primeira chamada (lazy load, ~270 MB). O endpoint <code>POST /vagas/{id}/rerankar</code> processa os top-N candidatos e retorna a lista reordenada com <code>score_rerank</code>.</p>
+
+<h3 id="s4-9">Market Analyzer</h3>
+
+<p>Módulo: <code>market_analyzer.py</code> — acionado via <code>POST /vagas/{id}/analisar-mercado</code></p>
+
+<p>Detecta a categoria do cargo (tech, direito, RH, engenharia, financeiro, marketing, saúde) e coleta dados de vagas reais:</p>
+
+<table>
+  <tr><th>Categoria</th><th>Fonte de dados</th><th>Fallback</th></tr>
+  <tr><td>tech</td><td>Kaggle LinkedIn Jobs (~120k vagas)</td><td>Skills curadas hardcoded</td></tr>
+  <tr><td>demais</td><td>Adzuna API (vagas em PT-BR)</td><td>Skills curadas hardcoded</td></tr>
+</table>
+
+<p>Sobre os textos coletados aplica <strong>TF-IDF</strong> para extrair as skills mais discriminativas do cargo. Depois vetoriza a lista ponderada de skills e salva como <code>vaga.vetor_mercado</code>. O <code>score_mercado</code> mede o quanto o CV do candidato está alinhado a essas tendências de mercado.</p>
+
+<div class="callout tip">
+  <strong>Filtragem EEO e benefits</strong>
+  O dataset LinkedIn (Kaggle) mistura skills técnicas com texto EEO (<em>equal employment opportunity</em>) e benefícios no campo <code>skills_desc</code>. A função <code>limpar_skills_desc()</code> em <code>market_analyzer.py</code> aplica uma blacklist expandida que exclui termos como "health savings account", "401k", "parental leave", "disability", "stock options" e similares, além de filtrar fragmentos com mais de 5 palavras ou iniciados por preposições/verbos auxiliares — evitando que termos irrelevantes contaminem o vetor de mercado.
+</div>
+
+
+<h3 id="s4-10">Sumarização de transcrições (transcript_analyzer.py)</h3>
+
+<p>Módulo: <code>app/ai/transcript_analyzer.py</code> — sem dependências externas, sem chamadas a API de IA.</p>
+
+<p>Permite colar a transcrição de uma entrevista (Google Meet, Zoom, etc.) e obter automaticamente pontos fortes, pontos fracos e anotações pré-preenchidos para revisão antes de salvar.</p>
+
+<p><strong>Algoritmo (extrativo, não generativo):</strong></p>
+<ol>
+  <li><strong>Limpeza</strong> — remove timestamps (<code>[00:05:12]</code>, <code>0:00:08</code>), labels de falante (<code>Ana (RH):</code>, <code>Entrevistador:</code>), marcadores de ruído (<code>[inaudível]</code>, <code>[risos]</code>), tags HTML</li>
+  <li><strong>Segmentação</strong> — divide em sentenças por pontuação (<code>.!?</code>) ou parágrafo duplo; filtra sentenças &lt; 20 chars</li>
+  <li><strong>TF-IDF</strong> — pontua cada sentença por relevância (termos raros no contexto da transcrição pontuam mais)</li>
+  <li><strong>Classificação por dicionário</strong> — cada sentença é rotulada como <code>forte</code> / <code>fraco</code> / <code>neutro</code> via vocabulário PT+EN</li>
+  <li><strong>Extração</strong> — retorna top-4 por categoria, truncadas a 55 chars com <code>…</code>; anotações = top sentenças neutras concatenadas</li>
+</ol>
+
+<table>
+  <tr><th>Vocabulário</th><th>Exemplos (PT)</th><th>Exemplos (EN)</th></tr>
+  <tr><td><strong>Fortes</strong></td><td>liderança, implementei, certificado, domínio, excelente, fluente, resultado, autonomia</td><td>led, delivered, implemented, certified, excellent, ownership</td></tr>
+  <tr><td><strong>Fracos</strong></td><td>não tenho, básico, superficial, dificuldade, aprendi recentemente, preciso melhorar</td><td>never, limited, basic, struggle, lack, beginner</td></tr>
+</table>
+
+<div class="callout tip">
+  <strong>Retorna sentenças reais — sem alucinação</strong>
+  Por ser extrativo (copia trechos do texto original), o algoritmo nunca inventa conteúdo. O usuário revisa os campos pré-preenchidos antes de salvar via <code>PATCH /entrevistas/{id}/resultado</code>.
+</div>
+
+<div class="callout aviso">
+  <strong>Limitação conhecida — perguntas do entrevistador</strong>
+  Se o entrevistador perguntar "qual sua fraqueza?", a keyword <em>fraqueza</em> pode classificar a pergunta como ponto fraco. Com transcrições sem labels de falante bem formatados, algumas perguntas escapam da limpeza. A revisão manual antes de salvar mitiga isso.
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     5. API BACKEND
+═══════════════════════════════════════════════════ -->
+<h2 id="s5"><span class="num">5</span>API Backend — endpoints</h2>
+
+<p>Todos os endpoints retornam JSON. Documentação interativa disponível em <code>http://localhost:8000/docs</code>.</p>
+
+<h3>Auth <span class="badge cinza">público + autenticado</span></h3>
+<table>
+  <tr><th>Método</th><th>Rota</th><th>Acesso</th><th>Descrição</th></tr>
+  <tr><td>POST</td><td><code>/auth/token</code></td><td>público</td><td>Login OAuth2 password flow. Retorna JWT.</td></tr>
+  <tr><td>GET</td><td><code>/auth/me</code></td><td>autenticado</td><td>Dados do usuário logado.</td></tr>
+  <tr><td>PATCH</td><td><code>/auth/senha</code></td><td>autenticado</td><td>Alterar senha (valida senha atual).</td></tr>
+  <tr><td>POST</td><td><code>/auth/esqueceu-senha</code></td><td>público</td><td>Gera token de reset (1h, single-use) e envia por e-mail.</td></tr>
+  <tr><td>POST</td><td><code>/auth/resetar-senha</code></td><td>público</td><td>Troca senha usando token. Token invalida após uso.</td></tr>
+</table>
+
+<h3>Vagas <span class="badge azul">RH autorizado / admin</span></h3>
+<table>
+  <tr><th>Método</th><th>Rota</th><th>Acesso</th><th>Descrição</th></tr>
+  <tr><td>POST</td><td><code>/vagas/</code></td><td>RH, admin</td><td>Cria vaga, vetoriza requisitos, dispara Market Analyzer async.</td></tr>
+  <tr><td>GET</td><td><code>/vagas/</code></td><td>autenticado</td><td>Lista vagas filtradas por papel (gestor vê só as suas).</td></tr>
+  <tr><td>PATCH</td><td><code>/vagas/{id}/requisitos</code></td><td>RH autorizado, admin</td><td>Edita nome e/ou requisitos_texto. Revectoriza a vaga e recalcula scores + explicações de todos os CVs.</td></tr>
+  <tr><td>PATCH</td><td><code>/vagas/{id}/pesos</code></td><td>RH autorizado, admin</td><td>Ajusta pesos do score. Recalcula scores e explicações XAI de todos os CVs existentes.</td></tr>
+  <tr><td>PATCH</td><td><code>/vagas/{id}/gestores</code></td><td>RH autorizado, admin</td><td>Define gestores técnicos da vaga.</td></tr>
+  <tr><td>PATCH</td><td><code>/vagas/{id}/rhs-autorizados</code></td><td>criador, admin</td><td>Define quais RHs podem acessar a vaga.</td></tr>
+  <tr><td>POST</td><td><code>/vagas/{id}/rerankar</code></td><td>RH autorizado, admin</td><td>Reordena top-N candidatos com cross-encoder.</td></tr>
+  <tr><td>POST</td><td><code>/vagas/{id}/analisar-mercado</code></td><td>RH autorizado, admin</td><td>Re-executa Market Analyzer e atualiza vetor_mercado.</td></tr>
+  <tr><td>GET</td><td><code>/vagas/{id}/exportar</code></td><td>RH autorizado, admin</td><td>Exporta candidatos como CSV.</td></tr>
+</table>
+
+<h3>Candidatos</h3>
+<table>
+  <tr><th>Método</th><th>Rota</th><th>Acesso</th><th>Descrição</th></tr>
+  <tr><td>GET</td><td><code>/candidatos/</code></td><td>autenticado</td><td>Lista com busca (<code>?q=</code> por nome/e-mail), filtro origem, paginação (<code>?limit=&amp;offset=</code>).</td></tr>
+  <tr><td>POST</td><td><code>/candidatos/</code></td><td>RH, admin</td><td>Cadastra candidato com formação.</td></tr>
+  <tr><td>PATCH</td><td><code>/candidatos/{id}</code></td><td>RH, admin</td><td>Atualiza dados (upsert parcial).</td></tr>
+</table>
+
+<h3>Candidaturas</h3>
+<table>
+  <tr><th>Método</th><th>Rota</th><th>Acesso</th><th>Descrição</th></tr>
+  <tr><td>POST</td><td><code>/candidaturas/</code></td><td>RH, admin</td><td>Vincula candidato a vaga.</td></tr>
+  <tr><td>PATCH</td><td><code>/candidaturas/{id}/status</code></td><td>RH / gestor (decisão) / admin</td><td>Avança no pipeline. Valida transições permitidas. Registra historico.</td></tr>
+  <tr><td>POST</td><td><code>/candidaturas/triagem-em-lote</code></td><td>RH, admin</td><td>Aprovar/reprovar múltiplos de uma vez (savepoint por candidatura).</td></tr>
+  <tr><td>POST</td><td><code>/candidaturas/{id}/curriculo</code></td><td>RH autorizado, admin</td><td>Upload PDF. Dispara processamento Celery.</td></tr>
+  <tr><td>GET</td><td><code>/candidaturas/{id}/curriculo</code></td><td>autenticado</td><td>Retorna texto extraído e scores do currículo.</td></tr>
+</table>
+
+<h3>Entrevistas</h3>
+<table>
+  <tr><th>Método</th><th>Rota</th><th>Acesso</th><th>Descrição</th></tr>
+  <tr><td>POST</td><td><code>/entrevistas/</code></td><td>RH / gestor (técnica) / admin</td><td>Agenda entrevista. Avança status da candidatura. Envia e-mail.</td></tr>
+  <tr><td>PATCH</td><td><code>/entrevistas/{id}/resultado</code></td><td>RH (rh) / gestor (técnica) / admin</td><td>Registra score 0–10, anotações, pontos fortes/fracos.</td></tr>
+  <tr><td>PATCH</td><td><code>/entrevistas/{id}/anotacoes</code></td><td>RH / gestor / admin</td><td>Edita anotações pós-realização. Salva histórico de edições.</td></tr>
+  <tr><td>POST</td><td><code>/entrevistas/{id}/resumir-transcricao</code></td><td>qualquer papel autenticado</td><td>Analisa transcrição colada pelo usuário. Retorna <code>pontos_fortes</code>, <code>pontos_fracos</code> e <code>anotacoes</code> para pré-preencher o formulário. Não salva nada — apenas sugere.</td></tr>
+  <tr><td>GET</td><td><code>/entrevistas/candidatura/{id}</code></td><td>qualquer papel autenticado</td><td>Lista entrevistas de uma candidatura ordenadas por data.</td></tr>
+</table>
+
+<h3>Analytics <span class="badge roxo">admin para auditoria</span></h3>
+<table>
+  <tr><th>Método</th><th>Rota</th><th>Acesso</th><th>Descrição</th></tr>
+  <tr><td>GET</td><td><code>/analytics/resumo</code></td><td>autenticado</td><td>Cards de resumo: vagas abertas, candidatos totais, contratados...</td></tr>
+  <tr><td>GET</td><td><code>/analytics/funil</code></td><td>autenticado</td><td>Candidatos por etapa, filtrável por vaga.</td></tr>
+  <tr><td>GET</td><td><code>/analytics/scores</code></td><td>autenticado</td><td>Distribuição de scores por faixa de 10 pontos, média, mediana.</td></tr>
+  <tr><td>GET</td><td><code>/analytics/auditoria</code></td><td><strong>admin</strong></td><td>Log completo de todas as transições. Filtros: vaga, ator, tipo de ação, paginação.</td></tr>
+</table>
+
+<h3>Webhook</h3>
+<table>
+  <tr><th>Método</th><th>Rota</th><th>Acesso</th><th>Descrição</th></tr>
+  <tr><td>POST</td><td><code>/webhook/importar</code></td><td>X-Webhook-Key ou aberto</td><td>Importa vagas, candidatos e currículos via JSON ou XML.</td></tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════
+     6. AUTENTICAÇÃO E AUTORIZAÇÃO
+═══════════════════════════════════════════════════ -->
+<h2 id="s6"><span class="num">6</span>Sistema de autenticação e autorização</h2>
+
+<h3>JWT — JSON Web Tokens</h3>
+
+<p>O token JWT é gerado no login e deve ser enviado no header <code>Authorization: Bearer &lt;token&gt;</code> em todas as requisições protegidas. O payload contém <code>sub</code> (email), <code>papel</code> e <code>exp</code> (expiração). Duração padrão: 8 horas.</p>
+
+<h3>RBAC — controle por papel</h3>
+
+<p>Três papéis com acesso progressivo:</p>
+
+<table>
+  <tr><th>Papel</th><th>O que pode fazer</th></tr>
+  <tr><td><span class="badge azul">RH</span></td><td>Criar vagas, triagem, upload de currículos, agendar entrevista RH, tomar decisão final</td></tr>
+  <tr><td><span class="badge roxo">Gestor</span></td><td>Ver candidatos das suas vagas, agendar entrevista técnica, registrar resultado técnico, tomar decisão final</td></tr>
+  <tr><td><span class="badge laranja">Admin</span></td><td>Tudo — mais gerenciar usuários e acessar auditoria completa</td></tr>
+</table>
+
+<h3>Controle por vaga — rhs_autorizados</h3>
+
+<p>Além do papel, existe controle granular por vaga. Quando um RH cria uma vaga, torna-se o criador exclusivo. Outros RHs não veem a vaga até serem adicionados à lista <code>rhs_autorizados</code>. O criador não pode remover a si mesmo.</p>
+
+<p>Vagas criadas por Admin não têm <code>rhs_autorizados</code> (NULL = acesso aberto a qualquer RH).</p>
+
+<h3>Token de reset de senha — single-use</h3>
+
+<p>O token de reset tem TTL de 1 hora (via campo <code>exp</code> do JWT). Além disso, é garantido uso único através de um <em>fingerprint</em> do hash atual da senha:</p>
+
+<div class="formula">
+No envio:
+  fph = sha256(usuario.senha_hash)[:16]
+  token = JWT { sub, tipo:"reset", fph, exp }
+
+Na verificação:
+  payload = jwt.decode(token)
+  SE payload["fph"] ≠ sha256(usuario.senha_hash)[:16]:
+    → HTTP 400 "Token já utilizado"
+  SENÃO:
+    → troca a senha (senha_hash muda → fph antigo inválido)
+</div>
+
+<p>Isso elimina a necessidade de banco de tokens revogados — a troca da senha invalida automaticamente qualquer token anterior.</p>
+
+
+<!-- ═══════════════════════════════════════════════
+     7. PIPELINE DE STATUS
+═══════════════════════════════════════════════════ -->
+<h2 id="s7"><span class="num">7</span>Pipeline de status das candidaturas</h2>
+
+<p>A candidatura percorre uma máquina de estados finita. Transições inválidas retornam HTTP 400. Cada transição é registrada em <code>candidatura.historico</code>.</p>
+
+<div class="pipeline">
+NOVO
+ └→ AGUARDANDO_PROCESSAMENTO   (upload de CV)
+      └→ PROCESSANDO_CURRICULO  (Celery inicia)
+           └→ TRIAGEM_PENDENTE  (score calculado)
+                ├→ APROVADO_TRIAGEM    →  ENTREVISTA_RH_AGENDADA
+                │                          └→ ENTREVISTA_RH_REALIZADA
+                │                               ├→ REPROVADO_RH    → BANCO_TALENTOS
+                │                               └→ ENTREVISTA_TEC_AGENDADA
+                │                                    └→ ENTREVISTA_TEC_REALIZADA
+                │                                         ├→ REPROVADO_TECNICO → BANCO_TALENTOS
+                │                                         └→ DECISAO_PENDENTE
+                │                                              ├→ CONTRATADO
+                │                                              ├→ NAO_APROVADO
+                │                                              └→ BANCO_TALENTOS
+                ├→ REPROVADO_TRIAGEM   → BANCO_TALENTOS
+                └→ BANCO_TALENTOS
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     8. NOTIFICAÇÕES POR E-MAIL
+═══════════════════════════════════════════════════ -->
+<h2 id="s8"><span class="num">8</span>Notificações por e-mail</h2>
+
+<p>Módulo: <code>core/email.py</code>. O envio usa SMTP com STARTTLS. Se <code>SMTP_HOST</code> não estiver configurado, as funções retornam <code>False</code> silenciosamente — o sistema funciona normalmente sem e-mail.</p>
+
+<table>
+  <tr><th>Função</th><th>Disparado quando</th><th>Destinatário</th></tr>
+  <tr><td><code>email_reset_senha()</code></td><td>POST /auth/esqueceu-senha</td><td>Usuário que solicitou o reset</td></tr>
+  <tr><td><code>email_cv_processado()</code></td><td>Celery finaliza processamento de CV</td><td>RH responsável pela candidatura</td></tr>
+  <tr><td><code>email_entrevista_agendada()</code></td><td>POST /entrevistas/</td><td>Entrevistador (quem agendou)</td></tr>
+  <tr><td><code>email_triagem_resultado()</code></td><td>PATCH /candidaturas/{id}/status → triagem</td><td>RH que tomou a decisão</td></tr>
+</table>
+
+<p>Todos os e-mails seguem o mesmo template HTML com fundo escuro e identidade visual do SIRS.</p>
+
+
+<!-- ═══════════════════════════════════════════════
+     9. WEBHOOK
+═══════════════════════════════════════════════════ -->
+<h2 id="s9"><span class="num">9</span>Webhook de importação</h2>
+
+<p>Endpoint: <code>POST /webhook/importar</code> — aceita <code>application/json</code> ou <code>application/xml</code>.</p>
+
+<h3>Autenticação</h3>
+<p>Header <code>X-Webhook-Key: &lt;valor&gt;</code>. Se <code>WEBHOOK_SECRET_KEY</code> não estiver configurado no <code>.env</code>, o endpoint é aberto (adequado para desenvolvimento). Em produção deve ser configurado.</p>
+
+<h3>Operações por entidade</h3>
+<table>
+  <tr><th>Entidade</th><th>Comportamento</th></tr>
+  <tr><td><code>vagas</code></td><td>Busca por nome — cria se não existir, ignora se já existir. Dispara <code>atualizar_mercado_vaga</code> async.</td></tr>
+  <tr><td><code>candidatos</code></td><td>Upsert por e-mail — atualiza campos não-nulos se já existir. <code>origem="externo"</code>, <code>fonte=&lt;fonte&gt;</code>.</td></tr>
+  <tr><td><code>candidaturas</code></td><td>Vincula por <code>vaga_external_id</code> ou <code>vaga_nome</code>. Não duplica.</td></tr>
+  <tr><td><code>curriculo_texto</code></td><td>Cria Curriculo e dispara <code>processar_curriculo_texto</code> (Celery) para vetorizar sem PDF.</td></tr>
+</table>
+
+<h3>Isolamento de falhas</h3>
+<p>Cada candidato é processado dentro de um savepoint (<code>db.begin_nested()</code>). Um erro individual (e-mail inválido, vaga não encontrada) faz rollback só daquele registro — os demais continuam. O erro é reportado na lista <code>erros</code> da resposta junto com o <code>id</code> do registro afetado.</p>
+
+
+<!-- ═══════════════════════════════════════════════
+     10. FRONTEND
+═══════════════════════════════════════════════════ -->
+<h2 id="s10"><span class="num">10</span>Frontend — React SPA</h2>
+
+<p>SPA React 18 + Vite + Tailwind. O proxy <code>/api/*</code> aponta para <code>api:8000</code> em dev. Toda comunicação com a API passa por <code>frontend/src/api.js</code>, que injeta o JWT via interceptor do axios.</p>
+
+<h3>Páginas principais</h3>
+<table>
+  <tr><th>Rota</th><th>Arquivo</th><th>Descrição</th></tr>
+  <tr><td><code>/vagas</code></td><td><code>pages/VagaLista.jsx</code></td><td>Lista de vagas com filtro. Botão criar vaga (RH/admin).</td></tr>
+  <tr><td><code>/vagas/:id</code></td><td><code>pages/VagaDetalhe.jsx</code></td><td>Candidatos ranqueados, triagem, editar vaga, pesos, gestores, breakdown de score.</td></tr>
+  <tr><td><code>/candidatos/:id</code></td><td><code>pages/CandidatoDetalhe.jsx</code></td><td>Histórico de candidaturas, scores, breakdown XAI via <code>ExplicacaoScore</code>.</td></tr>
+  <tr><td><code>/candidaturas/:id</code></td><td><code>pages/EntrevistaDetalhe.jsx</code></td><td>Entrevistas, formulário de resultado, analisador de transcrição, histórico de auditoria.</td></tr>
+  <tr><td><code>/analytics</code></td><td><code>pages/Analytics.jsx</code></td><td>Cards resumo, funil por etapa, distribuição de scores.</td></tr>
+  <tr><td><code>/auditoria</code></td><td><code>pages/Auditoria.jsx</code></td><td>Log completo de transições (admin). Botão de refresh explícito.</td></tr>
+</table>
+
+<h3>Componentes compartilhados</h3>
+<table>
+  <tr><th>Componente</th><th>Onde é usado</th><th>Função</th></tr>
+  <tr><td><code>ExplicacaoScore</code></td><td><code>VagaDetalhe</code>, <code>CandidatoDetalhe</code></td><td>Breakdown colapsável de score: barras de aderência à vaga e ao mercado, skills em comum, anos de experiência.</td></tr>
+  <tr><td><code>ComparacaoCandidatos</code></td><td><code>VagaDetalhe</code></td><td>Modal de comparação lado a lado de 2–3 candidatos.</td></tr>
+  <tr><td><code>BotaoTranscricao</code></td><td><code>EntrevistaDetalhe</code> (dentro do form de resultado)</td><td>Seção roxa colapsável. Cola transcrição → chama <code>POST /resumir-transcricao</code> → pré-preenche pontos fortes, pontos fracos e anotações para revisão antes de salvar.</td></tr>
+  <tr><td><code>Layout</code></td><td>todas as páginas autenticadas</td><td>Sidebar com links. Link Auditoria visível apenas para admin.</td></tr>
+  <tr><td><code>Badge</code>, <code>ScoreBar</code></td><td>diversas</td><td>Primitivos visuais reutilizáveis.</td></tr>
+</table>
+
+<div class="callout tip">
+  <strong>BotaoTranscricao — fluxo de uso</strong>
+  Ao registrar ou editar resultado de entrevista, o formulário exibe um botão "Preencher com transcrição" (identidade visual roxa, distinta dos outros campos). O usuário cola a transcrição exportada do Google Meet/Zoom, clica em "Analisar e preencher" e os campos são populados automaticamente. O usuário revisa e ajusta antes de salvar — nada é persistido automaticamente.
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     11. SEGURANÇA
+═══════════════════════════════════════════════════ -->
+<h2 id="s11"><span class="num">11</span>Segurança</h2>
+
+<table>
+  <tr><th>Vetor</th><th>Medida implementada</th></tr>
+  <tr><td>Senhas</td><td>bcrypt com salt automático (<code>passlib</code>). Nunca armazena texto plano.</td></tr>
+  <tr><td>Tokens JWT</td><td>Assinados com <code>SECRET_KEY</code> (HS256). Expiração em 8h. Não armazenados no servidor.</td></tr>
+  <tr><td>Reset de senha</td><td>Token single-use via fingerprint do hash. TTL de 1h. Invalida automaticamente após uso.</td></tr>
+  <tr><td>Rate limiting webhook</td><td>Redis: 15 req/min (burst) e 120 req/h por cliente. Fail-open se Redis offline.</td></tr>
+  <tr><td>Uploads PDF</td><td>Valida extensão (<code>.pdf</code>). Armazena com UUID como nome (evita path traversal).</td></tr>
+  <tr><td>XML externo</td><td><code>defusedxml</code> para prevenir ataques XXE (XML External Entity).</td></tr>
+  <tr><td>RBAC granular</td><td>Controle por papel + por vaga (<code>rhs_autorizados</code>). Cada endpoint valida permissões explicitamente.</td></tr>
+  <tr><td>Isolamento de dados</td><td>Gestor só vê candidatos das suas vagas. RH não autorizado não vê a vaga.</td></tr>
+</table>
+
+<div class="callout warn">
+  <strong>Em produção — obrigatório</strong>
+  Configurar <code>WEBHOOK_SECRET_KEY</code> e <code>SECRET_KEY</code> com valores longos e aleatórios. Sem <code>WEBHOOK_SECRET_KEY</code>, o endpoint de importação é aberto para qualquer chamada HTTP.
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     11. TESTES
+═══════════════════════════════════════════════════ -->
+<h2 id="s12"><span class="num">12</span>Testes</h2>
+
+<p>O sistema usa <strong>pytest</strong> com um banco PostgreSQL dedicado (<code>sirs_test_db</code>). Cada teste roda dentro de um savepoint — ao final, o savepoint é desfeito e o banco volta ao estado anterior. Testes de API não interferem no banco de desenvolvimento.</p>
+
+<h3>Mocks automáticos (conftest.py)</h3>
+<ul>
+  <li><code>mock_celery_tasks</code> — impede que tarefas Celery sejam despachadas para o broker real</li>
+  <li><code>mock_vetorizar</code> — retorna vetor fixo [0.1 × 384] em vez de carregar o modelo de embedding</li>
+  <li><code>mock_rate_limit</code> — desativa o rate limiter baseado em Redis</li>
+</ul>
+
+<p>Isso torna os testes de API muito rápidos (sem I/O de modelo). Para testar o pipeline de IA real, usa-se <code>@pytest.mark.slow</code>.</p>
+
+<h3>Testes de IA com embedding real</h3>
+<p>Os testes marcados com <code>@pytest.mark.slow</code> carregam o modelo real e verificam propriedades do sistema de scoring:</p>
+
+<ul>
+  <li>Ordenação semântica: candidato ideal > candidato mediano > candidato irrelevante</li>
+  <li>Especialização: data scientist pontua mais em vaga de DS do que desenvolvedor Python</li>
+  <li>Score final > limiar mínimo para candidatos adequados</li>
+  <li>Bônus estrutural favorece candidatos com experiência e skills alinhadas</li>
+</ul>
+
+<pre><code># Rodar testes rápidos (sem modelo)
+docker compose exec api pytest tests/ -v
+
+# Testes do reranker (cross-encoder mockado)
+docker compose exec api pytest tests/test_reranker.py -v
+
+# Testes do analisador de transcrições (sem dependências externas)
+docker compose exec api pytest tests/test_transcript_analyzer.py -v
+
+# Testes com embedding real
+docker compose exec api pytest tests/test_ai_curriculo.py tests/test_novos_curriculos.py -m slow -s -v
+
+# Relatório detalhado de scoring
+docker compose exec api pytest tests/test_novos_curriculos.py::TestPipelineNovos::test_relatorio_completo -m slow -s</code></pre>
+
+
+<h3>Cobertura por arquivo</h3>
+
+<table>
+  <tr><th>Arquivo</th><th>Testes</th><th>O que cobre</th></tr>
+  <tr><td><code>test_feature_extractor.py</code></td><td>62</td><td>Anos (3 estratégias), senioridade, skills, proficiência, bônus estrutural com penalidade de 0 overlap</td></tr>
+  <tr><td><code>test_ai_curriculo.py</code></td><td>34</td><td>Pipeline completo com 5 CVs × 2 vagas: features, bônus, scores semânticos, XAI</td></tr>
+  <tr><td><code>test_novos_curriculos.py</code></td><td>35</td><td>5 perfis novos (DevOps, Frontend, QA, Java, PM) × 2 vagas, relatório detalhado</td></tr>
+  <tr><td><code>test_matching_engine.py</code></td><td>29</td><td>Scores RH, mercado, multi-seção, XAI, score final</td></tr>
+  <tr><td><code>test_market_analyzer.py</code></td><td>26</td><td>Detecção de categoria, extração de skills, TF-IDF, filtragem EEO/benefits</td></tr>
+  <tr><td><code>test_transcript_analyzer.py</code></td><td>55</td><td>Limpeza de artefatos (timestamps, labels, ruído, HTML), segmentação, classificação PT+EN, truncamento, 6 transcrições realistas end-to-end</td></tr>
+  <tr><td><code>test_reranker.py</code></td><td>17</td><td>Unidade: ordenação por sigmoid, top-n, fallback em erro, logging. Endpoint: auth, 404, score_rerank, graceful fallback</td></tr>
+  <tr><td><code>test_auth.py</code></td><td>19</td><td>Login, hash/token, guards RBAC, reset senha single-use</td></tr>
+  <tr><td><code>test_vagas.py</code></td><td>43</td><td>CRUD, exclusividade RH, rhs_autorizados, recálculo de scores ao editar pesos/requisitos</td></tr>
+  <tr><td><code>test_candidatos.py</code></td><td>21</td><td>CRUD, webhook, gestor filtra</td></tr>
+  <tr><td><code>test_candidaturas.py</code></td><td>25</td><td>CRUD, máquina de estados, triagem em lote, historico JSONB persistido corretamente</td></tr>
+  <tr><td><code>test_entrevistas.py</code></td><td>37</td><td>Permissões por papel e por vaga</td></tr>
+  <tr><td><code>test_webhook.py</code></td><td>22</td><td>JSON, XML, upsert, erros parciais, origem</td></tr>
+</table>
+
+
+<!-- ═══════════════════════════════════════════════
+     12. CONFIGURAÇÃO E DEPLOY
+═══════════════════════════════════════════════════ -->
+<h2 id="s13"><span class="num">13</span>Configuração e deploy</h2>
+
+<h3>Variáveis de ambiente críticas</h3>
+
+<table>
+  <tr><th>Variável</th><th>Descrição</th><th>Padrão</th></tr>
+  <tr><td><code>DATABASE_URL</code></td><td>URL completa do PostgreSQL</td><td><em>obrigatório</em></td></tr>
+  <tr><td><code>SECRET_KEY</code></td><td>Chave de assinatura JWT</td><td><em>obrigatório</em></td></tr>
+  <tr><td><code>EMBEDDING_MODEL</code></td><td>Modelo bi-encoder</td><td>paraphrase-multilingual-MiniLM-L12-v2</td></tr>
+  <tr><td><code>EMBEDDING_DIM</code></td><td>Dimensão dos vetores</td><td>384</td></tr>
+  <tr><td><code>RERANKER_MODEL</code></td><td>Modelo cross-encoder</td><td>BAAI/bge-reranker-base</td></tr>
+  <tr><td><code>SMTP_HOST</code></td><td>Servidor SMTP para e-mails</td><td>vazio (desabilitado)</td></tr>
+  <tr><td><code>WEBHOOK_SECRET_KEY</code></td><td>Chave do webhook</td><td>vazio (aberto)</td></tr>
+  <tr><td><code>MARKET_ANALYZER_SOURCE</code></td><td>kaggle | adzuna | ambos</td><td>kaggle</td></tr>
+</table>
+
+<div class="callout tip">
+  <strong>Trocar o modelo de embedding</strong>
+  Ao trocar <code>EMBEDDING_MODEL</code> para um modelo de dimensão diferente (ex: 768d), é obrigatório: (1) atualizar <code>EMBEDDING_DIM</code>, (2) criar e aplicar uma migração Alembic que altera o tipo das colunas Vector, (3) reprocessar todos os currículos existentes. As colunas Vector do banco e o modelo devem sempre ter a mesma dimensão.
+</div>
+
+<h3>Comandos essenciais</h3>
+<pre><code># Subir em desenvolvimento
+docker compose up -d
+
+# Aplicar migrações
+docker compose exec api alembic upgrade heads
+
+# Popular banco com dados de teste
+docker compose exec api python tests/seed_full.py
+
+# Criar nova migração após alterar modelos
+docker compose exec api alembic revision --autogenerate -m "descricao"
+
+# Reiniciar worker (necessário após alterar tasks.py ou modelos de IA)
+docker compose restart worker
+
+# Ver logs em tempo real
+docker compose logs api worker -f</code></pre>
+
+<hr class="divider">
+<p class="muted right">SIRS — Sistema Inteligente de Recrutamento e Seleção · Documentação Técnica v2.0</p>
+
+</body>
+</html>

@@ -5,13 +5,16 @@ import { Layout }            from "./components/Layout"
 import { Login }             from "./pages/Login"
 import { Vagas }             from "./pages/Vagas"
 import { VagaDetalhe }       from "./pages/VagaDetalhe"
+import { KanbanVaga }        from "./pages/KanbanVaga"
 import { Candidatos }        from "./pages/Candidatos"
 import { EntrevistaDetalhe } from "./pages/EntrevistaDetalhe"
 import { AdminUsuarios }     from "./pages/AdminUsuarios"
 import { CandidatoDetalhe } from "./pages/CandidatoDetalhe"
 import { Perfil }           from "./pages/Perfil"
+import { Dashboard }        from "./pages/Dashboard"
 import { EsqueceuSenha }   from "./pages/EsqueceuSenha"
 import { ResetarSenha }    from "./pages/ResetarSenha"
+import { Auditoria }       from "./pages/Auditoria"
 import api                   from "./api"
 import "./index.css"
 
@@ -56,6 +59,9 @@ function App() {
         <Route path="/vagas/:id" element={
           <Protegida><VagaDetalhe usuario={usuario} /></Protegida>
         }/>
+        <Route path="/vagas/:id/kanban" element={
+          <Protegida><KanbanVaga usuario={usuario} /></Protegida>
+        }/>
         <Route path="/candidatos" element={
           <Protegida><Candidatos /></Protegida>
         }/>
@@ -65,8 +71,14 @@ function App() {
         <Route path="/candidaturas/:candidaturaId/entrevistas" element={
           <Protegida><EntrevistaDetalhe usuario={usuario} /></Protegida>
         }/>
+        <Route path="/dashboard" element={
+          <Protegida><Dashboard /></Protegida>
+        }/>
         <Route path="/admin" element={
           <Protegida apenasAdmin><AdminUsuarios /></Protegida>
+        }/>
+        <Route path="/auditoria" element={
+          <Protegida apenasAdmin><Auditoria /></Protegida>
         }/>
         <Route path="/perfil" element={
           <Protegida><Perfil usuario={usuario} /></Protegida>

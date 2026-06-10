@@ -2,9 +2,10 @@
 import io
 from tests.conftest import (
     make_vaga, make_candidato, make_candidatura,
-    auth_header, make_pdf_bytes,
+    auth_header, make_pdf_bytes, make_usuario,
 )
 from app.models.candidatura import StatusCandidatura
+from app.models.usuario import PapelUsuario
 
 
 class TestCriarCandidatura:
@@ -213,3 +214,102 @@ class TestUploadCurriculo:
             headers=auth_header(rh),
         )
         assert r.status_code == 404
+
+
+class TestTriagemEmLote:
+    _URL = "/candidaturas/triagem-em-lote"
+
+    def _pendente(self, db, suffix):
+        v = make_vaga(db, nome=f"Lote {suffix}")
+        c = make_candidato(db, email=f"lote_{suffix}@a.com")
+        return make_candidatura(db, c, v, StatusCandidatura.TRIAGEM_PENDENTE)
+
+    def test_rh_aprova_em_lote(self, client, rh, db):
+        c1 = self._pendente(db, "ap1")
+        c2 = self._pendente(db, "ap2")
+        r = client.post(self._URL, json={
+            "candidatura_ids": [str(c1.id), str(c2.id)],
+            "novo_status": "aprovado_triagem",
+            "ator": "ana_rh",
+        }, headers=auth_header(rh))
+        assert r.status_code == 200
+        assert r.json()["atualizadas"] == 2
+        assert r.json()["erros"] == []
+
+    def test_rh_reprova_em_lote(self, client, rh, db):
+        c1 = self._pendente(db, "rep1")
+        r = client.post(self._URL, json={
+            "candidatura_ids": [str(c1.id)],
+            "novo_status": "reprovado_triagem",
+        }, headers=auth_header(rh))
+        assert r.status_code == 200
+        assert r.json()["atualizadas"] == 1
+
+    def test_banco_de_talentos_em_lote(self, client, rh, db):
+        c1 = self._pendente(db, "bt1")
+        r = client.post(self._URL, json={
+            "candidatura_ids": [str(c1.id)],
+            "novo_status": "banco_de_talentos",
+        }, headers=auth_header(rh))
+        assert r.status_code == 200
+        assert r.json()["atualizadas"] == 1
+
+    def test_status_nao_permitido_retorna_400(self, client, rh, db):
+        c1 = self._pendente(db, "inv")
+        r = client.post(self._URL, json={
+            "candidatura_ids": [str(c1.id)],
+            "novo_status": "contratado",
+        }, headers=auth_header(rh))
+        assert r.status_code == 400
+
+    def test_gestor_nao_pode(self, client, gestor, db):
+        c1 = self._pendente(db, "gest")
+        r = client.post(self._URL, json={
+            "candidatura_ids": [str(c1.id)],
+            "novo_status": "aprovado_triagem",
+        }, headers=auth_header(gestor))
+        assert r.status_code == 403
+
+    def test_sem_token_retorna_401(self, client, db):
+        c1 = self._pendente(db, "auth")
+        r = client.post(self._URL, json={
+            "candidatura_ids": [str(c1.id)],
+            "novo_status": "aprovado_triagem",
+        })
+        assert r.status_code == 401
+
+    def test_id_inexistente_gera_erro_parcial(self, client, rh, db):
+        c1 = self._pendente(db, "parc")
+        r = client.post(self._URL, json={
+            "candidatura_ids": [
+                str(c1.id),
+                "00000000-0000-0000-0000-000000000000",
+            ],
+            "novo_status": "aprovado_triagem",
+        }, headers=auth_header(rh))
+        assert r.status_code == 200
+        assert r.json()["atualizadas"] == 1
+        assert len(r.json()["erros"]) == 1
+
+    def test_historico_registrado(self, client, rh, db):
+        c1 = self._pendente(db, "hist_lote")
+        client.post(self._URL, json={
+            "candidatura_ids": [str(c1.id)],
+            "novo_status": "aprovado_triagem",
+            "ator": "ana_supervisora",
+        }, headers=auth_header(rh))
+        db.refresh(c1)
+        assert c1.historico[-1]["para"] == "aprovado_triagem"
+        assert c1.historico[-1]["ator"] == "ana_supervisora"
+
+    def test_transicao_invalida_gera_erro_parcial(self, client, rh, db):
+        v = make_vaga(db, nome="Lote Trans Inv")
+        c = make_candidato(db, email="lote_inv_trans@a.com")
+        cand = make_candidatura(db, c, v, StatusCandidatura.APROVADO_TRIAGEM)
+        r = client.post(self._URL, json={
+            "candidatura_ids": [str(cand.id)],
+            "novo_status": "aprovado_triagem",
+        }, headers=auth_header(rh))
+        assert r.status_code == 200
+        assert r.json()["atualizadas"] == 0
+        assert len(r.json()["erros"]) == 1
