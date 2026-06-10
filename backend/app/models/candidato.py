@@ -33,4 +33,4 @@ class Candidato(Base):
 
     criado_em   : Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    candidaturas : Mapped[list["Candidatura"]] = relationship(back_populates="candidato")
+    candidaturas : Mapped[list["Candidatura"]] = relationship(back_populates="candidato")  # noqa: F821

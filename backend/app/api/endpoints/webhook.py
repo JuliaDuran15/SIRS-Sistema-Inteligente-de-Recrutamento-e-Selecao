@@ -17,13 +17,12 @@ import re
 from datetime import date
 
 import defusedxml.ElementTree as ET
-
-_RE_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-
 from app.ai.resume_parser import vetorizar_texto
 from app.ai.tasks import atualizar_mercado_vaga, processar_curriculo_texto
 from app.api.deps import DB
 from app.core.config import settings
+from app.core.logger import get_logger
+from app.core.rate_limit import checar_rate_limit
 from app.models.candidato import Candidato
 from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.curriculo import Curriculo
@@ -37,12 +36,12 @@ from app.schemas.webhook import (
     ImportacaoResultado,
     VagaImport,
 )
-from app.core.logger import get_logger
-from app.core.rate_limit import checar_rate_limit
 from fastapi import APIRouter, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
 logger = get_logger("WEBHOOK")
+
+_RE_EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 router = APIRouter()
 

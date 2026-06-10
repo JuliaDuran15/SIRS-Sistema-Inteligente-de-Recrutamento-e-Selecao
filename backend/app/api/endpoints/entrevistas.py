@@ -7,7 +7,12 @@ from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.entrevista import Entrevista
 from app.models.usuario import PapelUsuario
 from app.models.vaga import Vaga
-from app.schemas.entrevista import AnotacoesUpdate, EntrevistaCreate, EntrevistaResponse, EntrevistaResultado
+from app.schemas.entrevista import (
+    AnotacoesUpdate,
+    EntrevistaCreate,
+    EntrevistaResponse,
+    EntrevistaResultado,
+)
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session

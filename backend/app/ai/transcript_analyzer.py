@@ -97,8 +97,10 @@ def _classificar(sentenca: str) -> str:
     txt = sentenca.lower()
     pos = sum(1 for k in _FORTES if k in txt)
     neg = sum(1 for k in _FRACOS if k in txt)
-    if pos > neg: return "forte"
-    if neg > pos: return "fraco"
+    if pos > neg:
+        return "forte"
+    if neg > pos:
+        return "fraco"
     return "neutro"
 
 

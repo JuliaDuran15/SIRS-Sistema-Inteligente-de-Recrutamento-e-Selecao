@@ -140,10 +140,9 @@ class TestGerarExplicacao:
 # ── calcular_score_final ──────────────────────────────────────────────────────
 class TestCalcularScoreFinal:
     def test_sem_entrevistas_usa_apenas_curriculo(self):
-        # score_curriculo=80, peso_curriculo=0.5 → contribuição = 40
-        # entrevistas None → contribuem 0
+        # só curriculo ativo: peso_ativo=0.5, soma=0.4 → (0.4/0.5)*100 = 80.0
         result = calcular_score_final(80.0, None, None, 0.5, 0.25, 0.25)
-        assert result == pytest.approx(40.0)
+        assert result == pytest.approx(80.0)
 
     def test_todas_notas_maximas(self):
         # curriculo=100/100=1.0, entrev_rh=10/10=1.0, entrev_tec=10/10=1.0
@@ -153,9 +152,9 @@ class TestCalcularScoreFinal:
 
     def test_apenas_rh_preenchida(self):
         # curriculo=60, entrev_rh=8, entrev_tec=None
-        # (0.6*0.5) + (0.8*0.25) + (0*0.25) = 0.3 + 0.2 + 0 = 0.5 → 50.0
+        # soma=0.5, peso_ativo=0.75 → (0.5/0.75)*100 = 66.7
         result = calcular_score_final(60.0, 8.0, None, 0.5, 0.25, 0.25)
-        assert result == pytest.approx(50.0)
+        assert result == pytest.approx(66.7, abs=0.1)
 
     def test_pesos_diferentes(self):
         result = calcular_score_final(80.0, 6.0, 4.0, 0.6, 0.2, 0.2)

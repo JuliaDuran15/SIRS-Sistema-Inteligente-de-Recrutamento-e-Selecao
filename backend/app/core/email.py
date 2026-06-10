@@ -115,8 +115,10 @@ def email_reset_senha(destinatario: str, nome: str, reset_url: str) -> bool:
 
 
 def _cor_score(score: float) -> str:
-    if score >= 70: return "#2EE8B4"
-    if score >= 50: return "#FCD34D"
+    if score >= 70:
+        return "#2EE8B4"
+    if score >= 50:
+        return "#FCD34D"
     return "#FCA5A5"
 
 

@@ -36,5 +36,5 @@ class Entrevista(Base):
     realizada_em     : Mapped[datetime | None] = mapped_column(DateTime)
     criado_em        : Mapped[datetime]        = mapped_column(DateTime, default=datetime.utcnow)
 
-    candidatura  : Mapped["Candidatura"] = relationship(back_populates="entrevistas")
-    entrevistador: Mapped["Usuario"]     = relationship(back_populates="entrevistas")
+    candidatura  : Mapped["Candidatura"] = relationship(back_populates="entrevistas")  # noqa: F821
+    entrevistador: Mapped["Usuario"]     = relationship(back_populates="entrevistas")  # noqa: F821

@@ -36,4 +36,4 @@ class Curriculo(Base):
     processado_em    : Mapped[datetime | None] = mapped_column(DateTime)
     criado_em        : Mapped[datetime]     = mapped_column(DateTime, default=datetime.utcnow)
 
-    candidatura: Mapped["Candidatura"] = relationship(back_populates="curriculo")
+    candidatura: Mapped["Candidatura"] = relationship(back_populates="curriculo")  # noqa: F821

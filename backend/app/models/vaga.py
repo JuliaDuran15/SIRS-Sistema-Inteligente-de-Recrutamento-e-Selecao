@@ -44,4 +44,4 @@ class Vaga(Base):
 
     criado_em        : Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
-    candidaturas: Mapped[list["Candidatura"]] = relationship(back_populates="vaga")
+    candidaturas: Mapped[list["Candidatura"]] = relationship(back_populates="vaga")  # noqa: F821

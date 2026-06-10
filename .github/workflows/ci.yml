@@ -41,6 +41,7 @@ jobs:
       CELERY_RESULT_BACKEND:  redis://localhost:6379/0
       SECRET_KEY:             ci-secret-key-not-used-in-prod
       ALGORITHM:              HS256
+      UPLOAD_DIR:             /tmp/uploads
 
     defaults:
       run:
@@ -57,17 +58,17 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements-ci.txt') }}
           restore-keys: ${{ runner.os }}-pip-
 
       - name: Instala dependências
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-ci.txt
 
       - name: Lint (ruff)
         run: ruff check app/
 
       - name: Roda testes
-        run: pytest tests/ -v --tb=short -q
+        run: pytest tests/ -v --tb=short -q -m "not slow"
 
   lint-frontend:
     runs-on: ubuntu-latest

@@ -25,4 +25,4 @@ class Usuario(Base):
     ativo      : Mapped[bool]       = mapped_column(default=True)
     criado_em  : Mapped[datetime]   = mapped_column(DateTime, default=datetime.utcnow)
 
-    entrevistas: Mapped[list["Entrevista"]] = relationship(back_populates="entrevistador")
+    entrevistas: Mapped[list["Entrevista"]] = relationship(back_populates="entrevistador")  # noqa: F821

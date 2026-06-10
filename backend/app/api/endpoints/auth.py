@@ -8,14 +8,15 @@ from app.core.email import email_reset_senha, smtp_configurado
 from app.models.usuario import Usuario
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
-from jose import JWTError, jwt as jose_jwt
+from jose import JWTError
+from jose import jwt as jose_jwt
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 
 def _senha_fingerprint(senha_hash: str) -> str:
     """16 chars do SHA-256 do hash atual — invalida o token se a senha mudar."""
     return hashlib.sha256(senha_hash.encode()).hexdigest()[:16]
-from pydantic import BaseModel
-from sqlalchemy.orm import Session
 
 router = APIRouter()
 
@@ -74,8 +75,6 @@ def me(usuario=Depends(get_usuario_atual)):
     return usuario
 
 
-from app.core.email import email_reset_senha, smtp_configurado
-from app.core.config import settings
 
 
 class AlterarSenhaRequest(BaseModel):
@@ -116,7 +115,7 @@ class ResetarSenhaRequest(BaseModel):
 @router.post("/esqueceu-senha", response_model=EsqueceuSenhaResponse)
 def esqueceu_senha(dados: EsqueceuSenhaRequest, db: Session = DB):
     usuario = db.query(Usuario).filter(
-        Usuario.email == dados.email, Usuario.ativo == True
+        Usuario.email == dados.email, Usuario.ativo == True  # noqa: E712
     ).first()
     if not usuario:
         raise HTTPException(status_code=404, detail="Email não encontrado")
@@ -149,7 +148,7 @@ def resetar_senha(dados: ResetarSenhaRequest, db: Session = DB):
         raise HTTPException(status_code=400, detail="Token inválido")
 
     usuario = db.query(Usuario).filter(
-        Usuario.email == payload.get("sub"), Usuario.ativo == True
+        Usuario.email == payload.get("sub"), Usuario.ativo == True  # noqa: E712
     ).first()
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuário não encontrado")
