@@ -66,7 +66,9 @@ export function VagaDetalhe({ usuario }) {
   const [vaga, setVaga]                 = useState(null)
   const [candidaturas, setCandidaturas] = useState([])
   const [analisando, setAnalisando]     = useState(false)
+  // eslint-disable-next-line no-unused-vars
   const [reranking,  setReranking]      = useState(false)
+  // eslint-disable-next-line no-unused-vars
   const [rerankado,  setRerankado]      = useState(false)
   const [loading, setLoading]           = useState(true)
   const [editandoInfo, setEditandoInfo]   = useState(false)
@@ -339,6 +341,7 @@ export function VagaDetalhe({ usuario }) {
     }
   }
 
+  // eslint-disable-next-line no-unused-vars
   async function handleRerankar() {
     setReranking(true)
     try {

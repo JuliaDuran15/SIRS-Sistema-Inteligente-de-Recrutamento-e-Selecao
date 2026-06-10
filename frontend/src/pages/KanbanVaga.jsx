@@ -124,6 +124,7 @@ function CandidatoCard({ cand, isMoving, onDragStart }) {
 // ── Coluna ────────────────────────────────────────────────────────────────────
 function Coluna({ coluna, cards, dragOver, onDragOver, onDragLeave, onDrop, movendo, loading }) {
   const isOver   = dragOver === coluna.id
+  // eslint-disable-next-line no-unused-vars
   const canDrop  = isOver
   const hexAlpha = (hex, a) => hex + Math.round(a * 255).toString(16).padStart(2, "0")
 

@@ -24,6 +24,7 @@ export function CvPreview({ candidaturaId, temPdf, textoExtraido }) {
   // Carrega o PDF quando o painel é aberto pela primeira vez em modo pdf
   useEffect(() => {
     if (!aberto || modo !== "pdf" || pdfUrl || !temPdf) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCarreg(true)
     setErro(null)
     getCurriculoPdf(candidaturaId)

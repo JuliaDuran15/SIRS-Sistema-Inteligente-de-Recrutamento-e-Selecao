@@ -37,6 +37,7 @@ export function Candidatos() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOffset(0)
     carregar(0, busca, origem)
   }, [busca, origem])
