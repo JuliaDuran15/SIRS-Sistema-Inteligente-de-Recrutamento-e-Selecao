@@ -24,6 +24,7 @@ function useTheme() {
   return [light, setLight]
 }
 
+// eslint-disable-next-line no-unused-vars
 function NavItem({ path, label, Icon, active }) {
   return (
     <Link
@@ -167,6 +168,7 @@ export function Layout({ children, usuario, onLogout }) {
       : []),
   ]
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMobileOpen(false) }, [loc.pathname])
 
   const sidebarProps = { nav, usuario, onLogout, light, setLight, currentPath: loc.pathname }

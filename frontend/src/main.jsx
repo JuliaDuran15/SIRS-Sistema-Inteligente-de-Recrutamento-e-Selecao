@@ -18,7 +18,13 @@ import { Auditoria }       from "./pages/Auditoria"
 import api                   from "./api"
 import "./index.css"
 
-function App() {
+function Protegida({ children, apenasAdmin, usuario, onLogout }) {
+  if (!usuario) return <Navigate to="/login" replace />
+  if (apenasAdmin && usuario.papel !== "admin") return <Navigate to="/" replace />
+  return <Layout usuario={usuario} onLogout={onLogout}>{children}</Layout>
+}
+
+export function App() {
   const [usuario, setUsuario] = useState(() => {
     const salvo = localStorage.getItem("usuario")
     return salvo ? JSON.parse(salvo) : null
@@ -35,15 +41,7 @@ function App() {
     delete api.defaults.headers.common["Authorization"]
   }
 
-  function Protegida({ children, apenasAdmin }) {
-    if (!usuario) return <Navigate to="/login" replace />
-    if (apenasAdmin && usuario.papel !== "admin") return <Navigate to="/" replace />
-    return (
-      <Layout usuario={usuario} onLogout={handleLogout}>
-        {children}
-      </Layout>
-    )
-  }
+  const p = { usuario, onLogout: handleLogout }
 
   return (
     <BrowserRouter>
@@ -54,34 +52,34 @@ function App() {
         <Route path="/esqueceu-senha" element={<EsqueceuSenha />} />
         <Route path="/resetar-senha"  element={<ResetarSenha />} />
         <Route path="/" element={
-          <Protegida><Vagas usuario={usuario} /></Protegida>
+          <Protegida {...p}><Vagas usuario={usuario} /></Protegida>
         }/>
         <Route path="/vagas/:id" element={
-          <Protegida><VagaDetalhe usuario={usuario} /></Protegida>
+          <Protegida {...p}><VagaDetalhe usuario={usuario} /></Protegida>
         }/>
         <Route path="/vagas/:id/kanban" element={
-          <Protegida><KanbanVaga usuario={usuario} /></Protegida>
+          <Protegida {...p}><KanbanVaga usuario={usuario} /></Protegida>
         }/>
         <Route path="/candidatos" element={
-          <Protegida><Candidatos /></Protegida>
+          <Protegida {...p}><Candidatos /></Protegida>
         }/>
         <Route path="/candidatos/:id" element={
-          <Protegida><CandidatoDetalhe usuario={usuario} /></Protegida>
+          <Protegida {...p}><CandidatoDetalhe usuario={usuario} /></Protegida>
         }/>
         <Route path="/candidaturas/:candidaturaId/entrevistas" element={
-          <Protegida><EntrevistaDetalhe usuario={usuario} /></Protegida>
+          <Protegida {...p}><EntrevistaDetalhe usuario={usuario} /></Protegida>
         }/>
         <Route path="/dashboard" element={
-          <Protegida><Dashboard /></Protegida>
+          <Protegida {...p}><Dashboard /></Protegida>
         }/>
         <Route path="/admin" element={
-          <Protegida apenasAdmin><AdminUsuarios /></Protegida>
+          <Protegida {...p} apenasAdmin><AdminUsuarios /></Protegida>
         }/>
         <Route path="/auditoria" element={
-          <Protegida apenasAdmin><Auditoria /></Protegida>
+          <Protegida {...p} apenasAdmin><Auditoria /></Protegida>
         }/>
         <Route path="/perfil" element={
-          <Protegida><Perfil usuario={usuario} /></Protegida>
+          <Protegida {...p}><Perfil usuario={usuario} /></Protegida>
         }/>
         <Route path="*" element={<Navigate to="/" replace />}/>
       </Routes>

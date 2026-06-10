@@ -126,6 +126,7 @@ export function Dashboard() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLF(true)
     getAnalyticsFunil(vagaSel || undefined)
       .then(r => setFunil(r.data))

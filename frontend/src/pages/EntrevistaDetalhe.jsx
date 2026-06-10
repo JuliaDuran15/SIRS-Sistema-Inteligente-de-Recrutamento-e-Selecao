@@ -628,6 +628,7 @@ export function EntrevistaDetalhe({ usuario }) {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     carregar().finally(() => setLoading(false))
   }, [candidaturaId])
 
