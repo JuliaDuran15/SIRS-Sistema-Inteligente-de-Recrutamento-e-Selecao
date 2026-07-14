@@ -2,7 +2,12 @@ import numpy as np
 
 
 def _cos(a: list[float], b: list[float]) -> float:
-    return float(np.dot(np.array(a), np.array(b)))
+    va = np.array(a)
+    vb = np.array(b)
+    denom = np.linalg.norm(va) * np.linalg.norm(vb)
+    if denom == 0.0:
+        return 0.0
+    return float(np.dot(va, vb) / denom)
 
 
 def calcular_score_rh_multi_secao(

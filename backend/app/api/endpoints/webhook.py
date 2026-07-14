@@ -232,6 +232,7 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
                 curriculo = db.query(Curriculo).filter(
                     Curriculo.candidatura_id == candidatura.id
                 ).first()
+                texto_mudou = True
                 if not curriculo:
                     curriculo = Curriculo(
                         candidatura_id = candidatura.id,
@@ -240,12 +241,15 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
                     db.add(curriculo)
                     db.flush()
                 else:
-                    curriculo.texto_extraido = cd.curriculo_texto
-                # Avança status para ativar o spinner no frontend enquanto a task roda
-                if candidatura.status == StatusCandidatura.NOVO:
-                    candidatura.status = StatusCandidatura.AGUARDANDO_PROC
-                tasks_pendentes.append((processar_curriculo_texto, [str(candidatura.id), cd.curriculo_texto]))
-                resultado.curriculos_processados += 1
+                    texto_mudou = curriculo.texto_extraido != cd.curriculo_texto
+                    if texto_mudou:
+                        curriculo.texto_extraido = cd.curriculo_texto
+                if texto_mudou:
+                    # Avança status para ativar o spinner no frontend enquanto a task roda
+                    if candidatura.status == StatusCandidatura.NOVO:
+                        candidatura.status = StatusCandidatura.AGUARDANDO_PROC
+                    tasks_pendentes.append((processar_curriculo_texto, [str(candidatura.id), cd.curriculo_texto]))
+                    resultado.curriculos_processados += 1
 
             sp.commit()
 

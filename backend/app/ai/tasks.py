@@ -1,4 +1,5 @@
 import asyncio
+import unicodedata
 from datetime import datetime
 
 import app.db.base  # noqa: F401 — garante que todos os models estão mapeados
@@ -26,6 +27,45 @@ from app.models.usuario import Usuario
 from app.models.vaga import Vaga
 
 logger = get_logger("TASKS")
+
+_PARTICULAS = {"de", "da", "do", "dos", "das", "e", "a", "o"}
+
+
+def _normalizar_nome(texto: str) -> str:
+    nfkd = unicodedata.normalize("NFKD", texto)
+    return "".join(c for c in nfkd if not unicodedata.combining(c)).lower()
+
+
+def _verificar_nome_cv(nome_candidato: str, texto_cv: str) -> dict:
+    """
+    Verifica se o nome cadastrado aparece nos primeiros 300 chars do CV
+    (onde o nome quase sempre está). Retorna um dict com o resultado para
+    salvar na explicacao e logar no historico.
+    """
+    if not nome_candidato or not texto_cv:
+        return {"match": True, "confianca": 1.0}
+
+    trecho = texto_cv[:300]
+    trecho_norm = _normalizar_nome(trecho)
+
+    tokens = [
+        t for t in _normalizar_nome(nome_candidato).split()
+        if t not in _PARTICULAS and len(t) > 2
+    ]
+    if not tokens:
+        return {"match": True, "confianca": 1.0}
+
+    encontrados = [t for t in tokens if t in trecho_norm]
+    ausentes    = [t for t in tokens if t not in trecho_norm]
+    confianca   = round(len(encontrados) / len(tokens), 2)
+
+    return {
+        "match"            : confianca >= 0.5,
+        "confianca"        : confianca,
+        "nome_cadastrado"  : nome_candidato,
+        "tokens_ausentes"  : ausentes,
+        "trecho_analisado" : trecho.strip()[:120],
+    }
 
 
 def _recalcular_scores_mercado(db, vaga: Vaga) -> int:
@@ -85,8 +125,8 @@ def _recalcular_scores_mercado(db, vaga: Vaga) -> int:
             cur.score_curriculo = novo_final
             cur.explicacao      = nova_expl
             count += 1
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning(f"curriculo {cur.id} | falha no recálculo de scores: {exc}")
 
     if count:
         db.commit()
@@ -145,7 +185,13 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
 
         # 4. Features estruturais e bônus (calculados antes dos scores)
         termos        = (vaga.ranking_mercado or {}).get("termos")
-        vetor_mercado = vaga.vetor_mercado if vaga.vetor_mercado is not None else vaga.vetor_vaga
+        if vaga.vetor_mercado is not None:
+            vetor_mercado = vaga.vetor_mercado
+        else:
+            logger.warning(
+                f"vaga={vaga.id} | vetor_mercado ausente — score_mercado usará vetor_vaga como fallback"
+            )
+            vetor_mercado = vaga.vetor_vaga
 
         feat_cv   = extrair_features_curriculo(resultado["texto_extraido"])
         feat_vaga = extrair_features_vaga(vaga.requisitos_texto, termos)
@@ -172,7 +218,33 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
             features_vaga = feat_vaga,
         )
 
-        # 5. Salva no banco
+        # 7. Verificação de nome (aviso suave — não bloqueia)
+        nome_candidato = candidatura.candidato.nome if candidatura.candidato else ""
+        verif_nome = _verificar_nome_cv(nome_candidato, resultado["texto_extraido"])
+        if not verif_nome["match"]:
+            logger.warning(
+                f"candidatura={candidatura_id} | nome no CV pode divergir do cadastro | "
+                f"cadastrado='{verif_nome['nome_cadastrado']}' "
+                f"confianca={verif_nome['confianca']} "
+                f"ausentes={verif_nome['tokens_ausentes']}"
+            )
+            hist = list(candidatura.historico or [])
+            hist.append({
+                "de"    : str(candidatura.status),
+                "para"  : str(candidatura.status),
+                "ator"  : "sistema",
+                "em"    : datetime.utcnow().isoformat(),
+                "alerta": "nome_cv_divergente",
+                "detalhe": (
+                    f"Nome cadastrado '{verif_nome['nome_cadastrado']}' não foi encontrado "
+                    f"no início do CV. Tokens ausentes: {', '.join(verif_nome['tokens_ausentes'])}. "
+                    f"Verifique se o CV pertence a este candidato."
+                ),
+            })
+            candidatura.historico = hist
+        explicacao["alerta_nome"] = verif_nome
+
+        # 8. Salva no banco
         curriculo = db.query(Curriculo).filter(
             Curriculo.candidatura_id == candidatura_id
         ).first()
@@ -216,6 +288,26 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
             "candidatura_id": candidatura_id,
             "score_curriculo": score_curriculo,
         }
+
+    except ValueError as exc:
+        logger.error(f"candidatura={candidatura_id} | ERRO irrecuperável (sem retry): {exc}")
+        db.rollback()
+        try:
+            cand = db.query(Candidatura).filter(Candidatura.id == candidatura_id).first()
+            if cand:
+                hist = list(cand.historico or [])
+                hist.append({
+                    "de"  : str(cand.status),
+                    "para": StatusCandidatura.NOVO,
+                    "ator": "sistema",
+                    "em"  : datetime.utcnow().isoformat(),
+                    "erro": str(exc),
+                })
+                cand.historico = hist
+                cand.status    = StatusCandidatura.NOVO
+                db.commit()
+        except Exception:
+            db.rollback()
 
     except Exception as exc:
         logger.error(f"candidatura={candidatura_id} | ERRO no processamento de PDF: {exc}", exc_info=True)
@@ -310,7 +402,13 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
         feat_vaga = extrair_features_vaga(vaga.requisitos_texto, termos)
         bonus     = calcular_bonus_estrutural(feat_cv, feat_vaga)
 
-        vetor_mercado = vaga.vetor_mercado if vaga.vetor_mercado is not None else vaga.vetor_vaga
+        if vaga.vetor_mercado is not None:
+            vetor_mercado = vaga.vetor_mercado
+        else:
+            logger.warning(
+                f"vaga={vaga.id} | vetor_mercado ausente — score_mercado usará vetor_vaga como fallback"
+            )
+            vetor_mercado = vaga.vetor_vaga
         score_rh = calcular_score_rh_multi_secao(
             vetor_embedding = vetor,
             vetor_vaga      = vaga.vetor_vaga,
@@ -329,6 +427,32 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
             features_cv   = feat_cv,
             features_vaga = feat_vaga,
         )
+
+        # Verificação de nome (aviso suave — não bloqueia)
+        nome_candidato = candidatura.candidato.nome if candidatura.candidato else ""
+        verif_nome = _verificar_nome_cv(nome_candidato, texto)
+        if not verif_nome["match"]:
+            logger.warning(
+                f"candidatura={candidatura_id} | nome no CV pode divergir do cadastro | "
+                f"cadastrado='{verif_nome['nome_cadastrado']}' "
+                f"confianca={verif_nome['confianca']} "
+                f"ausentes={verif_nome['tokens_ausentes']}"
+            )
+            hist = list(candidatura.historico or [])
+            hist.append({
+                "de"    : str(candidatura.status),
+                "para"  : str(candidatura.status),
+                "ator"  : "sistema",
+                "em"    : datetime.utcnow().isoformat(),
+                "alerta": "nome_cv_divergente",
+                "detalhe": (
+                    f"Nome cadastrado '{verif_nome['nome_cadastrado']}' não foi encontrado "
+                    f"no início do CV. Tokens ausentes: {', '.join(verif_nome['tokens_ausentes'])}. "
+                    f"Verifique se o CV pertence a este candidato."
+                ),
+            })
+            candidatura.historico = hist
+        explicacao["alerta_nome"] = verif_nome
 
         curriculo = db.query(Curriculo).filter(
             Curriculo.candidatura_id == candidatura_id
@@ -372,6 +496,26 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
             "candidatura_id" : candidatura_id,
             "score_curriculo": score_curriculo,
         }
+
+    except ValueError as exc:
+        logger.error(f"candidatura={candidatura_id} | ERRO irrecuperável (sem retry): {exc}")
+        db.rollback()
+        try:
+            cand = db.query(Candidatura).filter(Candidatura.id == candidatura_id).first()
+            if cand:
+                hist = list(cand.historico or [])
+                hist.append({
+                    "de"  : str(cand.status),
+                    "para": StatusCandidatura.NOVO,
+                    "ator": "sistema",
+                    "em"  : datetime.utcnow().isoformat(),
+                    "erro": str(exc),
+                })
+                cand.historico = hist
+                cand.status    = StatusCandidatura.NOVO
+                db.commit()
+        except Exception:
+            db.rollback()
 
     except Exception as exc:
         logger.error(f"candidatura={candidatura_id} | ERRO no processamento de texto: {exc}", exc_info=True)

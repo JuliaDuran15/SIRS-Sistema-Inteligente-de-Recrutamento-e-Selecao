@@ -14,7 +14,7 @@ def get_model():
 
 def extrair_texto_pdf(caminho_pdf: str) -> str:
     doc    = fitz.open(caminho_pdf)
-    partes = [p.get_text("text") for p in doc if p.get_text("text").strip()]
+    partes = [t for p in doc if (t := p.get_text("text")).strip()]
     doc.close()
     if not partes:
         raise ValueError("PDF não contém texto extraível — pode ser imagem escaneada")

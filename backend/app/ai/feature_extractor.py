@@ -261,14 +261,14 @@ def calcular_bonus_estrutural(
     # ── 1. Experiência (±0.08, escalada pelo overlap para evitar premiar exp irrelevante) ──
     if anos_req > 0 and anos_cand > 0:
         ratio = anos_cand / anos_req
-        # Escala o bônus positivo pelo overlap: exp irrelevante vale menos
+        # Escala bônus E penalidade pelo overlap: quando skills não batem, anos importam menos
         escala = max(overlap, 0.3) if hab_req else 1.0
         if ratio >= 1.0:
             bonus += 0.08 * escala
         elif ratio >= 0.7:
             bonus += 0.03 * escala
         elif ratio < 0.35:
-            bonus -= 0.10          # penalidade por anos insuficientes não é escalada
+            bonus -= 0.10 * escala  # escalada: skills já penalizam, não punir duas vezes ao máximo
 
     # ── 2. Senioridade (penalidade proporcional ao gap) ───────────────────────
     if nivel_req > 0 and nivel_cand > 0:

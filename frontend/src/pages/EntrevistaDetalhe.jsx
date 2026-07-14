@@ -8,7 +8,7 @@ import {
   atualizarStatusCandidatura,
   uploadCurriculo,
   uploadCurriculoTexto,
-  // resumirTranscricao,  // TODO: habilitar quando feature de transcrição for ativada
+  resumirTranscricao,
 } from "../api"
 import { Badge } from "../components/Badge"
 import { ScoreBar } from "../components/ScoreBar"
@@ -266,56 +266,56 @@ function UploadCurriculo({ candidaturaId, status, curriculo, podeUpload, onAtual
   )
 }
 
-// ── Análise de transcrição (desativado) ──────────────────────────────────────
-// function BotaoTranscricao({ entrevistaId, onPreenchido }) {
-//   const [aberto, setAberto]           = useState(false)
-//   const [transcricao, setTranscricao] = useState("")
-//   const [carregando, setCarregando]   = useState(false)
-//   const [erro, setErro]               = useState(null)
-//
-//   async function analisar() {
-//     if (!transcricao.trim()) return
-//     setCarregando(true); setErro(null)
-//     try {
-//       const r = await resumirTranscricao(entrevistaId, transcricao)
-//       onPreenchido(r.data)
-//       setAberto(false); setTranscricao("")
-//     } catch (err) {
-//       setErro(err.response?.data?.detail ?? "Erro ao analisar transcrição")
-//     } finally { setCarregando(false) }
-//   }
-//
-//   return (
-//     <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(167,139,250,0.25)" }}>
-//       <button type="button" onClick={() => setAberto(a => !a)}
-//         className="w-full flex items-center justify-between px-4 py-3 text-left"
-//         style={{ background: "rgba(167,139,250,0.08)" }}>
-//         <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#A78BFA" }}>
-//           Preencher com transcrição
-//         </span>
-//         <span className="text-sm" style={{ color: "rgba(167,139,250,0.5)" }}>{aberto ? "▲" : "▼"}</span>
-//       </button>
-//       {aberto && (
-//         <div className="p-4 space-y-3" style={{ background: "rgba(167,139,250,0.04)" }}>
-//           <p className="text-xs text-brand-pale/45">
-//             Cole a transcrição — pontos fortes, fracos e anotações extraídos automaticamente. Revise antes de salvar.
-//           </p>
-//           <textarea value={transcricao} onChange={e => setTranscricao(e.target.value)}
-//             rows={6} placeholder="Cole a transcrição aqui..."
-//             className="w-full px-3 py-2 rounded-xl text-sm resize-y font-mono"
-//             style={{ fontSize: "0.72rem" }} />
-//           {erro && <p className="text-xs text-red-400">{erro}</p>}
-//           <button type="button" onClick={analisar}
-//             disabled={carregando || !transcricao.trim()}
-//             className="px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 transition-all"
-//             style={{ background: "rgba(167,139,250,0.2)", color: "#A78BFA", border: "1px solid rgba(167,139,250,0.35)" }}>
-//             {carregando ? "Analisando..." : "Analisar e preencher"}
-//           </button>
-//         </div>
-//       )}
-//     </div>
-//   )
-// }
+// ── Análise de transcrição ───────────────────────────────────────────────────
+function BotaoTranscricao({ entrevistaId, onPreenchido }) {
+  const [aberto, setAberto]           = useState(false)
+  const [transcricao, setTranscricao] = useState("")
+  const [carregando, setCarregando]   = useState(false)
+  const [erro, setErro]               = useState(null)
+
+  async function analisar() {
+    if (!transcricao.trim()) return
+    setCarregando(true); setErro(null)
+    try {
+      const r = await resumirTranscricao(entrevistaId, transcricao)
+      onPreenchido(r.data)
+      setAberto(false); setTranscricao("")
+    } catch (err) {
+      setErro(err.response?.data?.detail ?? "Erro ao analisar transcrição")
+    } finally { setCarregando(false) }
+  }
+
+  return (
+    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(167,139,250,0.25)" }}>
+      <button type="button" onClick={() => setAberto(a => !a)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+        style={{ background: "rgba(167,139,250,0.08)" }}>
+        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#A78BFA" }}>
+          Preencher com transcrição
+        </span>
+        <span className="text-sm" style={{ color: "rgba(167,139,250,0.5)" }}>{aberto ? "▲" : "▼"}</span>
+      </button>
+      {aberto && (
+        <div className="p-4 space-y-3" style={{ background: "rgba(167,139,250,0.04)" }}>
+          <p className="text-xs text-brand-pale/45">
+            Cole a transcrição — pontos fortes, fracos e anotação extraídos automaticamente por IA. Revise antes de salvar.
+          </p>
+          <textarea value={transcricao} onChange={e => setTranscricao(e.target.value)}
+            rows={6} placeholder="Cole a transcrição aqui..."
+            className="w-full px-3 py-2 rounded-xl text-sm resize-y font-mono"
+            style={{ fontSize: "0.72rem" }} />
+          {erro && <p className="text-xs text-red-400">{erro}</p>}
+          <button type="button" onClick={analisar}
+            disabled={carregando || !transcricao.trim()}
+            className="px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 transition-all"
+            style={{ background: "rgba(167,139,250,0.2)", color: "#A78BFA", border: "1px solid rgba(167,139,250,0.35)" }}>
+            {carregando ? "Analisando..." : "Analisar e preencher"}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ── Card entrevista ──────────────────────────────────────────────────────────
 function CardEntrevista({ entrevista: initial, usuario, candidatura, onResultadoSalvo }) {
@@ -500,14 +500,14 @@ function CardEntrevista({ entrevista: initial, usuario, candidatura, onResultado
             <button type="button" onClick={() => setOpen(false)}
               className="text-brand-pale/35 hover:text-brand-pale transition-colors text-lg leading-none">×</button>
           </div>
-          {/* <BotaoTranscricao
+          <BotaoTranscricao
             entrevistaId={entrevista.id}
             onPreenchido={({ pontos_fortes, pontos_fracos, anotacoes: an }) => {
               if (pontos_fortes?.length) setFortes(pontos_fortes)
               if (pontos_fracos?.length) setFracos(pontos_fracos)
               if (an) setAnotacoes(an)
             }}
-          /> */}
+          />
           <div>
             <label className="block text-xs font-bold text-brand-pale/55 uppercase tracking-wider mb-2">
               Score (0–10)

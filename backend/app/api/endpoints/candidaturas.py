@@ -108,6 +108,12 @@ def upload_curriculo(candidatura_id: str, arquivo: UploadFile = File(...),
     if not arquivo.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Apenas arquivos PDF são aceitos")
 
+    arquivo.file.seek(0, 2)
+    tamanho = arquivo.file.tell()
+    arquivo.file.seek(0)
+    if tamanho > 20 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Arquivo muito grande — limite de 20 MB")
+
     candidatura = db.query(Candidatura).filter(Candidatura.id == candidatura_id).first()
     if not candidatura:
         raise HTTPException(status_code=404, detail="Candidatura não encontrada")

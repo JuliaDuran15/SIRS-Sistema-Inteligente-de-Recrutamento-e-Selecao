@@ -1,3 +1,6 @@
+const LABELS_SENIORIDADE = ["estágio", "júnior", "pleno", "sênior", "lead", "gestão", "direção"]
+const LABELS_EDUCACAO    = ["", "técnico", "grad. incompleta", "graduação", "pós/MBA", "mestrado", "doutorado"]
+
 function MiniBar({ valor, cor }) {
   return (
     <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--s-track)" }}>
@@ -13,15 +16,34 @@ function corComp(cls) {
 
 export function ExplicacaoScore({ explicacao, expandido, onToggle }) {
   if (!explicacao) return null
-  const { componentes, sinais_estruturais: sinais } = explicacao
+  const { componentes, sinais_estruturais: sinais, alerta_nome: alertaNome } = explicacao
   const vaga_c  = componentes?.aderencia_vaga    ?? {}
   const mkt_c   = componentes?.aderencia_mercado ?? {}
   const skills  = sinais?.habilidades_em_comum   ?? []
   const anosExp = sinais?.anos_experiencia        ?? 0
+  const nivSen  = sinais?.nivel_senioridade       ?? 0
   const nivEduc = sinais?.nivel_educacao          ?? 0
 
   return (
-    <div>
+    <div className="space-y-2">
+      {alertaNome?.match === false && (
+        <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl"
+          style={{ background: "rgba(252,193,60,0.08)", border: "1px solid rgba(252,193,60,0.35)" }}>
+          <span className="text-amber-400 text-base leading-none mt-0.5 flex-shrink-0">⚠</span>
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-amber-400">CV pode não pertencer a este candidato</p>
+            <p className="text-xs text-amber-300/70 mt-0.5 leading-relaxed">
+              Nome cadastrado <span className="font-mono font-semibold">{alertaNome.nome_cadastrado}</span> não
+              foi encontrado no início do documento
+              {alertaNome.tokens_ausentes?.length > 0 && (
+                <> (ausentes: <span className="font-mono">{alertaNome.tokens_ausentes.join(", ")}</span>)</>
+              )}.
+              Confira se o arquivo enviado é o CV correto.
+            </p>
+          </div>
+        </div>
+      )}
+
       <button
         onClick={onToggle}
         className="flex items-center gap-2 text-xs transition-colors mt-1"
@@ -50,7 +72,8 @@ export function ExplicacaoScore({ explicacao, expandido, onToggle }) {
               <p className="text-xs text-brand-pale/30">
                 Contribui com <strong style={{ color: corComp(vaga_c.classificacao) }}>{vaga_c.contribuicao} pts</strong> no score final
                 {anosExp > 0 && ` · ${anosExp} ${anosExp === 1 ? "ano" : "anos"} de experiência`}
-                {nivEduc > 0 && ` · educação ${Math.round(nivEduc * 100)}%`}
+                {nivSen  > 0 && ` · ${LABELS_SENIORIDADE[nivSen]}`}
+                {nivEduc > 0 && ` · ${LABELS_EDUCACAO[nivEduc]}`}
               </p>
             </div>
           )}

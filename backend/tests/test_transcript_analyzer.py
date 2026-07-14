@@ -85,22 +85,21 @@ class TestLimpar:
 
 class TestSentencas:
     def test_divide_por_ponto(self):
-        sents = _sentencas("Tenho experiência em Python. Trabalhei por cinco anos.")
+        sents = _sentencas("Tenho experiência em Python há mais de cinco anos. Trabalhei em empresas de tecnologia.")
         assert len(sents) == 2
 
     def test_divide_por_exclamacao(self):
-        # "Ótimo resultado!" tem só 16 chars e é filtrado (< 20); "Entregamos antes do prazo." fica
-        sents = _sentencas("Ótimo resultado! Entregamos antes do prazo.")
+        sents = _sentencas("Que resultado incrível e muito impactante! Entregamos o projeto antes do prazo previsto.")
         assert len(sents) >= 1
 
     def test_divide_por_paragrafo(self):
-        sents = _sentencas("Primeiro parágrafo com conteúdo relevante.\n\nSegundo parágrafo diferente.")
+        sents = _sentencas("Primeiro parágrafo com conteúdo relevante e bastante detalhado.\n\nSegundo parágrafo com informação diferente.")
         assert len(sents) == 2
 
     def test_filtra_sentencas_muito_curtas(self):
-        # "Ok." tem menos de 20 chars → deve ser filtrada
+        # "Ok." tem menos de 30 chars → deve ser filtrada
         sents = _sentencas("Ok. Tenho bastante experiência em liderança de equipes.")
-        assert all(len(s) > 20 for s in sents)
+        assert all(len(s) > 30 for s in sents)
 
     def test_texto_vazio_retorna_lista_vazia(self):
         assert _sentencas("") == []
@@ -453,4 +452,274 @@ class TestAnalisarTranscricao:
         Reconhecido por entregar resultados excepcionais com autonomia total.
         """
         r = analisar_transcricao(transcript)
+
+        print("\n── Resultado da análise ──────────────────────────────")
+        print("PONTOS FORTES:")
+        for i, p in enumerate(r["pontos_fortes"], 1):
+            print(f"  {i}. {p}")
+        print("PONTOS FRACOS:")
+        for i, p in enumerate(r["pontos_fracos"], 1):
+            print(f"  {i}. {p}")
+        print(f"ANOTAÇÕES: {r['anotacoes'] or '(nenhuma)'}")
+        print("─────────────────────────────────────────────────────")
+
         assert len(r["pontos_fortes"]) >= 3
+
+    def test_entrevista_longa_e_complexa_com_typos(self):
+        """
+        Transcrição longa e realista: Google Meet, typos, sobreposições, misto PT/EN.
+        Só imprime o resultado — sem assertions rígidas de contagem.
+        """
+        transcript = """
+        0:00:03 Ana (RH)
+        Boa tarde Pedro, tudo bem? Obrigada por aceitar essa conversa hoje.
+        Pode começar se aprsentando brevemente pra gente?
+
+        0:00:12 Pedro Alves
+        Claro, boa tarde Ana! Então, meu nome é Pedro, sou engnheiro de sofware
+        com quaze dez anos de expriência no mercado. Comecei na área de QA,
+        migrei pra backend e nos últimos quatro anos tô trabalhando com arquitetura
+        de sistemas distribuídos. Atualmente sou tech lead num time de oito pessoas.
+
+        0:01:05 Ana (RH)
+        Ótimo! E qual foi o projeto que você considera mais desafiador da sua carreira?
+
+        0:01:11 Pedro Alves
+        [sobreposição] com certeza foi quando eu liderou— liderei, desculpa —
+        a migração de um monolito legado pra microsserviços na empresa anterior.
+        A gente tinha um sistema com mais de quinze anos de dívida técnica,
+        e eu coordenei um time de doze engenheiros durante oito meses.
+        Implementei a estratégia de strangler fig pattern pra não derrubar produção.
+        Entrgamos com 98% de uptime durante toda a migração, foi bem puxado [risos].
+        O impacto foi reduzir o tempo de deploy de quatro horas pra oito minutos.
+        Melhorei também os processos de code review e implmentei cultura de testes,
+        o que aumentou a cobertura de 12% pra 78% em seis meses.
+
+        0:02:40 Ana (RH)
+        Impressionante! E no seu papel de tech lead, como você lida com conflitos técnicos
+        dentro do time?
+
+        0:02:48 Pedro Alves
+        Eu acredito muito em comunicação clara e tomada de decisão baseada em dados.
+        Quando surge um conflito de abordagem técnica, eu facilito uma sessão de
+        arquitetura onde cada pessoa apresenta os trade-offs da sua solução.
+        Tenho autonomia pra tomar a decisão final, mas prefiro construir consenso.
+        Já tive situações bem tensas, como quando dois sêniores discordavam sobre
+        usar Kafka versus RabbitMQ. Conduzi um spike de três dias, medimos tudo,
+        e chegamos num consenso baseado em evidências. Isso fortaleceu a confiança do time.
+
+        0:03:55 Ana (RH)
+        Muito bom. E quais são as suas principais fraquezas ou pontos de desenvolvimento?
+
+        0:04:02 Pedro Alves
+        Olha, vou ser honesto. Tenho dificuldades com a parte de gestão de pessoas
+        no sentido de dar feedback negativo — não sei exatamente como fazer isso
+        de forma que não desmotive a pessoa, ainda tô aprendendo isso.
+        Também não tenho muita experiência com a parte de negócios e produto,
+        eu sempre fui muito técnico. E front-end é basico pra mim, nunca trabalhei
+        seriamente com React ou Vue, fica difícil quando preciso ajudar o time frontend.
+        [inaudível] ah, e gestão de orçamento também é algo que preciso melhorar,
+        nunca tive essa responsabilidade diretamente.
+
+        0:05:10 Ana (RH)
+        Entendido, obrigada pela honestidade. Como você se mantém atualizado
+        tecnicamente? O mercado muda muito rápido.
+
+        0:05:18 Pedro Alves
+        Tenho uma rotina bem estruturada pra isso. Todo dia leio o Hacker News
+        e alguns newsletters técnicos. Contribuo com projetos open source nos finais
+        de semana — tenho um repositório com quase dois mil stars no GitHub.
+        Fiz certificação em Kubernetes no ano passado e tô estudando IA aplicada
+        a sistemas de recomendação. Também sou reconhecido internamente por organizar
+        tech talks mensais onde o time apresenta novidades e aprendizados.
+        Acredito muito em mentorar pessoas mais juniores, isso me faz crescer também.
+
+        0:06:20 Ana (RH)
+        Perfeito Pedro. Última pergunta: por que você quer sair da empresa atual?
+
+        0:06:25 Pedro Alves
+        A empresa é ótima, não tenho nada negativo a falar. Mas cheguei num ponto
+        onde sinto que já alcançei tudo que podia alcançar lá. Quero um ambiente
+        com desafios maiores, produto com escala global e um time que me desafie
+        tecnicamente. Vi que aqui vocês trabalham com problemas complexos de
+        distribuição de dados em larga escala, e é exatamente onde quero desenvolver
+        minha especialização nos próximos anos.
+        """
+
+        r = analisar_transcricao(transcript)
+
+        print("\n══ TRANSCRIÇÃO (entrada) ══════════════════════════════════")
+        for linha in transcript.strip().splitlines():
+            print(linha)
+        print("\n══ RESULTADO DA ANÁLISE ═══════════════════════════════════")
+        print("PONTOS FORTES:")
+        for i, p in enumerate(r["pontos_fortes"], 1):
+            print(f"  {i}. {p}")
+        if not r["pontos_fortes"]:
+            print("  (nenhum detectado)")
+        print("PONTOS FRACOS:")
+        for i, p in enumerate(r["pontos_fracos"], 1):
+            print(f"  {i}. {p}")
+        if not r["pontos_fracos"]:
+            print("  (nenhum detectado)")
+        print(f"ANOTAÇÕES: {r['anotacoes'] or '(nenhuma)'}")
+        print("══════════════════════════════════════════════════════════")
+
+        assert len(r["pontos_fortes"]) >= 2, f"esperava >= 2 fortes, encontrou: {r['pontos_fortes']}"
+        assert len(r["pontos_fracos"]) >= 1, f"esperava >= 1 fraco, encontrou: {r['pontos_fracos']}"
+        assert "0:0" not in str(r), "timestamp vazou para o output"
+        assert "Ana" not in " ".join(r["pontos_fortes"] + r["pontos_fracos"])
+
+
+# ─── Novos testes — iteração 2 ────────────────────────────────────────────────
+
+class TestLimparNomeSemColon:
+    """Labels de falante em linha isolada sem dois-pontos (Google Meet / Zoom)."""
+
+    def test_nome_simples_removido(self):
+        resultado = _limpar("Entrevistador\nFale sobre sua trajetória profissional.")
+        assert "Entrevistador" not in resultado
+        assert "trajetória" in resultado
+
+    def test_nome_composto_apos_timestamp_removido(self):
+        resultado = _limpar("0:00:08 João Silva\nClaro, sou desenvolvedor sênior.")
+        assert "João Silva" not in resultado
+        assert "desenvolvedor sênior" in resultado
+
+    def test_nome_com_papel_sem_colon_removido(self):
+        """'Ana (RH)' em linha isolada sem dois-pontos — removido pelo passo 3."""
+        resultado = _limpar("0:00:05 Ana (RH)\nBoa tarde, pode começar?")
+        assert not resultado.lstrip().startswith("Ana (RH)")
+        assert "Boa tarde" in resultado
+
+    def test_nome_em_dialogo_nao_removido(self):
+        """Nome dentro de uma frase de diálogo é conteúdo legítimo, não label."""
+        resultado = _limpar("Boa tarde João, obrigada por vir.")
+        assert "João" in resultado
+
+    def test_multiplos_falantes_removidos(self):
+        transcript = (
+            "Entrevistador\n"
+            "Fale sobre sua experiência em liderança de times.\n\n"
+            "Candidato\n"
+            "Liderei equipes por cinco anos entregando resultados excelentes.\n"
+        )
+        resultado = _limpar(transcript)
+        assert "Entrevistador" not in resultado
+        assert "Candidato" not in resultado
+        assert "Liderei" in resultado
+
+    def test_nome_nao_prefixado_na_sentenca_seguinte(self):
+        """Nome do falante não deve aparecer como prefixo na sentença que segue."""
+        resultado = _limpar("0:01:20 Maria\nImplementei o sistema de pagamentos do zero.")
+        for trecho in resultado.split("."):
+            assert not trecho.strip().startswith("Maria")
+
+    def test_transcript_google_meet_nomes_removidos(self):
+        """Formato real exportado pelo Google Meet — nomes não devem vazar."""
+        transcript = (
+            "0:00:03 Entrevistador\n"
+            "Boa tarde, pode se apresentar?\n\n"
+            "0:00:08 João Silva\n"
+            "Claro, sou desenvolvedor sênior com dez anos de experiência."
+        )
+        resultado = _limpar(transcript)
+        assert "Entrevistador" not in resultado
+        assert "João Silva" not in resultado
+        assert "desenvolvedor sênior" in resultado
+
+
+class TestFalsosPositivosKeywords:
+    """Palavras-chave não devem bater em substrings de outras palavras."""
+
+    def test_forte_nao_bate_em_esforco(self):
+        """'forte' como substring de 'esforço' não deve gerar falso positivo."""
+        assert _classificar("foi necessário muito esforço para completar a tarefa no prazo") == "neutro"
+
+    def test_forte_nao_bate_em_conforto(self):
+        assert _classificar("trabalho com conforto em ambientes de alta pressão") == "neutro"
+
+    def test_forte_nao_bate_em_reforco(self):
+        assert _classificar("usamos reforço positivo para motivar a equipe no projeto") == "neutro"
+
+    def test_domina_nao_bate_em_predomina(self):
+        """'domina' como substring de 'predomina' não deve gerar falso positivo."""
+        assert _classificar("a cultura ágil predomina na empresa onde trabalhei por anos") == "neutro"
+
+    def test_iniciativa_bate_como_palavra_inteira(self):
+        """'iniciativa' presente como palavra inteira — deve classificar como forte."""
+        assert _classificar("tomei iniciativa no projeto e entreguei antes do prazo") == "forte"
+
+    def test_fraco_nao_bate_em_texto_neutro_sem_keywords(self):
+        """Texto sem nenhuma keyword não deve ser classificado como fraco."""
+        assert _classificar("a empresa trabalha com atacado e varejo em todo o país") == "neutro"
+
+    def test_nao_tenho_nada_negativo_e_neutro(self):
+        """'não tenho nada negativo' cancela o sinal fraco de 'não tenho' → neutro."""
+        assert _classificar("A empresa é ótima, não tenho nada negativo a falar.") == "neutro"
+
+    def test_nao_tenho_nada_a_reclamar_e_neutro(self):
+        assert _classificar("não tenho nada a reclamar da empresa anterior, foi ótimo") == "neutro"
+
+    def test_nao_tenho_experiencia_ainda_e_fraco(self):
+        """'não tenho' sem inversão de contexto continua sendo fraco."""
+        assert _classificar("não tenho experiência com Kubernetes ainda") == "fraco"
+
+
+class TestOutputSemArtefatos:
+    """analisar_transcricao não deve retornar artefatos de transcrição no output."""
+
+    def test_speaker_labels_nao_vazam_google_meet(self):
+        transcript = (
+            "0:00:03 Recrutadora (RH)\n"
+            "Me fale sobre seus pontos fortes principais.\n\n"
+            "0:00:08 Candidato\n"
+            "Tenho liderança técnica sólida e domínio avançado de arquitetura.\n"
+            "Desenvolvi sistemas escaláveis com excelente entrega de resultado.\n"
+        )
+        r = analisar_transcricao(transcript)
+        saida = " ".join(r["pontos_fortes"] + r["pontos_fracos"] + [r["anotacoes"]])
+        assert "Recrutadora" not in saida
+        assert "Candidato" not in saida
+        assert "0:00" not in saida
+
+    def test_timestamps_nao_vazam_para_saida(self):
+        import re as _re
+        transcript = (
+            "1:30:45 falei sobre liderança de equipes nos projetos anteriores.\n"
+            "2:15 desenvolvi e entregamos sistemas de alta disponibilidade.\n"
+        )
+        r = analisar_transcricao(transcript)
+        saida = " ".join(r["pontos_fortes"] + r["pontos_fracos"] + [r["anotacoes"]])
+        assert not _re.search(r'\d+:\d{2}', saida), f"timestamp vazou: {saida!r}"
+
+    def test_anotacoes_e_sentenca_unica_nao_join(self):
+        """anotacoes deve ser a melhor sentença neutra, não um join de várias."""
+        transcript = """
+        Me formei em Ciência da Computação em 2015 e comecei minha carreira em startups.
+        Trabalhei em quatro empresas diferentes ao longo de dez anos de carreira.
+        Atualmente busco posição de liderança técnica em empresa de produto digital.
+        Prefiro ambientes colaborativos onde posso contribuir e crescer profissionalmente.
+        Tenho interesse especial em projetos de alto impacto e inovação tecnológica.
+        """
+        r = analisar_transcricao(transcript)
+        # join de 3 frases do exemplo ultrapassaria facilmente 200 chars
+        assert len(r["anotacoes"]) <= 201
+
+    def test_anotacoes_respeita_max_len_200(self):
+        """Sentença neutra longa deve ser truncada a 200 chars com '…'."""
+        palavras = " e ".join([f"item{i}" for i in range(60)])
+        long_sent = f"Trabalhei com {palavras} ao longo de toda minha carreira."
+        r = analisar_transcricao(long_sent)
+        assert len(r["anotacoes"]) <= 201
+
+    def test_html_nao_vaza_para_campos(self):
+        transcript = """
+        <div>Entrevistador: fale sobre você.</div>
+        <p>Tenho liderança técnica e domínio avançado em arquitetura de sistemas.</p>
+        <p>Desenvolvi plataformas de pagamento com excelente desempenho e entrega.</p>
+        """
+        r = analisar_transcricao(transcript)
+        saida = " ".join(r["pontos_fortes"] + r["pontos_fracos"] + [r["anotacoes"]])
+        assert "<" not in saida
+        assert ">" not in saida
