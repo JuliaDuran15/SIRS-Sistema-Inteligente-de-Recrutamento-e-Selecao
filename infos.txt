@@ -716,3 +716,33 @@ Para usar o Kaggle como fonte de mercado, colocar `backend/data/postings.csv` do
 | `test_candidaturas.py` | Máquina de estados, triagem em lote, savepoints |
 | `test_entrevistas.py` | Permissões por papel e por vaga (gestor só técnica) |
 | `test_vagas.py` | CRUD, `rhs_autorizados`, recálculo de scores ao mudar pesos |
+
+
+UX / Fluxo
+
+Kanban do funil — arrastar candidatos entre etapas visualmente, em vez de trocar status por dropdown. Alto impacto para o RH no dia a dia.
+Preview de PDF inline — abrir o currículo numa lateral sem sair da página, em vez de download.
+Busca global — campo único que busca por nome de candidato, vaga ou email em qualquer tela.
+Export CSV — botão nas listas de candidaturas para exportar para planilha, comum em HR.
+Notificações
+
+Badge de novidades — quando um CV termina de ser processado pelo Celery, mostrar notificação na interface sem precisar recarregar a página (polling simples ou WebSocket).
+Alertas de SLA — destacar candidatos que estão numa etapa há mais de X dias sem movimentação.
+IA / Matching
+
+Sugestão de perguntas de entrevista — com base no CV e nos requisitos da vaga, gerar 5–8 perguntas relevantes antes da entrevista.
+Detecção de duplicata — alertar quando o mesmo candidato (por email ou similaridade de nome) tenta aplicar para a mesma vaga duas vezes.
+Resumo automático do candidato — parágrafo gerado pela IA com pontos chave do CV, visível no card da candidatura sem precisar abrir o PDF.
+Analytics
+
+Tempo médio por etapa — quantos dias em média um candidato fica em triagem, em entrevista, etc. Identifica gargalos no processo.
+Taxa de conversão por vaga — % de candidatos que avançam de cada etapa para a próxima, comparando vagas entre si.
+Origem dos candidatos — manual vs webhook, por vaga.
+Processo / Comunicação
+
+Templates de email automático — email pré-configurado enviado automaticamente em transições chave (aprovado triagem, reprovado, contratado).
+Formulário de feedback estruturado — após registrar resultado de entrevista, pedir avaliações em dimensões fixas (comunicação, técnica, fit cultural) com nota 1–5, além do texto livre.
+Segurança / Compliance
+
+LGPD / anonimização — opção de anonimizar dados pessoais (nome, email, telefone) de candidatos não aprovados após 6 meses.
+Rate limiting no webhook — evitar abuso do endpoint de importação em massa.

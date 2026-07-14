@@ -41,7 +41,8 @@ const COR_STATUS = {
 
 function fmt(iso) {
   if (!iso) return "—"
-  const d = new Date(iso)
+  // Backend envia UTC sem sufixo Z — adicionar Z para parsing correto
+  const d = new Date(iso.endsWith("Z") ? iso : iso + "Z")
   return d.toLocaleString("pt-BR", {
     day: "2-digit", month: "2-digit", year: "numeric",
     hour: "2-digit", minute: "2-digit",

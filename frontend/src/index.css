@@ -342,6 +342,13 @@ html { scroll-behavior: smooth; }
     background: rgba(100, 130, 160, 0.35) !important;
   }
 
+  /* ── Badge SLA (⏱) ────────────────────────────────────────────────────────── */
+  html.light .badge-sla {
+    background: rgba(180, 100, 0, 0.12) !important;
+    color: #92400E !important;
+    border: 1px solid rgba(146, 64, 14, 0.35) !important;
+  }
+
   /* ── Alerta de nome divergente no CV ─────────────────────────────────────── */
   html.light .alerta-nome-cv {
     background: rgba(180, 110, 0, 0.08) !important;

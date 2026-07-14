@@ -9,6 +9,21 @@ const PESOS_DEFAULT = {
   peso_curriculo: 0.5, peso_entrevista_rh: 0.25, peso_entrevista_tec: 0.25,
 }
 
+const SLA_DEFAULT = {
+  triagem_pendente: { valor: 3, unidade: "dias" },
+  decisao_pendente: { valor: 2, unidade: "dias" },
+  outros_ativos:    { valor: 7, unidade: "dias" },
+}
+const SLA_GRUPOS = [
+  { key: "triagem_pendente", label: "Triagem pendente" },
+  { key: "decisao_pendente", label: "Decisão pendente" },
+  { key: "outros_ativos",    label: "Demais etapas" },
+]
+
+function lerSlaConfig() {
+  try { return JSON.parse(localStorage.getItem("sla_config")) ?? SLA_DEFAULT } catch { return SLA_DEFAULT }
+}
+
 const STATUS_COR   = { aberta: "green", pausada: "amber", fechada: "gray" }
 const STATUS_LABEL = { aberta: "aberta", pausada: "pausada", fechada: "fechada" }
 
@@ -23,6 +38,12 @@ export function Vagas({ usuario }) {
   const [erro, setErro]       = useState("")
   const [loading, setLoading] = useState(true)
   const [busca, setBusca]     = useState("")
+  const [slaConfig, setSlaConfig] = useState(lerSlaConfig)
+  const [modalSla, setModalSla]   = useState(false)
+
+  useEffect(() => {
+    localStorage.setItem("sla_config", JSON.stringify(slaConfig))
+  }, [slaConfig])
 
   const podeGerenciar = usuario?.papel === "rh" || usuario?.papel === "admin"
 
@@ -86,22 +107,99 @@ export function Vagas({ usuario }) {
   return (
     <div>
       {/* Header */}
-      <div className="flex items-start justify-between mb-8">
+      <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-brand-cloud">Vagas</h1>
           <p className="text-sm text-brand-pale/45 mt-1 font-medium">
             {loading ? "Carregando..." : `${vagas.length} ${vagas.length === 1 ? "vaga" : "vagas"}`}
           </p>
         </div>
-        {podeGerenciar && (
-          <button onClick={() => setCriando(!criando)}
-            className="flex items-center gap-2 px-4 py-2.5 text-brand-black text-sm font-bold rounded-xl hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}>
-            <span className="text-base font-light">+</span>
-            Nova vaga
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {usuario?.papel === "admin" && (
+            <button
+              onClick={() => setModalSla(v => !v)}
+              title="Configurar limites de SLA globais"
+              className="flex items-center gap-1.5 px-3 py-2.5 text-sm font-semibold rounded-xl transition-all"
+              style={modalSla
+                ? { background: "rgba(167,139,250,0.2)", border: "1px solid rgba(167,139,250,0.4)", color: "#C4B5FD" }
+                : { background: "var(--s-chip)", border: "1px solid var(--b-subtle)", color: "var(--t-muted2)" }}>
+              ⚙ SLA
+            </button>
+          )}
+          {podeGerenciar && (
+            <button onClick={() => setCriando(!criando)}
+              className="flex items-center gap-2 px-4 py-2.5 text-brand-black text-sm font-bold rounded-xl hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}>
+              <span className="text-base font-light">+</span>
+              Nova vaga
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Painel de configuração de SLA — apenas admin */}
+      {modalSla && usuario?.papel === "admin" && (
+        <div className="card-glass rounded-2xl p-5 space-y-4 mb-6"
+          style={{ borderColor: "rgba(167,139,250,0.3)" }}>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-bold text-brand-cloud">Alertas de SLA</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--t-muted)" }}>
+                Tempo máximo em cada etapa antes do alerta ⏱ aparecer nas candidaturas. Salvo globalmente no navegador.
+              </p>
+            </div>
+            <button onClick={() => setModalSla(false)}
+              className="text-lg leading-none flex-shrink-0 transition-colors hover:text-brand-cloud"
+              style={{ color: "var(--t-faint2)" }}>×</button>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            {SLA_GRUPOS.map(({ key, label }) => (
+              <div key={key} className="space-y-2">
+                <p className="text-xs font-semibold" style={{ color: "var(--t-muted2)" }}>{label}</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number" min="1" max="9999" step="1"
+                    value={slaConfig[key]?.valor ?? 1}
+                    onChange={e => setSlaConfig(prev => ({
+                      ...prev,
+                      [key]: { ...prev[key], valor: Math.max(1, Number(e.target.value)) }
+                    }))}
+                    className="w-16 rounded-lg px-2 py-1.5 text-sm font-mono text-center"
+                    style={{ background: "var(--s-input)", border: "1px solid var(--b-subtle)", color: "var(--t-base)" }}
+                  />
+                  <select
+                    value={slaConfig[key]?.unidade ?? "dias"}
+                    onChange={e => setSlaConfig(prev => ({
+                      ...prev,
+                      [key]: { ...prev[key], unidade: e.target.value }
+                    }))}
+                    className="flex-1 rounded-lg px-2 py-1.5 text-xs"
+                    style={{ background: "var(--s-input)", border: "1px solid var(--b-subtle)", color: "var(--t-base)" }}
+                  >
+                    <option value="minutos">minutos</option>
+                    <option value="horas">horas</option>
+                    <option value="dias">dias</option>
+                  </select>
+                </div>
+                <p className="text-xs font-mono" style={{ color: "var(--t-faint2)" }}>
+                  atual: {slaConfig[key]?.valor} {slaConfig[key]?.unidade}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between pt-1" style={{ borderTop: "1px solid var(--b-subtle)" }}>
+            <button
+              onClick={() => setSlaConfig(SLA_DEFAULT)}
+              className="text-xs font-semibold transition-colors hover:text-brand-cloud"
+              style={{ color: "var(--t-faint2)" }}>
+              Restaurar padrões (3d / 2d / 7d)
+            </button>
+            <span className="text-xs" style={{ color: "var(--t-faint2)" }}>
+              Configuração salva automaticamente no navegador
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Formulário de criação */}
       {criando && (
