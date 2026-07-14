@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { getAnalyticsResumo, getAnalyticsFunil, getAnalyticsScores, getVagas } from "../api"
+import { getAnalyticsResumo, getAnalyticsFunil, getAnalyticsScores, getAnalyticsScoresPorVaga, getAnalyticsTopSkills, getVagas } from "../api"
 import {
   IconBriefcase, IconUsers, IconActivity, IconCheckCircle,
   IconCalendar, IconClock, IconFilter,
@@ -108,21 +108,55 @@ function HistogramaScores({ buckets, media, mediana }) {
   )
 }
 
+function BarrasHorizontais({ itens, corBarra = "#4DC8E8", corTexto, formatarValor, emptyMsg }) {
+  if (!itens?.length) return (
+    <p className="text-xs text-brand-pale/35 italic py-6 text-center">{emptyMsg ?? "Sem dados."}</p>
+  )
+  const max = Math.max(...itens.map(i => i.valor), 1)
+  return (
+    <div className="space-y-2.5">
+      {itens.map((item, idx) => (
+        <div key={idx} className="flex items-center gap-3">
+          <span className="text-xs text-brand-pale/50 truncate flex-shrink-0" style={{ width: 140 }}>
+            {item.label}
+          </span>
+          <div className="flex-1 h-4 rounded-full overflow-hidden" style={{ background: "var(--s-track)" }}>
+            <div
+              className="h-full rounded-full transition-all duration-500"
+              style={{ width: `${(item.valor / max) * 100}%`, background: corBarra }}
+            />
+          </div>
+          <span className="text-xs font-mono font-bold flex-shrink-0 w-12 text-right"
+            style={{ color: corTexto ?? corBarra }}>
+            {formatarValor ? formatarValor(item.valor) : item.valor}
+          </span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function Dashboard() {
-  const [resumo, setResumo]           = useState(null)
-  const [vagas, setVagas]             = useState([])
-  const [vagaSel, setVagaSel]         = useState("")
-  const [funil, setFunil]             = useState(null)
-  const [scores, setScores]           = useState(null)
-  const [loadingResumo, setLR]        = useState(true)
-  const [loadingFunil, setLF]         = useState(false)
-  const [loadingScores, setLS]        = useState(false)
+  const [resumo, setResumo]               = useState(null)
+  const [vagas, setVagas]                 = useState([])
+  const [vagaSel, setVagaSel]             = useState("")
+  const [funil, setFunil]                 = useState(null)
+  const [scores, setScores]               = useState(null)
+  const [scoresPorVaga, setScoresPorVaga] = useState(null)
+  const [topSkills, setTopSkills]         = useState(null)
+  const [loadingResumo, setLR]            = useState(true)
+  const [loadingFunil, setLF]             = useState(false)
+  const [loadingScores, setLS]            = useState(false)
+  const [loadingExtra, setLE]             = useState(true)
 
   useEffect(() => {
     Promise.all([getAnalyticsResumo(), getVagas()])
       .then(([r, rv]) => { setResumo(r.data); setVagas(rv.data) })
       .finally(() => setLR(false))
     getAnalyticsFunil().then(r => setFunil(r.data))
+    Promise.all([getAnalyticsScoresPorVaga(), getAnalyticsTopSkills()])
+      .then(([rs, rt]) => { setScoresPorVaga(rs.data); setTopSkills(rt.data) })
+      .finally(() => setLE(false))
   }, [])
 
   useEffect(() => {
@@ -138,8 +172,12 @@ export function Dashboard() {
         .then(r => setScores(r.data))
         .catch(() => setScores(null))
         .finally(() => setLS(false))
+      getAnalyticsTopSkills(vagaSel)
+        .then(r => setTopSkills(r.data))
+        .catch(() => {})
     } else {
       setScores(null)
+      getAnalyticsTopSkills().then(r => setTopSkills(r.data)).catch(() => {})
     }
   }, [vagaSel])
 
@@ -229,6 +267,59 @@ export function Dashboard() {
             <HistogramaScores buckets={scores.buckets} media={scores.media} mediana={scores.mediana} />
           ) : (
             <p className="text-xs text-brand-pale/35 italic text-center py-8">Nenhum currículo processado para esta vaga.</p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6">
+        {/* Score médio por vaga */}
+        <div className="card-glass rounded-2xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">
+              Score médio por vaga
+            </h2>
+            <span className="text-xs text-brand-pale/35 font-mono">top 10</span>
+          </div>
+          {loadingExtra ? (
+            <div className="space-y-2">
+              {[1,2,3,4].map(i => (
+                <div key={i} className="h-4 rounded animate-pulse" style={{ background: "var(--s-skeleton-lt)" }} />
+              ))}
+            </div>
+          ) : (
+            <BarrasHorizontais
+              itens={scoresPorVaga?.vagas?.map(v => ({ label: v.vaga_nome, valor: v.score_medio }))}
+              corBarra="linear-gradient(90deg, #1A8BBF, #2EE8B4)"
+              corTexto="#2EE8B4"
+              formatarValor={v => `${v}`}
+              emptyMsg="Nenhum currículo processado ainda."
+            />
+          )}
+        </div>
+
+        {/* Top skills */}
+        <div className="card-glass rounded-2xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold text-brand-pale/45 uppercase tracking-wider">
+              Top skills dos candidatos
+            </h2>
+            <span className="text-xs text-brand-pale/35 font-mono">
+              {vagaSel && topSkills?.vaga_nome ? topSkills.vaga_nome : "todas as vagas"}
+            </span>
+          </div>
+          {loadingExtra ? (
+            <div className="space-y-2">
+              {[1,2,3,4,5].map(i => (
+                <div key={i} className="h-4 rounded animate-pulse" style={{ background: "var(--s-skeleton-lt)" }} />
+              ))}
+            </div>
+          ) : (
+            <BarrasHorizontais
+              itens={topSkills?.skills?.map(s => ({ label: s.skill, valor: s.contagem }))}
+              corBarra="#7C3AED"
+              corTexto="#C4B5FD"
+              emptyMsg="Nenhuma skill detectada ainda."
+            />
           )}
         </div>
       </div>

@@ -138,7 +138,7 @@ function ModalEditarUsuario({ usuario, onSalvo, onFechar }) {
 // ── Componentes auxiliares ────────────────────────────────────────────────────
 function Modal({ titulo, onFechar, children }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+    <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(7,17,26,0.75)", backdropFilter: "blur(4px)" }}>
       <div className="card-glass rounded-2xl p-6 w-full max-w-md space-y-5">
         <div className="flex items-center justify-between">

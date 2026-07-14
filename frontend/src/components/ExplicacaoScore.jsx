@@ -27,12 +27,12 @@ export function ExplicacaoScore({ explicacao, expandido, onToggle }) {
   return (
     <div className="space-y-2">
       {alertaNome?.match === false && (
-        <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-xl"
+        <div className="alerta-nome-cv flex items-start gap-2.5 px-3 py-2.5 rounded-xl"
           style={{ background: "rgba(252,193,60,0.08)", border: "1px solid rgba(252,193,60,0.35)" }}>
-          <span className="text-amber-400 text-base leading-none mt-0.5 flex-shrink-0">⚠</span>
+          <span className="alerta-nome-cv__icone text-amber-400 text-base leading-none mt-0.5 flex-shrink-0">⚠</span>
           <div className="min-w-0">
-            <p className="text-xs font-bold text-amber-400">CV pode não pertencer a este candidato</p>
-            <p className="text-xs text-amber-300/70 mt-0.5 leading-relaxed">
+            <p className="alerta-nome-cv__titulo text-xs font-bold text-amber-400">CV pode não pertencer a este candidato</p>
+            <p className="alerta-nome-cv__corpo text-xs text-amber-300/70 mt-0.5 leading-relaxed">
               Nome cadastrado <span className="font-mono font-semibold">{alertaNome.nome_cadastrado}</span> não
               foi encontrado no início do documento
               {alertaNome.tokens_ausentes?.length > 0 && (

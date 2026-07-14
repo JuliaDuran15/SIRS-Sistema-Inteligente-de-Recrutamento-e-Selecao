@@ -60,6 +60,28 @@ class DistribuicaoScores(BaseModel):
     mediana  : float | None
 
 
+class VagaScore(BaseModel):
+    vaga_id          : str
+    vaga_nome        : str
+    score_medio      : float
+    total_candidatos : int
+
+
+class ScoresPorVaga(BaseModel):
+    vagas : list[VagaScore]
+
+
+class SkillCount(BaseModel):
+    skill    : str
+    contagem : int
+
+
+class TopSkills(BaseModel):
+    skills    : list[SkillCount]
+    vaga_id   : str | None
+    vaga_nome : str | None
+
+
 # ── Labels e cores ────────────────────────────────────────────────────────────
 
 _ETAPAS_FUNIL = [
@@ -220,6 +242,79 @@ def distribuicao_scores(
         buckets = [BucketScore(faixa=k, quantidade=v) for k, v in buckets_map.items()],
         media   = media,
         mediana = mediana,
+    )
+
+
+@router.get("/scores-por-vaga", response_model=ScoresPorVaga)
+def scores_por_vaga(
+    db      : Session = DB,
+    usuario           = Depends(get_usuario_atual),
+):
+    """Score médio de currículo agrupado por vaga (top 10 com mais candidatos)."""
+    vaga_ids = _vagas_ids_query(usuario, db)
+    rows = (
+        db.query(
+            Vaga.id,
+            Vaga.nome,
+            func.avg(Curriculo.score_curriculo).label("media"),
+            func.count(Curriculo.id).label("total"),
+        )
+        .join(Candidatura, Candidatura.vaga_id == Vaga.id)
+        .join(Curriculo,   Curriculo.candidatura_id == Candidatura.id)
+        .filter(Vaga.id.in_(vaga_ids))
+        .filter(Curriculo.score_curriculo.is_not(None))
+        .group_by(Vaga.id, Vaga.nome)
+        .order_by(func.count(Curriculo.id).desc())
+        .limit(10)
+        .all()
+    )
+    return ScoresPorVaga(vagas=[
+        VagaScore(
+            vaga_id=str(r.id),
+            vaga_nome=r.nome,
+            score_medio=round(float(r.media), 1),
+            total_candidatos=r.total,
+        )
+        for r in rows
+    ])
+
+
+@router.get("/top-skills", response_model=TopSkills)
+def top_skills(
+    vaga_id : str | None = Query(None),
+    db      : Session    = DB,
+    usuario              = Depends(get_usuario_atual),
+):
+    """Skills mais frequentes extraídas dos currículos (top 15)."""
+    vaga_ids = _vagas_ids_query(usuario, db)
+    query = (
+        db.query(Curriculo.explicacao)
+        .join(Candidatura, Curriculo.candidatura_id == Candidatura.id)
+        .filter(Candidatura.vaga_id.in_(vaga_ids))
+        .filter(Curriculo.explicacao.is_not(None))
+    )
+    if vaga_id:
+        query = query.filter(Candidatura.vaga_id == vaga_id)
+
+    contagem: dict[str, int] = {}
+    for (exp,) in query.all():
+        skills = (exp or {}).get("sinais_estruturais", {}).get("habilidades_em_comum", [])
+        for s in skills:
+            s = s.strip().lower()
+            if s:
+                contagem[s] = contagem.get(s, 0) + 1
+
+    top = sorted(contagem.items(), key=lambda x: x[1], reverse=True)[:15]
+
+    vaga_nome = None
+    if vaga_id:
+        v = db.query(Vaga.nome).filter(Vaga.id == vaga_id).scalar()
+        vaga_nome = v
+
+    return TopSkills(
+        skills=[SkillCount(skill=s, contagem=c) for s, c in top],
+        vaga_id=vaga_id,
+        vaga_nome=vaga_nome,
     )
 
 

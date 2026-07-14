@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Link, useLocation } from "react-router-dom"
 import logo from "../assets/logo.png"
 import {
@@ -7,6 +7,15 @@ import {
 } from "./Icons"
 
 const SIDEBAR_W = 240
+
+// Retorna a raiz de seção à qual um pathname pertence
+function getSectionRoot(path) {
+  if (path.startsWith("/candidatos")) return "/candidatos"
+  if (path.startsWith("/dashboard"))  return "/dashboard"
+  if (path.startsWith("/admin"))      return "/admin"
+  if (path.startsWith("/auditoria"))  return "/auditoria"
+  return "/"   // Vagas: /, /vagas/*, /candidaturas/*
+}
 
 function useTheme() {
   const [light, setLight] = useState(
@@ -25,26 +34,40 @@ function useTheme() {
 }
 
 // eslint-disable-next-line no-unused-vars
-function NavItem({ path, label, Icon, active }) {
+function NavItem({ path, to, label, Icon, active, light }) {
+  const activeStyle = light ? {
+    background  : "rgba(18, 112, 168, 0.13)",
+    color       : "#0D4F7A",
+    borderLeft  : "2px solid #1270A8",
+    padding     : "10px 12px 10px 10px",
+    boxShadow   : "0 1px 6px rgba(18,112,168,0.10)",
+  } : {
+    background  : "linear-gradient(135deg, rgba(26,139,191,0.25), rgba(77,200,232,0.08))",
+    color       : "#4DC8E8",
+    borderLeft  : "2px solid #4DC8E8",
+    padding     : "10px 12px 10px 10px",
+    boxShadow   : "0 1px 8px rgba(26,139,191,0.12)",
+  }
+
+  const inactiveStyle = {
+    color      : "var(--t-muted2)",
+    borderLeft : "2px solid transparent",
+    padding    : "10px 12px 10px 10px",
+  }
+
+  const iconColor = active
+    ? (light ? "#1270A8" : "#4DC8E8")
+    : "var(--t-faint2)"
+
   return (
     <Link
-      to={path}
-      className={`flex items-center gap-3 rounded-xl text-sm font-semibold transition-all duration-200 group${!active ? " hover:bg-white/5" : ""}`}
-      style={active ? {
-        background: "linear-gradient(135deg, rgba(26,139,191,0.25), rgba(77,200,232,0.08))",
-        color: "#4DC8E8",
-        borderLeft: "2px solid #4DC8E8",
-        padding: "10px 12px 10px 10px",
-        boxShadow: "0 1px 8px rgba(26,139,191,0.12)",
-      } : {
-        color: "var(--t-muted2)",
-        borderLeft: "2px solid transparent",
-        padding: "10px 12px 10px 10px",
-      }}
+      to={to ?? path}
+      className={`flex items-center gap-3 rounded-xl text-sm font-semibold transition-all duration-200 group${!active ? (light ? " hover:bg-black/5" : " hover:bg-white/5") : ""}`}
+      style={active ? activeStyle : inactiveStyle}
     >
       <span
         className="flex-shrink-0 transition-all duration-200"
-        style={{ color: active ? "#4DC8E8" : "var(--t-faint2)" }}
+        style={{ color: iconColor }}
       >
         <Icon size={17} />
       </span>
@@ -55,7 +78,7 @@ function NavItem({ path, label, Icon, active }) {
   )
 }
 
-function SidebarContent({ nav, usuario, onLogout, light, setLight, currentPath }) {
+function SidebarContent({ nav, usuario, onLogout, light, setLight, currentSection, lastPaths }) {
   return (
     <div className="flex flex-col h-full overflow-hidden">
 
@@ -80,9 +103,18 @@ function SidebarContent({ nav, usuario, onLogout, light, setLight, currentPath }
         >
           Menu
         </p>
-        {nav.map(n => (
-          <NavItem key={n.path} {...n} active={currentPath === n.path} />
-        ))}
+        {nav.map(n => {
+          const isActive = currentSection === n.path
+          return (
+            <NavItem
+              key={n.path}
+              {...n}
+              to={isActive ? n.path : (lastPaths[n.path] ?? n.path)}
+              active={isActive}
+              light={light}
+            />
+          )
+        })}
       </nav>
 
       {/* Bottom actions */}
@@ -155,6 +187,13 @@ export function Layout({ children, usuario, onLogout }) {
   const loc                       = useLocation()
   const [light, setLight]         = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const lastPaths                 = useRef({})
+
+  // Mantém o último caminho visitado por seção de navegação
+  useEffect(() => {
+    const root = getSectionRoot(loc.pathname)
+    lastPaths.current[root] = loc.pathname
+  }, [loc.pathname])
 
   const nav = [
     { path: "/",           label: "Vagas",      Icon: IconBriefcase },
@@ -171,17 +210,20 @@ export function Layout({ children, usuario, onLogout }) {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMobileOpen(false) }, [loc.pathname])
 
-  const sidebarProps = { nav, usuario, onLogout, light, setLight, currentPath: loc.pathname }
+  const currentSection = getSectionRoot(loc.pathname)
+  const sidebarProps = { nav, usuario, onLogout, light, setLight, currentSection, lastPaths: lastPaths.current }
 
   return (
     <div className="min-h-screen flex">
 
       {/* Desktop sidebar — fixed */}
       <aside
-        className="hidden lg:flex flex-col fixed top-0 left-0 h-screen z-10"
+        className="hidden lg:flex flex-col fixed top-0 left-0 h-screen z-[60]"
         style={{
           width          : SIDEBAR_W,
-          background     : "linear-gradient(180deg, var(--s-header) 0%, rgba(7,17,26,0.9) 100%)",
+          background     : light
+            ? "var(--s-header)"
+            : "linear-gradient(180deg, var(--s-header) 0%, rgba(7,17,26,0.9) 100%)",
           borderRight    : "1px solid var(--b-card)",
           backdropFilter : "blur(24px)",
         }}

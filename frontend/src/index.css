@@ -337,6 +337,26 @@ html { scroll-behavior: smooth; }
     border: 1px solid rgba(185,28,28,0.30);
   }
 
+  /* ── Overlay de modais ────────────────────────────────────────────────────── */
+  html.light .modal-overlay {
+    background: rgba(100, 130, 160, 0.35) !important;
+  }
+
+  /* ── Alerta de nome divergente no CV ─────────────────────────────────────── */
+  html.light .alerta-nome-cv {
+    background: rgba(180, 110, 0, 0.08) !important;
+    border: 1px solid rgba(146, 64, 14, 0.35) !important;
+  }
+  html.light .alerta-nome-cv__icone {
+    color: #92400E !important;
+  }
+  html.light .alerta-nome-cv__titulo {
+    color: #78350F !important;
+  }
+  html.light .alerta-nome-cv__corpo {
+    color: rgba(120, 53, 15, 0.80) !important;
+  }
+
   /* Sidebar layout: empurra o conteúdo principal para a direita no desktop */
   .sidebar-layout-main {
     margin-left: 0;

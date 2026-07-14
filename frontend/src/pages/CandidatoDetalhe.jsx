@@ -528,7 +528,7 @@ export function CandidatoDetalhe({ usuario }) {
 
       {/* Modal de confirmação de desvínculo */}
       {confirmDesvincular && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: "rgba(7,17,26,0.75)", backdropFilter: "blur(4px)" }}>
           <div className="card-glass rounded-2xl p-6 w-full max-w-sm space-y-4"
             style={{ border: "1px solid rgba(252,165,165,0.25)" }}>
