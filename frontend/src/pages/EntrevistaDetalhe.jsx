@@ -457,7 +457,7 @@ function CardEntrevista({ entrevista: initial, usuario, candidatura, onResultado
                   <p className="text-xs font-bold text-brand-mint/70 uppercase tracking-wider mb-2">Pontos fortes</p>
                   <div className="flex flex-wrap gap-1.5">
                     {entrevista.pontos_fortes.map(t => (
-                      <span key={t} className="px-2.5 py-1 rounded-lg text-xs font-semibold"
+                      <span key={t} className="chip-fortes px-2.5 py-1 rounded-lg text-xs font-semibold"
                         style={{ background: "rgba(26,170,128,0.18)", color: "#2EE8B4" }}>{t}</span>
                     ))}
                   </div>

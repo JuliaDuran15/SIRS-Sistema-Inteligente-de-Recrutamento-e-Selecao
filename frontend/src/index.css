@@ -265,6 +265,7 @@ html { scroll-behavior: smooth; }
   html.light .text-brand-cloud { color: #0D1B2A !important; }
   html.light .text-brand-mint\/70 { color: rgba(4,120,87,0.85) !important; }
   html.light .text-brand-mint\/60 { color: rgba(4,120,87,0.75) !important; }
+  html.light .chip-fortes { color: #047857 !important; background: rgba(4,120,87,0.12) !important; }
 
   /* Inputs e textareas ficam com fundo branco e texto escuro no light */
   html.light input,
