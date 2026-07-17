@@ -72,6 +72,10 @@ class CandidatoListResponse(BaseModel):
     offset : int
 
 
+class AlterarEmailRequest(BaseModel):
+    email_novo: EmailStr
+
+
 class CandidatoUpdate(BaseModel):
     nome            : str | None     = Field(None, min_length=1, max_length=200)
     telefone        : str | None     = Field(None, max_length=30)

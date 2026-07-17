@@ -14,7 +14,7 @@ Fluxo por chamada:
 """
 import json
 import re
-from datetime import date
+from datetime import date, datetime
 
 import defusedxml.ElementTree as ET
 from app.ai.resume_parser import vetorizar_texto
@@ -28,6 +28,7 @@ from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.curriculo import Curriculo
 from app.models.vaga import Vaga
 from app.schemas.webhook import (
+    AvisoDuplicata,
     CandidatoImport,
     ErroImportacao,
     FormacaoImport,
@@ -137,6 +138,7 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
     )
     resultado = ImportacaoResultado()
     erros: list[ErroImportacao] = []
+    avisos: list[AvisoDuplicata] = []
     vagas_map: dict[str, Vaga] = {}  # external_id → instância Vaga
     tasks_pendentes: list = []       # (func, args) — despachadas após db.commit()
 
@@ -226,6 +228,29 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
                     db.add(candidatura)
                     db.flush()
                     resultado.candidaturas_criadas += 1
+                else:
+                    # Candidatura já existe — mesmo email para a mesma vaga
+                    avisos.append(AvisoDuplicata(
+                        email     = candidato.email,
+                        nome      = candidato.nome,
+                        vaga_nome = vaga.nome,
+                    ))
+                    logger.warning(
+                        f"duplicata_detectada | fonte={dados.fonte or 'sem-fonte'} | "
+                        f"email={candidato.email} | vaga={vaga.nome} | "
+                        f"candidatura_id={candidatura.id}"
+                    )
+                    novo_historico = list(candidatura.historico or [])
+                    novo_historico.append({
+                        "tipo"  : "resubmissao_duplicata",
+                        "detalhe": (
+                            f"Re-submissão detectada via webhook "
+                            f"(fonte: {dados.fonte or 'sem-fonte'}). "
+                            "Candidatura já existia — nenhuma alteração feita."
+                        ),
+                        "em"    : datetime.utcnow().isoformat(),
+                    })
+                    candidatura.historico = novo_historico
 
             # ── 4. Currículo ──────────────────────────────────────────────────
             if cd.curriculo_texto and candidatura:
@@ -282,9 +307,11 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
         f"curriculos={resultado.curriculos_processados}"
     )
     return ImportacaoResponse(
-        importados  = resultado,
-        erros       = erros,
-        total_erros = len(erros),
+        importados   = resultado,
+        erros        = erros,
+        total_erros  = len(erros),
+        avisos       = avisos,
+        total_avisos = len(avisos),
     )
 
 

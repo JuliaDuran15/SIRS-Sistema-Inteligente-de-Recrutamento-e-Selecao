@@ -160,6 +160,22 @@ def registrar_resultado(
         from app.api.endpoints.candidaturas import transicionar
         transicionar(candidatura, STATUS_APOS_REALIZAR[entrevista.tipo], ator=usuario.nome)
 
+    # Auditoria: registra nota da entrevista na candidatura
+    if candidatura:
+        tipo_label = "RH" if entrevista.tipo == "rh" else "Técnica"
+        evt = {
+            "tipo"         : "resultado_entrevista",
+            "entrevista_id": str(entrevista.id),
+            "tipo_entrevista": tipo_label,
+            "score"        : dados.score_manual,
+            "reedicao"     : ja_realizada,
+            "ator"         : usuario.nome,
+            "em"           : datetime.utcnow().isoformat(),
+        }
+        novo_hist = list(candidatura.historico or [])
+        novo_hist.append(evt)
+        candidatura.historico = novo_hist
+
     if candidatura:
         if entrevista.tipo == "rh":
             candidatura.score_entrevista_rh  = entrevista.score_manual

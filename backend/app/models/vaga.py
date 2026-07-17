@@ -42,6 +42,9 @@ class Vaga(Base):
     # [str(uuid), ...] — RHs com permissão exclusiva de editar esta vaga.
     # None (SQL NULL) = qualquer RH pode editar (vagas legadas e vagas criadas por Admin)
 
+    # Eventos de nível de vaga (criação, status, pesos, requisitos, exclusões de candidatura)
+    historico        : Mapped[list | None] = mapped_column(JSONB, default=list)
+
     criado_em        : Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     candidaturas: Mapped[list["Candidatura"]] = relationship(back_populates="vaga")  # noqa: F821

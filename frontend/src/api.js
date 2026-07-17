@@ -28,10 +28,11 @@ export const analisarMercado  = (id)        => api.post(`/vagas/${id}/analisar-m
 export const rerankarVaga     = (id)        => api.post(`/vagas/${id}/rerankar`)
 export const exportarVaga     = (id)        => api.get(`/vagas/${id}/exportar`, { responseType: "blob" })
 
-export const getCandidatos    = (params)      => api.get("/candidatos/", { params })
-export const createCandidato  = (data)        => api.post("/candidatos/", data)
-export const getCandidato     = (id)          => api.get(`/candidatos/${id}`)
-export const updateCandidato  = (id, data)    => api.patch(`/candidatos/${id}`, data)
+export const getCandidatos       = (params)      => api.get("/candidatos/", { params })
+export const createCandidato     = (data)        => api.post("/candidatos/", data)
+export const getCandidato        = (id)          => api.get(`/candidatos/${id}`)
+export const updateCandidato     = (id, data)    => api.patch(`/candidatos/${id}`, data)
+export const alterarEmailCandidato = (id, emailNovo) => api.patch(`/candidatos/${id}/email`, { email_novo: emailNovo })
 
 export const getCandidaturas    = (vagaId)      => api.get(`/candidaturas/?vaga_id=${vagaId}`)
 export const getCandidaturasPorCandidato = (cid)=> api.get(`/candidaturas/?candidato_id=${cid}`)

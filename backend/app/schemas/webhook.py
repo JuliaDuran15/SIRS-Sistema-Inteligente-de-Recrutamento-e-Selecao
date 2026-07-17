@@ -69,7 +69,15 @@ class ErroImportacao(BaseModel):
     detalhe       : str
 
 
+class AvisoDuplicata(BaseModel):
+    email    : str   # e-mail do candidato duplicado
+    nome     : str   # nome do candidato
+    vaga_nome: str   # vaga em que a duplicata foi detectada
+
+
 class ImportacaoResponse(BaseModel):
-    importados  : ImportacaoResultado
-    erros       : list[ErroImportacao]
-    total_erros : int
+    importados    : ImportacaoResultado
+    erros         : list[ErroImportacao]
+    total_erros   : int
+    avisos        : list[AvisoDuplicata] = []
+    total_avisos  : int = 0

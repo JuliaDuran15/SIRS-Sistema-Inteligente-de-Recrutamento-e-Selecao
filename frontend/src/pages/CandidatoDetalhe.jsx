@@ -9,11 +9,14 @@ import {
   createCandidatura,
   deleteCandidatura,
   updateCandidato,
+  alterarEmailCandidato,
 } from "../api"
 import { Badge } from "../components/Badge"
 import { ScoreBar } from "../components/ScoreBar"
 import { CvPreview } from "../components/CvPreview"
 import { ExplicacaoScore } from "../components/ExplicacaoScore"
+import { ToastContainer } from "../components/ToastContainer"
+import { useToast, extrairErro } from "../hooks/useToast"
 
 const STATUS_COR = {
   novo: "gray", aguardando_processamento: "gray", processando_curriculo: "amber",
@@ -128,8 +131,8 @@ export function CandidatoDetalhe({ usuario }) {
   const [loading, setLoading]             = useState(true)
   const [novaVagaId, setNovaVagaId]         = useState("")
   const [vinculando, setVinculando]         = useState(false)
-  const [erroVinculo, setErroVinculo]       = useState(null)
   const [confirmDesvincular, setConfirm]    = useState(null)  // candidatura_id a confirmar
+  const { toasts, mostrarToast }            = useToast()
   const [desvinculando, setDesvinculando]   = useState(false)
   const [expandidos, setExpandidos]       = useState(new Set())
   const [editando, setEditando]           = useState(false)
@@ -145,6 +148,30 @@ export function CandidatoDetalhe({ usuario }) {
   })
 
   const podeGerenciar = usuario?.papel === "rh" || usuario?.papel === "admin"
+  const isAdmin       = usuario?.papel === "admin"
+
+  // ── Estado do modal de alteração de e-mail ──────────────────────────────
+  const [modalEmail, setModalEmail]     = useState(false)
+  const [novoEmail, setNovoEmail]       = useState("")
+  const [salvandoEmail, setSalvandoEmail] = useState(false)
+  const [erroEmail, setErroEmail]       = useState(null)
+
+  async function handleAlterarEmail(e) {
+    e.preventDefault()
+    if (!novoEmail.trim()) return
+    setSalvandoEmail(true); setErroEmail(null)
+    try {
+      const r = await alterarEmailCandidato(id, novoEmail.trim())
+      setCandidato(r.data)
+      setModalEmail(false)
+      setNovoEmail("")
+      mostrarToast("E-mail alterado com sucesso", "sucesso")
+    } catch (err) {
+      setErroEmail(err.response?.data?.detail ?? "Erro ao alterar e-mail")
+    } finally {
+      setSalvandoEmail(false)
+    }
+  }
 
   function abrirEdicao() {
     setFormEdit({
@@ -212,13 +239,13 @@ export function CandidatoDetalhe({ usuario }) {
   async function handleVincular(e) {
     e.preventDefault()
     if (!novaVagaId) return
-    setVinculando(true); setErroVinculo(null)
+    setVinculando(true)
     try {
       const r = await createCandidatura({ candidato_id: id, vaga_id: novaVagaId })
       setCandidaturas(prev => [...prev, r.data])
       setNovaVagaId("")
     } catch (err) {
-      setErroVinculo(err.response?.data?.detail ?? "Erro ao vincular")
+      mostrarToast(extrairErro(err, "Erro ao vincular candidatura"), "erro")
     } finally {
       setVinculando(false)
     }
@@ -277,7 +304,19 @@ export function CandidatoDetalhe({ usuario }) {
               </div>
               <div className="flex-1 min-w-0">
                 <h1 className="text-xl font-bold text-brand-cloud">{candidato.nome}</h1>
-                <p className="text-sm text-brand-pale/45 font-mono mt-0.5">{candidato.email}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-sm text-brand-pale/45 font-mono">{candidato.email}</p>
+                  {isAdmin && (
+                    <button
+                      onClick={() => { setNovoEmail(candidato.email); setErroEmail(null); setModalEmail(true) }}
+                      title="Alterar e-mail (admin)"
+                      className="text-xs px-1.5 py-0.5 rounded-md transition-all"
+                      style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.25)", color: "#fbbf24" }}
+                    >
+                      ✎
+                    </button>
+                  )}
+                </div>
                 {candidato.telefone && (
                   <p className="text-xs text-brand-pale/35 mt-0.5">{candidato.telefone}</p>
                 )}
@@ -453,6 +492,14 @@ export function CandidatoDetalhe({ usuario }) {
                   </div>
                 </div>
 
+                {/* Aviso de re-submissão via webhook */}
+                {c.historico?.some(h => h.tipo === "resubmissao_duplicata") && (
+                  <div className="mt-3 px-3 py-2 rounded-xl text-xs font-semibold"
+                    style={{ background: "rgba(161,98,7,0.15)", color: "#fbbf24", border: "1px solid rgba(234,179,8,0.3)" }}>
+                    ⚠ Re-submissão detectada via webhook — este candidato já tinha candidatura para esta vaga. Nenhuma alteração foi feita.
+                  </div>
+                )}
+
                 {/* Score curricular se já processado */}
                 {c.curriculo?.score_curriculo != null && (
                   <div className="mt-3 pt-3 space-y-2.5" style={{ borderTop: "1px solid rgba(77,200,232,0.08)" }}>
@@ -522,7 +569,6 @@ export function CandidatoDetalhe({ usuario }) {
               {vinculando ? "Vinculando…" : "Vincular"}
             </button>
           </form>
-          {erroVinculo && <p className="text-xs text-red-400">{erroVinculo}</p>}
         </div>
       )}
 
@@ -557,6 +603,60 @@ export function CandidatoDetalhe({ usuario }) {
           </div>
         </div>
       )}
+      {/* Modal de alteração de e-mail (apenas admin) */}
+      {modalEmail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.55)" }}
+          onClick={e => e.target === e.currentTarget && setModalEmail(false)}>
+          <div className="rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+            style={{ background: "var(--s-card)", border: "1px solid var(--b-card)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-brand-cloud">Alterar e-mail do candidato</h3>
+              <button onClick={() => setModalEmail(false)}
+                className="text-brand-pale/35 hover:text-brand-pale text-xl leading-none transition-colors">×</button>
+            </div>
+            <p className="text-xs text-brand-pale/40 mb-4">
+              Esta ação fica registrada na auditoria. O e-mail é usado como identificador único do candidato.
+            </p>
+            <form onSubmit={handleAlterarEmail} className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-brand-pale/45 uppercase tracking-wider mb-1.5">
+                  Novo e-mail
+                </label>
+                <input
+                  type="email"
+                  value={novoEmail}
+                  onChange={e => setNovoEmail(e.target.value)}
+                  required
+                  autoFocus
+                  className="w-full rounded-xl px-3 py-2.5 text-sm font-mono"
+                  placeholder="novo@email.com"
+                />
+              </div>
+              {erroEmail && (
+                <p className="text-xs font-semibold rounded-lg px-3 py-2"
+                  style={{ background: "rgba(239,68,68,0.12)", color: "#f87171" }}>
+                  {erroEmail}
+                </p>
+              )}
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => setModalEmail(false)}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+                  style={{ background: "var(--s-chip)", color: "var(--t-muted2)", border: "1px solid var(--b-subtle)" }}>
+                  Cancelar
+                </button>
+                <button type="submit" disabled={salvandoEmail || !novoEmail.trim()}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                  style={{ background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.35)", color: "#fbbf24" }}>
+                  {salvandoEmail ? "Salvando…" : "Confirmar alteração"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <ToastContainer toasts={toasts} />
     </div>
   )
 }

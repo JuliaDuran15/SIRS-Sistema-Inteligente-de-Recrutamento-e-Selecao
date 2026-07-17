@@ -64,6 +64,15 @@ def criar_candidatura(dados: CandidaturaCreate, db: Session = DB, _=RH_OU_ADMIN)
         raise HTTPException(status_code=404, detail="Candidato não encontrado")
     if not db.query(Vaga).filter(Vaga.id == dados.vaga_id).first():
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
+    duplicata = db.query(Candidatura).filter(
+        Candidatura.candidato_id == dados.candidato_id,
+        Candidatura.vaga_id      == dados.vaga_id,
+    ).first()
+    if duplicata:
+        raise HTTPException(
+            status_code=409,
+            detail="Este candidato já possui uma candidatura para esta vaga",
+        )
     candidatura = Candidatura(
         candidato_id=dados.candidato_id,
         vaga_id=dados.vaga_id,
@@ -256,6 +265,8 @@ def triagem_em_lote(
 
     atualizadas = 0
     erros: list[dict] = []
+    lote_id = str(uuid_lib.uuid4())
+    total   = len(dados.candidatura_ids)
 
     for cid in dados.candidatura_ids:
         sp = db.begin_nested()
@@ -266,6 +277,17 @@ def triagem_em_lote(
                 sp.rollback()
                 continue
             transicionar(candidatura, dados.novo_status, ator=dados.ator)
+
+            novo_hist = list(candidatura.historico or [])
+            novo_hist.append({
+                "tipo"    : "triagem_lote",
+                "lote_id" : lote_id,
+                "total"   : total,
+                "ator"    : dados.ator,
+                "em"      : datetime.utcnow().isoformat(),
+            })
+            candidatura.historico = novo_hist
+
             sp.commit()
             atualizadas += 1
         except Exception as exc:
@@ -328,13 +350,29 @@ def atualizar_status(
 def desvincular_candidatura(
     candidatura_id: str,
     db: Session = DB,
-    _=APENAS_ADMIN,
+    usuario=APENAS_ADMIN,
 ):
     """Remove a candidatura e todos os seus dados associados (currículo, entrevistas).
     Exclusivo para Admin — usar apenas para corrigir erros de vínculo."""
     candidatura = db.query(Candidatura).filter(Candidatura.id == candidatura_id).first()
     if not candidatura:
         raise HTTPException(status_code=404, detail="Candidatura não encontrada")
+
+    # Salva evento de auditoria na vaga ANTES de deletar a candidatura
+    candidato = db.query(Candidato).filter(Candidato.id == candidatura.candidato_id).first()
+    vaga      = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
+    if vaga:
+        novo_hist = list(vaga.historico or [])
+        novo_hist.append({
+            "tipo"            : "candidatura_excluida",
+            "candidatura_id"  : str(candidatura.id),
+            "candidato_nome"  : candidato.nome  if candidato else None,
+            "candidato_email" : candidato.email if candidato else None,
+            "status_era"      : candidatura.status.value if candidatura.status else None,
+            "ator"            : usuario.nome,
+            "em"              : datetime.utcnow().isoformat(),
+        })
+        vaga.historico = novo_hist
 
     from app.models.entrevista import Entrevista
     db.query(Entrevista).filter(Entrevista.candidatura_id == candidatura_id).delete()

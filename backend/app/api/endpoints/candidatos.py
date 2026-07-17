@@ -1,10 +1,13 @@
+from datetime import datetime
+
 from app.api.deps import DB
-from app.core.auth import QUALQUER_PAPEL, RH_OU_ADMIN, get_usuario_atual
+from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL, RH_OU_ADMIN, get_usuario_atual
 from app.models.candidato import Candidato
 from app.models.candidatura import Candidatura
 from app.models.usuario import PapelUsuario
 from app.models.vaga import Vaga
 from app.schemas.candidato import (
+    AlterarEmailRequest,
     CandidatoCreate,
     CandidatoListResponse,
     CandidatoResponse,
@@ -132,6 +135,44 @@ def buscar_candidato(candidato_id: str, db: Session = DB, _=QUALQUER_PAPEL):
     candidato = db.query(Candidato).filter(Candidato.id == candidato_id).first()
     if not candidato:
         raise HTTPException(status_code=404, detail="Candidato não encontrado")
+    return candidato
+
+
+@router.patch("/{candidato_id}/email", response_model=CandidatoResponse)
+def alterar_email_candidato(
+    candidato_id : str,
+    dados        : AlterarEmailRequest,
+    db           : Session = DB,
+    usuario      = APENAS_ADMIN,
+):
+    """Apenas admin pode alterar o e-mail de um candidato. A alteração é registrada na auditoria."""
+    candidato = db.query(Candidato).filter(Candidato.id == candidato_id).first()
+    if not candidato:
+        raise HTTPException(status_code=404, detail="Candidato não encontrado")
+
+    email_novo = str(dados.email_novo).lower()
+    if email_novo == candidato.email.lower():
+        raise HTTPException(status_code=400, detail="O novo e-mail é igual ao e-mail atual")
+
+    conflito = db.query(Candidato).filter(Candidato.email == email_novo).first()
+    if conflito:
+        raise HTTPException(status_code=400, detail="Este e-mail já está em uso por outro candidato")
+
+    email_anterior   = candidato.email
+    candidato.email  = email_novo
+
+    novo_hist = list(candidato.historico or [])
+    novo_hist.append({
+        "tipo"           : "alteracao_email",
+        "email_anterior" : email_anterior,
+        "email_novo"     : email_novo,
+        "ator"           : usuario.nome,
+        "em"             : datetime.utcnow().isoformat(),
+    })
+    candidato.historico = novo_hist
+
+    db.commit()
+    db.refresh(candidato)
     return candidato
 
 

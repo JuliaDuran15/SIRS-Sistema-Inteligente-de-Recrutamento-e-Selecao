@@ -1130,9 +1130,11 @@ export function VagaDetalhe({ usuario }) {
                           {i + 1}
                         </div>
                         <div>
-                          <p className="font-bold text-brand-cloud">
+                          <Link
+                            to={`/candidatos/${c.candidato_id}`}
+                            className="font-bold text-brand-cloud hover:text-brand-sky transition-colors">
                             {c.candidato?.nome ?? "Candidato"}
-                          </p>
+                          </Link>
                           <p className="text-xs text-brand-pale/40 font-mono mt-0.5">
                             {c.candidato?.email}
                           </p>

@@ -28,8 +28,10 @@ class Candidato(Base):
 
 
     # Formação acadêmica — JSONB porque pode ter mais de uma
-
     formacao    : Mapped[dict | None] = mapped_column(JSONB, default=list)
+
+    # Eventos de nível de candidato (ex: alteração de e-mail pelo admin)
+    historico   : Mapped[list | None] = mapped_column(JSONB, default=list)
 
     criado_em   : Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 

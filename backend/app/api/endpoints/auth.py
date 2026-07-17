@@ -1,4 +1,5 @@
 import hashlib
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from app.api.deps import DB
@@ -6,12 +7,41 @@ from app.core.auth import criar_token, get_usuario_atual, hash_senha, verificar_
 from app.core.config import settings
 from app.core.email import email_reset_senha, smtp_configurado
 from app.models.usuario import Usuario
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from jose import JWTError
 from jose import jwt as jose_jwt
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+
+_BRT = timezone(timedelta(hours=-3))
+
+
+def _fora_horario_comercial(agora_utc: datetime) -> bool:
+    """True se o login for fora do horário comercial brasileiro (seg-sex 07h-22h BRT)."""
+    brt = agora_utc.replace(tzinfo=timezone.utc).astimezone(_BRT)
+    return brt.weekday() >= 5 or brt.hour < 7 or brt.hour >= 24
+
+
+def _registrar_login(usuario: Usuario, db: Session, *, sucesso: bool,
+                     motivo: str | None = None, ip: str | None = None) -> None:
+    agora = datetime.utcnow()
+    evt: dict = {
+        "tipo"   : "login",
+        "sucesso": sucesso,
+        "em"     : agora.isoformat(),
+    }
+    if not sucesso and motivo:
+        evt["motivo"] = motivo
+    if sucesso:
+        evt["fora_horario"] = _fora_horario_comercial(agora)
+    if ip:
+        evt["ip"] = ip
+
+    novo_hist = list(usuario.historico or [])
+    novo_hist.append(evt)
+    usuario.historico = novo_hist
+    db.commit()
 
 
 def _senha_fingerprint(senha_hash: str) -> str:
@@ -38,23 +68,28 @@ class UsuarioAtualResponse(BaseModel):
 
 @router.post("/login", response_model=LoginResponse)
 def login(
-    form: OAuth2PasswordRequestForm = Depends(),
-    db  : Session = DB,
+    request : Request,
+    form    : OAuth2PasswordRequestForm = Depends(),
+    db      : Session = DB,
 ):
     """
     OAuth2 password flow — compatível com o Swagger UI.
     username = email do usuário.
     """
+    ip      = request.client.host if request.client else None
     usuario = db.query(Usuario).filter(Usuario.email == form.username).first()
+    senha_ok = usuario is not None and verificar_senha(form.password, usuario.senha_hash)
 
-    if not usuario or not verificar_senha(form.password, usuario.senha_hash):
-        raise HTTPException(
-            status_code=401,
-            detail="Email ou senha incorretos",
-        )
+    if not senha_ok:
+        if usuario:
+            _registrar_login(usuario, db, sucesso=False, motivo="senha_incorreta", ip=ip)
+        raise HTTPException(status_code=401, detail="Email ou senha incorretos")
 
     if not usuario.ativo:
+        _registrar_login(usuario, db, sucesso=False, motivo="usuario_desativado", ip=ip)
         raise HTTPException(status_code=403, detail="Usuário desativado")
+
+    _registrar_login(usuario, db, sucesso=True, ip=ip)
 
     token = criar_token({"sub": usuario.email, "papel": usuario.papel})
 

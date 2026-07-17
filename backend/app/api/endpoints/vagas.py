@@ -1,5 +1,6 @@
 import csv
 import io
+from datetime import datetime
 
 from app.ai.market_analyzer import analisar_mercado
 from app.ai.matching_engine import calcular_score_curriculo, calcular_score_final
@@ -74,6 +75,14 @@ def criar_vaga(dados: VagaCreate, db: Session = DB, usuario=Depends(get_usuario_
 
     vaga = Vaga(**payload)
     db.add(vaga)
+    db.flush()  # garante vaga.id disponível antes do historico
+
+    vaga.historico = [{
+        "tipo" : "vaga_criada",
+        "ator" : usuario.nome,
+        "em"   : datetime.utcnow().isoformat(),
+    }]
+
     db.commit()
     db.refresh(vaga)
     atualizar_mercado_vaga.delay(str(vaga.id))
@@ -101,6 +110,14 @@ def atualizar_requisitos(
         vaga.vetor_vaga       = vetorizar_texto(dados.requisitos_texto)
         # Requisitos mudaram → recalcula scores e explicações de todos os CVs
         _recalcular_scores_vaga(vaga, db)
+
+    novo_hist = list(vaga.historico or [])
+    novo_hist.append({
+        "tipo" : "requisitos_alterados",
+        "ator" : usuario.nome,
+        "em"   : datetime.utcnow().isoformat(),
+    })
+    vaga.historico = novo_hist
 
     db.commit()
     db.refresh(vaga)
@@ -218,12 +235,32 @@ def atualizar_pesos(
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
     if not _pode_editar_vaga(usuario, vaga):
         raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta vaga")
+    pesos_anteriores = {
+        "rh": vaga.peso_rh, "mercado": vaga.peso_mercado,
+        "curriculo": vaga.peso_curriculo,
+        "entrevista_rh": vaga.peso_entrevista_rh, "entrevista_tec": vaga.peso_entrevista_tec,
+    }
     vaga.peso_rh             = dados.peso_rh
     vaga.peso_mercado        = dados.peso_mercado
     vaga.peso_curriculo      = dados.peso_curriculo
     vaga.peso_entrevista_rh  = dados.peso_entrevista_rh
     vaga.peso_entrevista_tec = dados.peso_entrevista_tec
     _recalcular_scores_vaga(vaga, db)
+
+    novo_hist = list(vaga.historico or [])
+    novo_hist.append({
+        "tipo"            : "pesos_alterados",
+        "pesos_anteriores": pesos_anteriores,
+        "pesos_novos"     : {
+            "rh": dados.peso_rh, "mercado": dados.peso_mercado,
+            "curriculo": dados.peso_curriculo,
+            "entrevista_rh": dados.peso_entrevista_rh, "entrevista_tec": dados.peso_entrevista_tec,
+        },
+        "ator": usuario.nome,
+        "em"  : datetime.utcnow().isoformat(),
+    })
+    vaga.historico = novo_hist
+
     db.commit()
     db.refresh(vaga)
     return vaga
@@ -243,7 +280,20 @@ def atualizar_status(
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
     if not _pode_editar_vaga(usuario, vaga):
         raise HTTPException(status_code=403, detail="Você não tem permissão para editar esta vaga")
+
+    status_anterior = vaga.status
     vaga.status = status
+
+    novo_hist = list(vaga.historico or [])
+    novo_hist.append({
+        "tipo" : "vaga_status",
+        "de"   : status_anterior,
+        "para" : status,
+        "ator" : usuario.nome,
+        "em"   : datetime.utcnow().isoformat(),
+    })
+    vaga.historico = novo_hist
+
     db.commit()
     db.refresh(vaga)
     return vaga

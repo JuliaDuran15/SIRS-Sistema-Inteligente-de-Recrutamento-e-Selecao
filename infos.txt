@@ -723,15 +723,13 @@ UX / Fluxo
 Kanban do funil — arrastar candidatos entre etapas visualmente, em vez de trocar status por dropdown. Alto impacto para o RH no dia a dia.
 Preview de PDF inline — abrir o currículo numa lateral sem sair da página, em vez de download.
 Busca global — campo único que busca por nome de candidato, vaga ou email em qualquer tela.
-Export CSV — botão nas listas de candidaturas para exportar para planilha, comum em HR.
-Notificações
+
 
 Badge de novidades — quando um CV termina de ser processado pelo Celery, mostrar notificação na interface sem precisar recarregar a página (polling simples ou WebSocket).
 Alertas de SLA — destacar candidatos que estão numa etapa há mais de X dias sem movimentação.
 IA / Matching
 
 Sugestão de perguntas de entrevista — com base no CV e nos requisitos da vaga, gerar 5–8 perguntas relevantes antes da entrevista.
-Detecção de duplicata — alertar quando o mesmo candidato (por email ou similaridade de nome) tenta aplicar para a mesma vaga duas vezes.
 Resumo automático do candidato — parágrafo gerado pela IA com pontos chave do CV, visível no card da candidatura sem precisar abrir o PDF.
 Analytics
 
@@ -745,4 +743,26 @@ Formulário de feedback estruturado — após registrar resultado de entrevista,
 Segurança / Compliance
 
 LGPD / anonimização — opção de anonimizar dados pessoais (nome, email, telefone) de candidatos não aprovados após 6 meses.
-Rate limiting no webhook — evitar abuso do endpoint de importação em massa.
+
+Candidatos.jsx (o que acabei de implementar): banner vermelho com borda dentro do formulário, logo acima dos botões "Cadastrar / Cancelar"
+CandidatoDetalhe.jsx (já existia): texto simples vermelho abaixo do formulário de vínculo
+
+Mais baixa (mas útil):
+
+Logins — especialmente tentativas falhas ou logins fora do horário
+Alteração de papel de usuário — escalonamento de privilégio (admin promovendo alguém)
+Recálculo manual de scores — ação admin que muda todos os rankings
+
+Backend — novos eventos auditados:
+
+Ação	Onde é gravado	Campos chave
+Vaga criada	vaga.historico	ator, em
+Status da vaga alterado	vaga.historico	de, para, ator, em
+Pesos alterados	vaga.historico	pesos_anteriores, pesos_novos, ator, em
+Requisitos alterados	vaga.historico	ator, em
+Candidatura excluída	vaga.historico (antes do DELETE)	candidato_nome/email, status_era, ator, em
+Triagem em lote	candidatura.historico (cada uma)	lote_id, total, ator, em
+Resultado de entrevista	candidatura.historico	tipo_entrevista, score, reedicao
+Tentativa falha → ponto vermelho, "Tentativa de login falhou" + motivo + IP
+Login fora do horário → ponto âmbar, "Login fora do horário" + papel + IP
+Login normal → ponto verde, "Login" + papel + IP

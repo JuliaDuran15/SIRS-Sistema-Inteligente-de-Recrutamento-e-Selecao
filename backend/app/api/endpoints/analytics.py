@@ -11,7 +11,7 @@ from app.models.candidato import Candidato
 from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.curriculo import Curriculo
 from app.models.entrevista import Entrevista
-from app.models.usuario import PapelUsuario
+from app.models.usuario import PapelUsuario, Usuario
 from app.models.vaga import Vaga
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
@@ -321,14 +321,17 @@ def top_skills(
 # ── Auditoria ─────────────────────────────────────────────────────────────────
 
 class EventoAuditoria(BaseModel):
-    candidatura_id  : str
-    candidato_nome  : str
-    candidato_email : str
-    vaga_nome       : str
-    de              : str | None
-    para            : str
-    ator            : str | None
-    em              : str | None
+    tipo            : str | None = None
+    candidatura_id  : str | None = None
+    candidato_id    : str | None = None
+    candidato_nome  : str | None = None
+    candidato_email : str | None = None
+    vaga_nome       : str | None = None
+    de              : str | None = None
+    para            : str | None = None
+    ator            : str | None = None
+    em              : str | None = None
+    extra           : dict | None = None
 
 
 class AuditoriaResponse(BaseModel):
@@ -344,45 +347,245 @@ def auditoria(
     offset  : int           = Query(0,  ge=0),
     vaga_id : str | None    = Query(None),
     ator    : str | None    = Query(None, description="Filtra por nome do ator (parcial)"),
-    para    : str | None    = Query(None, description="Filtra pelo status de destino"),
+    para    : str | None    = Query(None, description="Filtra pelo status de destino (transições)"),
+    tipo    : str | None    = Query(None, description="Filtra por tipo de evento especial"),
     db      : Session       = DB,
     usuario = Depends(get_usuario_atual),
 ):
-    """Retorna o log de todas as transições de status das candidaturas. Apenas Admin."""
+    """Retorna o log de transições de candidaturas e alterações de candidatos. Apenas Admin."""
     if usuario.papel != PapelUsuario.ADMIN:
         raise HTTPException(status_code=403, detail="Apenas administradores podem acessar a auditoria")
 
-    query = (
-        db.query(Candidatura, Candidato, Vaga)
-        .join(Candidato, Candidatura.candidato_id == Candidato.id)
-        .join(Vaga,      Candidatura.vaga_id      == Vaga.id)
-    )
-    if vaga_id:
-        query = query.filter(Candidatura.vaga_id == vaga_id)
-
     eventos: list[dict] = []
-    for cand, candidato, vaga in query.all():
+
+    # Quando tipo especial está ativo, ignorar fontes que não produzem esse tipo
+    _apenas_status   = tipo is None and para is not None
+    _apenas_especial = tipo is not None
+
+    # ── Eventos de candidatura (transições de status) ─────────────────────────
+    _TIPOS_CANDIDATURA = {"triagem_lote", "resultado_entrevista"}
+    _incluir_cand = not _apenas_especial or tipo in _TIPOS_CANDIDATURA or not tipo
+
+    if not _apenas_especial or tipo in _TIPOS_CANDIDATURA:
+        query_cand = (
+            db.query(Candidatura, Candidato, Vaga)
+            .join(Candidato, Candidatura.candidato_id == Candidato.id)
+            .join(Vaga,      Candidatura.vaga_id      == Vaga.id)
+        )
+        if vaga_id:
+            query_cand = query_cand.filter(Candidatura.vaga_id == vaga_id)
+    else:
+        query_cand = []
+
+    for cand, candidato, vaga in query_cand:
         for evt in (cand.historico or []):
             evt_ator = evt.get("ator") or ""
             evt_para = evt.get("para") or ""
+            evt_tipo = evt.get("tipo")
+
+            # Pular tipos especiais neste bloco (tratados abaixo)
+            if evt_tipo in {"triagem_lote", "resultado_entrevista", "resubmissao_duplicata"}:
+                continue
             if ator and ator.lower() not in evt_ator.lower():
                 continue
             if para and para != evt_para:
                 continue
+            if tipo:  # quando tipo especial ativo, pular transições puras
+                continue
             eventos.append({
+                "tipo"           : None,
                 "candidatura_id" : str(cand.id),
+                "candidato_id"   : str(candidato.id),
                 "candidato_nome" : candidato.nome,
                 "candidato_email": candidato.email,
                 "vaga_nome"      : vaga.nome,
                 "de"             : evt.get("de"),
-                "para"           : evt_para,
+                "para"           : evt_para or None,
                 "ator"           : evt_ator or None,
                 "em"             : evt.get("em"),
             })
 
+    # ── Eventos de candidato (alterações de e-mail) — apenas sem filtro de vaga
+    if not vaga_id and not para and (not tipo or tipo == "alteracao_email"):
+        for candidato in db.query(Candidato).all():
+            for evt in (candidato.historico or []):
+                if evt.get("tipo") != "alteracao_email":
+                    continue
+                evt_ator = evt.get("ator") or ""
+                if ator and ator.lower() not in evt_ator.lower():
+                    continue
+                eventos.append({
+                    "tipo"           : "alteracao_email",
+                    "candidatura_id" : None,
+                    "candidato_id"   : str(candidato.id),
+                    "candidato_nome" : candidato.nome,
+                    "candidato_email": candidato.email,
+                    "vaga_nome"      : None,
+                    "de"             : evt.get("email_anterior"),
+                    "para"           : evt.get("email_novo"),
+                    "ator"           : evt_ator or None,
+                    "em"             : evt.get("em"),
+                })
+
+    # ── Eventos de vaga (criação, status, pesos, requisitos, exclusão de candidatura)
+    _TIPOS_VAGA = {"vaga_criada", "vaga_status", "pesos_alterados",
+                   "requisitos_alterados", "candidatura_excluida"}
+
+    query_vagas = db.query(Vaga)
+    if vaga_id:
+        query_vagas = query_vagas.filter(Vaga.id == vaga_id)
+
+    for vaga in query_vagas.all():
+        for evt in (vaga.historico or []):
+            tipo_evt = evt.get("tipo")
+            if tipo_evt not in _TIPOS_VAGA:
+                continue
+            if para:
+                continue
+            if tipo and tipo != tipo_evt:
+                continue
+            evt_ator = evt.get("ator") or ""
+            if ator and ator.lower() not in evt_ator.lower():
+                continue
+
+            if tipo_evt == "candidatura_excluida":
+                eventos.append({
+                    "tipo"           : "candidatura_excluida",
+                    "candidatura_id" : evt.get("candidatura_id"),
+                    "candidato_id"   : None,
+                    "candidato_nome" : evt.get("candidato_nome"),
+                    "candidato_email": evt.get("candidato_email"),
+                    "vaga_nome"      : vaga.nome,
+                    "de"             : evt.get("status_era"),
+                    "para"           : None,
+                    "ator"           : evt_ator or None,
+                    "em"             : evt.get("em"),
+                })
+            elif tipo_evt == "pesos_alterados":
+                def _fmt_pesos(p: dict) -> str:
+                    return (f"CV {int(p.get('curriculo',0)*100)}% · "
+                            f"RH {int(p.get('rh',0)*100)}% · "
+                            f"Mercado {int(p.get('mercado',0)*100)}% · "
+                            f"Entrev.RH {int(p.get('entrevista_rh',0)*100)}% · "
+                            f"Entrev.Téc {int(p.get('entrevista_tec',0)*100)}%")
+                eventos.append({
+                    "tipo"           : "pesos_alterados",
+                    "candidatura_id" : None,
+                    "candidato_id"   : None,
+                    "candidato_nome" : None,
+                    "candidato_email": None,
+                    "vaga_nome"      : vaga.nome,
+                    "de"             : _fmt_pesos(evt.get("pesos_anteriores") or {}),
+                    "para"           : _fmt_pesos(evt.get("pesos_novos") or {}),
+                    "ator"           : evt_ator or None,
+                    "em"             : evt.get("em"),
+                })
+            else:
+                eventos.append({
+                    "tipo"           : tipo_evt,
+                    "candidatura_id" : None,
+                    "candidato_id"   : None,
+                    "candidato_nome" : None,
+                    "candidato_email": None,
+                    "vaga_nome"      : vaga.nome,
+                    "de"             : evt.get("de"),
+                    "para"           : evt.get("para"),
+                    "ator"           : evt_ator or None,
+                    "em"             : evt.get("em"),
+                })
+
+    # ── Eventos de triagem em lote (marcadores nos historicos de candidatura)
+    if (not para or para == "triagem_lote") and (not tipo or tipo == "triagem_lote"):
+        for cand, candidato, vaga in (
+            db.query(Candidatura, Candidato, Vaga)
+            .join(Candidato, Candidatura.candidato_id == Candidato.id)
+            .join(Vaga,      Candidatura.vaga_id      == Vaga.id)
+            .filter(Candidatura.vaga_id == vaga_id if vaga_id else True)
+            .all()
+        ):
+            for evt in (cand.historico or []):
+                if evt.get("tipo") != "triagem_lote":
+                    continue
+                evt_ator = evt.get("ator") or ""
+                if ator and ator.lower() not in evt_ator.lower():
+                    continue
+                eventos.append({
+                    "tipo"           : "triagem_lote",
+                    "candidatura_id" : str(cand.id),
+                    "candidato_id"   : str(candidato.id),
+                    "candidato_nome" : candidato.nome,
+                    "candidato_email": candidato.email,
+                    "vaga_nome"      : vaga.nome,
+                    "de"             : None,
+                    "para"           : evt.get("lote_id"),
+                    "ator"           : evt_ator or None,
+                    "em"             : evt.get("em"),
+                    "extra"          : {"total": evt.get("total")},
+                })
+
+    # ── Resultado de entrevista
+    if not tipo or tipo == "resultado_entrevista":
+      for cand, candidato, vaga in (
+        db.query(Candidatura, Candidato, Vaga)
+        .join(Candidato, Candidatura.candidato_id == Candidato.id)
+        .join(Vaga,      Candidatura.vaga_id      == Vaga.id)
+        .filter(Candidatura.vaga_id == vaga_id if vaga_id else True)
+        .all()
+      ):
+        for evt in (cand.historico or []):
+            if evt.get("tipo") != "resultado_entrevista":
+                continue
+            if para:
+                continue
+            evt_ator = evt.get("ator") or ""
+            if ator and ator.lower() not in evt_ator.lower():
+                continue
+            eventos.append({
+                "tipo"           : "resultado_entrevista",
+                "candidatura_id" : str(cand.id),
+                "candidato_id"   : str(candidato.id),
+                "candidato_nome" : candidato.nome,
+                "candidato_email": candidato.email,
+                "vaga_nome"      : vaga.nome,
+                "de"             : evt.get("tipo_entrevista"),
+                "para"           : str(evt.get("score", "")),
+                "ator"           : evt_ator or None,
+                "em"             : evt.get("em"),
+                "extra"          : {"reedicao": evt.get("reedicao", False)},
+            })
+
+    # ── Eventos de login (sucesso, falha, fora de horário)
+    if not vaga_id and not para and (not tipo or tipo == "login"):
+        for usr in db.query(Usuario).all():
+            for evt in (usr.historico or []):
+                if evt.get("tipo") != "login":
+                    continue
+                evt_ator = usr.nome
+                if ator and ator.lower() not in evt_ator.lower():
+                    continue
+                eventos.append({
+                    "tipo"           : "login",
+                    "candidatura_id" : None,
+                    "candidato_id"   : None,
+                    "candidato_nome" : usr.nome,
+                    "candidato_email": usr.email,
+                    "vaga_nome"      : None,
+                    "de"             : None,
+                    "para"           : None,
+                    "ator"           : usr.nome,
+                    "em"             : evt.get("em"),
+                    "extra"          : {
+                        "sucesso"     : evt.get("sucesso", True),
+                        "motivo"      : evt.get("motivo"),
+                        "fora_horario": evt.get("fora_horario", False),
+                        "ip"          : evt.get("ip"),
+                        "papel"       : usr.papel.value,
+                    },
+                })
+
     eventos.sort(key=lambda e: e["em"] or "", reverse=True)
-    total   = len(eventos)
-    pagina  = eventos[offset : offset + limit]
+    total  = len(eventos)
+    pagina = eventos[offset : offset + limit]
 
     return AuditoriaResponse(
         eventos=[EventoAuditoria(**e) for e in pagina],
