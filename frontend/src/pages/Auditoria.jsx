@@ -55,11 +55,9 @@ const TIPO_CONFIG = {
   login_fora_horario:  { label: "Login fora do horário",     cor: "var(--ac-amber)"  },
 }
 
-// ── Lista unificada de opções de ação para o combobox ────────────────────────
-const OPCOES_ACAO = [
-  // Transições de candidatura (param: para=xxx)
+// ── Lista de opções de ação para o combobox (por papel) ─────────────────────
+const OPCOES_ACAO_ADMIN = [
   ...Object.entries(STATUS_LABEL).map(([k, v]) => ({ id: `status:${k}`, label: v, grupo: "Fluxo de candidatura" })),
-  // Eventos especiais (param: tipo=xxx)
   { id: "tipo:vaga_criada",          label: "Vaga criada",               grupo: "Vagas" },
   { id: "tipo:vaga_status",          label: "Status da vaga alterado",   grupo: "Vagas" },
   { id: "tipo:pesos_alterados",      label: "Pesos alterados",           grupo: "Vagas" },
@@ -71,13 +69,22 @@ const OPCOES_ACAO = [
   { id: "tipo:login",                label: "Login / Acesso",            grupo: "Segurança" },
 ]
 
+const OPCOES_ACAO_RH = [
+  ...Object.entries(STATUS_LABEL).map(([k, v]) => ({ id: `status:${k}`, label: v, grupo: "Fluxo de candidatura" })),
+  { id: "tipo:vaga_criada",          label: "Vaga criada",               grupo: "Vagas" },
+  { id: "tipo:vaga_status",          label: "Status da vaga alterado",   grupo: "Vagas" },
+  { id: "tipo:candidatura_excluida", label: "Candidatura excluída",      grupo: "Vagas" },
+  { id: "tipo:triagem_lote",         label: "Triagem em lote",           grupo: "Triagem" },
+  { id: "tipo:resultado_entrevista", label: "Nota de entrevista",        grupo: "Entrevistas" },
+]
+
 // ── Combobox com busca por digitação ─────────────────────────────────────────
-function ComboboxAcao({ value, onChange }) {
+function ComboboxAcao({ value, onChange, opcoes }) {
   const [texto, setTexto]       = useState("")
   const [aberto, setAberto]     = useState(false)
   const ref                     = useRef(null)
 
-  const opcaoAtual = OPCOES_ACAO.find(o => o.id === value)
+  const opcaoAtual = opcoes.find(o => o.id === value)
 
   useEffect(() => {
     if (!aberto) setTexto("")
@@ -90,8 +97,8 @@ function ComboboxAcao({ value, onChange }) {
   }, [])
 
   const filtradas = texto.trim()
-    ? OPCOES_ACAO.filter(o => o.label.toLowerCase().includes(texto.toLowerCase()))
-    : OPCOES_ACAO
+    ? opcoes.filter(o => o.label.toLowerCase().includes(texto.toLowerCase()))
+    : opcoes
 
   // Agrupa opções filtradas por grupo
   const porGrupo = filtradas.reduce((acc, o) => {
@@ -316,7 +323,9 @@ function ColunaEntidade({ evt }) {
 }
 
 // ── Página principal ──────────────────────────────────────────────────────────
-export function Auditoria() {
+export function Auditoria({ usuario }) {
+  const isAdmin  = usuario?.papel === "admin"
+  const opcoesAcao = isAdmin ? OPCOES_ACAO_ADMIN : OPCOES_ACAO_RH
   const [data, setData]         = useState({ eventos: [], total: 0 })
   const [vagas, setVagas]       = useState([])
   const [loading, setLoading]   = useState(true)
@@ -383,7 +392,9 @@ export function Auditoria() {
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-brand-cloud">Auditoria</h1>
+          <h1 className="text-2xl font-bold text-brand-cloud">
+            {isAdmin ? "Auditoria" : "Histórico de Decisões"}
+          </h1>
           <p className="text-sm text-brand-pale/45 mt-1 font-medium">
             {loading ? "Carregando…" : `${data.total} eventos`}
             {temFiltro && !loading && <span className="ml-2 text-brand-pale/30">· filtros ativos</span>}
@@ -432,7 +443,7 @@ export function Auditoria() {
           {/* Tipo de ação — combobox com busca */}
           <div className="flex-1 min-w-52">
             <label className="block text-xs font-bold text-brand-pale/40 uppercase tracking-wider mb-1.5">Tipo de ação</label>
-            <ComboboxAcao value={filtroAcao} onChange={setFiltroAcao} />
+            <ComboboxAcao value={filtroAcao} onChange={setFiltroAcao} opcoes={opcoesAcao} />
           </div>
 
           {temFiltro && (

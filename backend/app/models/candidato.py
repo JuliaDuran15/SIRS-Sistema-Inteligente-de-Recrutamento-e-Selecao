@@ -26,6 +26,8 @@ class Candidato(Base):
     estado      : Mapped[str | None] = mapped_column(String(2))
     cep         : Mapped[str | None] = mapped_column(String(9))
 
+    linkedin_url  : Mapped[str | None] = mapped_column(String(300))
+    portfolio_url : Mapped[str | None] = mapped_column(String(300))
 
     # Formação acadêmica — JSONB porque pode ter mais de uma
     formacao    : Mapped[dict | None] = mapped_column(JSONB, default=list)

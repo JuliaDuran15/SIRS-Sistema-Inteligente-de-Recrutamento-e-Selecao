@@ -204,6 +204,10 @@ export function Layout({ children, usuario, onLogout }) {
           { path: "/admin",     label: "Usuários",  Icon: IconCog      },
           { path: "/auditoria", label: "Auditoria", Icon: IconActivity },
         ]
+      : usuario?.papel === "rh"
+      ? [
+          { path: "/auditoria", label: "Histórico", Icon: IconActivity },
+        ]
       : []),
   ]
 

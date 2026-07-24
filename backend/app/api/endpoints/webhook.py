@@ -122,6 +122,8 @@ def _parse_xml(body: bytes) -> ImportacaoPayload:
             cep              = c.findtext("cep"),
             formacao         = formacao,
             curriculo_texto  = c.findtext("curriculo_texto"),
+            linkedin_url     = c.findtext("linkedin_url") or c.get("linkedin_url"),
+            portfolio_url    = c.findtext("portfolio_url") or c.get("portfolio_url"),
             vaga_external_id = c.get("vaga_external_id") or c.findtext("vaga_external_id"),
             vaga_nome        = c.findtext("vaga_nome"),
         ))
@@ -179,7 +181,8 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
             candidato = db.query(Candidato).filter(Candidato.email == cd.email).first()
             if candidato:
                 for campo in ("nome", "telefone", "data_nascimento",
-                              "logradouro", "bairro", "cidade", "estado", "cep"):
+                              "logradouro", "bairro", "cidade", "estado", "cep",
+                              "linkedin_url", "portfolio_url"):
                     val = getattr(cd, campo)
                     if val is not None:
                         setattr(candidato, campo, val)
@@ -198,6 +201,8 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
                     estado          = cd.estado,
                     cep             = cd.cep,
                     formacao        = [f.model_dump() for f in cd.formacao],
+                    linkedin_url    = cd.linkedin_url,
+                    portfolio_url   = cd.portfolio_url,
                 )
                 db.add(candidato)
                 db.flush()

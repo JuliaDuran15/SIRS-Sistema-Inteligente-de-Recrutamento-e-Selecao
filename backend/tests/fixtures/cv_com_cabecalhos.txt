@@ -1,0 +1,26 @@
+ANA PAULA FERREIRA
+ana.ferreira@email.com | (11) 98765-4321
+
+RESUMO PROFISSIONAL
+Engenheira de software com 6 anos de experiência em desenvolvimento backend,
+especializada em sistemas distribuídos e APIs de alta performance.
+Apaixonada por código limpo e soluções escaláveis.
+
+EXPERIÊNCIA PROFISSIONAL
+Engenheira Backend Sênior | Fintech Pagamentos S.A. (2021 – Atual)
+- Liderou migração de monolito para microsserviços (Python + FastAPI)
+- Reduziu latência média de 800ms para 120ms em endpoints críticos
+- Responsável por revisar PRs e mentorar 3 desenvolvedores júniores
+
+Desenvolvedora Backend Plena | Startup TechBR (2018 – 2021)
+- Desenvolveu pipeline de integração com ERPs (SAP, TOTVS)
+- Implementou sistema de filas com Celery + Redis
+- Atuou em squad ágil com cerimônias Scrum semanais
+
+HABILIDADES TÉCNICAS
+Python, FastAPI, Django, PostgreSQL, Redis, Celery, Docker, Kubernetes,
+AWS (EC2, RDS, S3, Lambda), Git, Linux, REST APIs, SQL avançado
+
+FORMAÇÃO ACADÊMICA
+Bacharelado em Engenharia de Computação — USP (2014 – 2018)
+Certificação AWS Solutions Architect Associate (2022)

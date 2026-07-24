@@ -2,7 +2,7 @@ from datetime import datetime
 
 from app.api.deps import DB
 from app.core.auth import QUALQUER_PAPEL, get_usuario_atual
-from app.core.email import email_entrevista_agendada
+from app.core.email import email_entrevista_agendada, email_entrevista_candidato
 from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.entrevista import Entrevista
 from app.models.usuario import PapelUsuario
@@ -102,7 +102,19 @@ def agendar_entrevista(
     db.refresh(entrevista)
 
     from app.models.candidato import Candidato
+    from app.models.usuario import Usuario as UsuarioModel
     candidato = db.query(Candidato).filter(Candidato.id == candidatura.candidato_id).first()
+
+    # Collect RH emails for this vaga
+    rh_ids = list(vaga.rhs_autorizados or []) if vaga else []
+    if vaga and vaga.criado_por_id:
+        rh_ids.append(str(vaga.criado_por_id))
+    rh_emails = [
+        u.email for u in db.query(UsuarioModel).filter(UsuarioModel.id.in_(rh_ids)).all()
+        if u.email
+    ] if rh_ids else []
+
+    # Notify scheduler (gestor or rh)
     email_entrevista_agendada(
         destinatario       = usuario.email,
         nome_entrevistador = usuario.nome,
@@ -111,6 +123,30 @@ def agendar_entrevista(
         tipo               = dados.tipo,
         agendada_para      = dados.agendada_para,
     )
+
+    # When gestor schedules, also notify each RH of the vaga
+    if usuario.papel == PapelUsuario.GESTOR:
+        for rh_email in rh_emails:
+            email_entrevista_agendada(
+                destinatario       = rh_email,
+                nome_entrevistador = usuario.nome,
+                candidato_nome     = candidato.nome if candidato else "—",
+                vaga_nome          = vaga.nome if vaga else "—",
+                tipo               = dados.tipo,
+                agendada_para      = dados.agendada_para,
+            )
+
+    # Contact email shown to candidate is always RH's, not gestor's
+    contato_rh = rh_emails[0] if rh_emails else usuario.email
+    if candidato and candidato.email:
+        email_entrevista_candidato(
+            destinatario   = candidato.email,
+            candidato_nome = candidato.nome,
+            vaga_nome      = vaga.nome if vaga else "—",
+            agendada_para  = dados.agendada_para,
+            email_rh       = contato_rh,
+            tipo           = dados.tipo,
+        )
 
     return entrevista
 

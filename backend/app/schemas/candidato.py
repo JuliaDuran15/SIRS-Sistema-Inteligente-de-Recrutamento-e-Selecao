@@ -36,6 +36,8 @@ class CandidatoCreate(BaseModel):
     cidade          : str | None     = Field(None, max_length=100)
     estado          : str | None     = Field(None, max_length=2)
     cep             : str | None     = Field(None, max_length=10)
+    linkedin_url    : str | None     = Field(None, max_length=300)
+    portfolio_url   : str | None     = Field(None, max_length=300)
     formacao        : list[FormacaoItem] = []
 
     @field_validator("nome", "telefone", "logradouro", "numero", "complemento",
@@ -58,6 +60,8 @@ class CandidatoResponse(BaseModel):
     cidade          : str | None
     estado          : str | None
     cep             : str | None
+    linkedin_url    : str | None
+    portfolio_url   : str | None
     formacao        : Any
     tem_candidatura_externa : bool = False
     criado_em       : datetime
@@ -87,6 +91,8 @@ class CandidatoUpdate(BaseModel):
     cidade          : str | None     = Field(None, max_length=100)
     estado          : str | None     = Field(None, max_length=2)
     cep             : str | None     = Field(None, max_length=10)
+    linkedin_url    : str | None     = Field(None, max_length=300)
+    portfolio_url   : str | None     = Field(None, max_length=300)
     formacao        : list[FormacaoItem] | None = None
 
     @field_validator("nome", "telefone", "logradouro", "numero", "complemento",

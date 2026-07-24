@@ -1,0 +1,26 @@
+LUCAS TORRES
+lucas.torres@email.com | +55 11 99000-1234 | linkedin.com/in/lucastorres
+
+PROFILE
+Data engineer with 5 years of experience building scalable data pipelines
+and analytics platforms. Specializing in cloud-native architectures and
+real-time streaming systems.
+
+WORK EXPERIENCE
+Senior Data Engineer | GlobalTech Inc. (2021 – Present)
+- Designed and maintained ETL pipelines processing 10M+ events/day using Apache Spark
+- Led migration of batch jobs to streaming architecture with Apache Kafka
+- Managed data lake on AWS S3 with Glue and Athena for ad-hoc queries
+
+Data Engineer | Analytics House (2019 – 2021)
+- Developed data models in dbt for financial reporting dashboards
+- Implemented orchestration workflows in Apache Airflow
+- Collaborated with data scientists to productionize ML models
+
+SKILLS
+Python, SQL, Apache Spark, Kafka, Airflow, dbt, AWS (S3, Glue, Athena, EMR),
+GCP (BigQuery, Dataflow), Docker, Terraform, Git
+
+EDUCATION
+Bachelor's in Information Systems — PUC-SP (2015 – 2019)
+Google Professional Data Engineer Certification (2022)

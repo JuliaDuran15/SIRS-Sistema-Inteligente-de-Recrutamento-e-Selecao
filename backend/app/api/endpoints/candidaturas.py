@@ -340,7 +340,28 @@ def atualizar_status(
                 nome_rh        = usuario.nome,
                 candidato_nome = candidato.nome,
                 vaga_nome      = vaga_obj.nome,
-                aprovado       = (novo_status == StatusCandidatura.APROVADO_TRIAGEM),
+                aprovado       = novo_status == StatusCandidatura.APROVADO_TRIAGEM,
+            )
+
+    if novo_status == StatusCandidatura.CONTRATADO:
+        from app.core.email import email_contratacao_candidato
+        from app.models.candidato import Candidato
+        from app.models.usuario import Usuario
+        candidato = db.query(Candidato).filter(Candidato.id == candidatura.candidato_id).first()
+        vaga_obj  = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
+        if candidato and candidato.email and vaga_obj:
+            rh_ids = list(vaga_obj.rhs_autorizados or [])
+            if vaga_obj.criado_por_id:
+                rh_ids.append(str(vaga_obj.criado_por_id))
+            rh_emails = [
+                u.email for u in db.query(Usuario).filter(Usuario.id.in_(rh_ids)).all()
+                if u.email
+            ]
+            email_contratacao_candidato(
+                destinatario   = candidato.email,
+                candidato_nome = candidato.nome,
+                vaga_nome      = vaga_obj.nome,
+                email_rh       = rh_emails[0] if rh_emails else "",
             )
 
     return candidatura

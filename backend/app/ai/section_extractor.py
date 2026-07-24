@@ -74,6 +74,9 @@ _KEYWORDS_FALLBACK: dict[SecaoNome, list[str]] = {
         "universidade", "faculdade", "graduação", "bacharelado", "mestrado",
         "doutorado", "mba", "curso", "certificado", "formado",
         "university", "bachelor", "master", "degree",
+        "graduado", "graduada", "cursando", "pós-graduação", "pós graduação",
+        "tecnólogo", "tecnóloga", "licenciatura", "especialização",
+        "fatec", "fiap", "senac", "senai", "etec",
     ],
     "resumo": [
         "profissional com", "especialista em", "experiência em", "anos de",

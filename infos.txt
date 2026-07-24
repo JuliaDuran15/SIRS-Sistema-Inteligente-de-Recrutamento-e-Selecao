@@ -766,3 +766,114 @@ Resultado de entrevista	candidatura.historico	tipo_entrevista, score, reedicao
 Tentativa falha → ponto vermelho, "Tentativa de login falhou" + motivo + IP
 Login fora do horário → ponto âmbar, "Login fora do horário" + papel + IP
 Login normal → ponto verde, "Login" + papel + IP
+
+
+TESTES 
+1. Tempo médio de processamento de currículo
+
+Escreva um script que chama as funções diretamente (sem Celery), com time.perf_counter():
+
+
+docker compose exec -T api python - <<'EOF'
+import time, statistics
+from app.ai.resume_parser import parsear_curriculo
+from app.ai.matching_engine import calcular_score_rh_multi_secao
+
+PDF = "tests/fixtures/curriculo_exemplo.pdf"  # coloque um PDF real aqui
+tempos = []
+for _ in range(5):
+    t0 = time.perf_counter()
+    resultado = parsear_curriculo(PDF)
+    tempos.append(time.perf_counter() - t0)
+
+print(f"média: {statistics.mean(tempos):.2f}s  |  min: {min(tempos):.2f}s  |  max: {max(tempos):.2f}s")
+EOF
+
+
+
+2. Ranking de 100 candidatos
+
+docker compose exec -T api python - <<'EOF'
+import time
+import app.models.candidato, app.models.candidatura, app.models.curriculo
+import app.models.vaga, app.models.entrevista, app.models.usuario
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from app.core.config import settings
+from app.ai.matching_engine import calcular_score_rh_multi_secao
+from app.models.curriculo import Curriculo
+from app.models.vaga import Vaga
+
+engine = create_engine(settings.DATABASE_URL)
+with Session(engine) as db:
+    vaga      = db.query(Vaga).filter(Vaga.vetor_vaga != None).first()
+    curriculos = db.query(Curriculo).filter(Curriculo.vetor_embedding != None).limit(100).all()
+
+    if not vaga or not curriculos:
+        print("Sem dados suficientes — rode seed_full.py primeiro")
+    else:
+        print(f"Rankeando {len(curriculos)} currículos contra: {vaga.nome}")
+        t0 = time.perf_counter()
+        scores = [
+            calcular_score_rh_multi_secao(
+                c.vetor_embedding,
+                vaga.vetor_vaga,
+                c.vetor_secao_exp,
+            )
+            for c in curriculos
+        ]
+        elapsed = time.perf_counter() - t0
+        print(f"{len(scores)} candidatos rankeados em {elapsed:.3f}s")
+        print(f"Média por candidato : {elapsed/len(scores)*1000:.2f}ms")
+        print(f"Score mín / máx     : {min(scores):.3f} / {max(scores):.3f}")
+EOF
+
+
+3. Precisão da segmentação
+
+Requer um gabarito manual — você anota as seções esperadas em alguns currículos e compara com o output de section_extractor:
+docker compose exec -T api python - <<'EOF'
+from app.ai.section_extractor import extrair_secoes
+
+# monte um gabarito: {arquivo: seções esperadas}
+GABARITO = {
+    "tests/fixtures/cv1.txt": ["experiencia", "formacao", "habilidades"],
+    "tests/fixtures/cv2.txt": ["experiencia", "habilidades"],
+}
+
+acertos = total = 0
+for arq, esperadas in GABARITO.items():
+    texto = open(arq).read()
+    secoes = extrair_secoes(texto)          # retorna dict com as seções encontradas
+    encontradas = [k for k, v in secoes.items() if v]
+    for s in esperadas:
+        total += 1
+        if s in encontradas:
+            acertos += 1
+        else:
+            print(f"  FALTOU '{s}' em {arq}")
+
+print(f"precisão: {acertos}/{total} = {acertos/total:.0%}")
+EOF
+
+4. Consumo de memória
+
+# instala memory_profiler se não tiver
+docker compose exec -T api pip install memory-profiler -q
+
+docker compose exec -T api python - <<'EOF'
+import tracemalloc
+from app.ai.resume_parser import parsear_curriculo
+
+tracemalloc.start()
+parsear_curriculo("tests/fixtures/curriculo_exemplo.pdf")
+atual, pico = tracemalloc.get_traced_memory()
+tracemalloc.stop()
+print(f"pico de memória: {pico / 1024 / 1024:.1f} MB")
+EOF
+
+Dica geral: se quiser integrar isso aos testes existentes, adicione um arquivo tests/test_benchmark.py com @pytest.mark.slow e rode com pytest tests/test_benchmark.py -s -v. Assim fica rastreável por execução — você vê se uma mudança no modelo ou no parser degradou a performance.
+
+O gargalo mais provável é o parsear_curriculo (embedding model na primeira chamada faz lazy load). Na métrica 1, descarte a primeira iteração ou faça um "warm-up" antes de medir.
+

@@ -20,6 +20,7 @@ export function Candidatos() {
   const [form, setForm]         = useState({
     nome: "", email: "", telefone: "",
     cidade: "", estado: "", vaga_id: "",
+    linkedin_url: "", portfolio_url: "",
     curriculo_texto: "",
   })
   const [formacoes, setFormacoes] = useState([])
@@ -63,7 +64,12 @@ export function Candidatos() {
   async function handleSubmit(e) {
     e.preventDefault()
     setErroForm(null)
-    const { vaga_id, curriculo_texto, ...dados } = form
+    const { vaga_id, curriculo_texto, linkedin_url, portfolio_url, ...rest } = form
+    const dados = {
+      ...rest,
+      linkedin_url: linkedin_url || null,
+      portfolio_url: portfolio_url || null,
+    }
     const formacaoLimpa = formacoes
       .filter(f => f.curso.trim() && f.instituicao.trim())
       .map(f => ({ ...f, ano_conclusao: f.ano_conclusao ? parseInt(f.ano_conclusao) : null }))
@@ -92,7 +98,7 @@ export function Candidatos() {
       await uploadCurriculoTexto(candidaturaId, curriculo_texto.trim())
     }
     setCriando(false)
-    setForm({ nome: "", email: "", telefone: "", cidade: "", estado: "", vaga_id: "", curriculo_texto: "" })
+    setForm({ nome: "", email: "", telefone: "", cidade: "", estado: "", vaga_id: "", linkedin_url: "", portfolio_url: "", curriculo_texto: "" })
     setFormacoes([])
     carregar(0)
   }
@@ -172,6 +178,20 @@ export function Candidatos() {
                 </div>
               ))}
             </div>
+            {/* Links */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-brand-pale/65 uppercase tracking-wider mb-1.5">LinkedIn</label>
+                <input type="url" value={form.linkedin_url} onChange={set("linkedin_url")}
+                  placeholder="https://linkedin.com/in/..." className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-brand-pale/65 uppercase tracking-wider mb-1.5">Portfólio</label>
+                <input type="url" value={form.portfolio_url} onChange={set("portfolio_url")}
+                  placeholder="https://..." className={inputClass} />
+              </div>
+            </div>
+
             {/* Formação acadêmica */}
             <div>
               <div className="flex items-center justify-between mb-2">

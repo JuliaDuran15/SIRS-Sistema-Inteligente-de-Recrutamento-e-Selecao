@@ -1,0 +1,21 @@
+CARLOS MENDES — Desenvolvedor Full Stack
+carlos.mendes@email.com | (21) 91234-5678
+
+Profissional com 4 anos de experiência em desenvolvimento web, focado em
+React e Node.js. Busco oportunidades em empresas de produto onde possa
+contribuir com interfaces modernas e APIs robustas.
+
+Trabalhei como desenvolvedor full stack na Agência Digital WEB (2020–2024),
+responsável por criar e manter landing pages e e-commerces para mais de
+20 clientes. Desenvolvi integrações com APIs de pagamento (Stripe, PagSeguro)
+e coordenei deploys em ambientes AWS.
+
+Anteriormente atuei como estagiário na empresa Sistemas Legados Ltda (2019–2020),
+onde implementei melhorias em sistema ERP legado em PHP e realizei testes
+manuais de regressão.
+
+Domino React, TypeScript, Node.js, Express, PostgreSQL, MongoDB, Docker,
+Git e tenho familiaridade com AWS e CI/CD via GitHub Actions.
+
+Graduado em Análise e Desenvolvimento de Sistemas pela FATEC-SP (2019).
+Cursando pós-graduação em Engenharia de Software — FIAP (em andamento).

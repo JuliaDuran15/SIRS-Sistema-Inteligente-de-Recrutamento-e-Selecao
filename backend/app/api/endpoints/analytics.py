@@ -352,28 +352,43 @@ def auditoria(
     db      : Session       = DB,
     usuario = Depends(get_usuario_atual),
 ):
-    """Retorna o log de transições de candidaturas e alterações de candidatos. Apenas Admin."""
-    if usuario.papel != PapelUsuario.ADMIN:
-        raise HTTPException(status_code=403, detail="Apenas administradores podem acessar a auditoria")
+    """Log de transições e decisões. Admin vê tudo; RH vê apenas suas vagas (sem logins)."""
+    if usuario.papel not in (PapelUsuario.ADMIN, PapelUsuario.RH):
+        raise HTTPException(status_code=403, detail="Acesso negado")
+
+    is_admin = usuario.papel == PapelUsuario.ADMIN
+    # Para RH, restringe os eventos às vagas que ele gerencia
+    vagas_permitidas = None if is_admin else _vagas_ids_query(usuario, db)
 
     eventos: list[dict] = []
 
     # Quando tipo especial está ativo, ignorar fontes que não produzem esse tipo
-    _apenas_status   = tipo is None and para is not None
     _apenas_especial = tipo is not None
+
+    # Helper: aplica filtro de vagas autorizadas a uma query de Candidatura
+    def _filtrar_vagas_cand(q):
+        if vagas_permitidas is not None:
+            q = q.filter(Candidatura.vaga_id.in_(vagas_permitidas))
+        if vaga_id:
+            q = q.filter(Candidatura.vaga_id == vaga_id)
+        return q
+
+    def _filtrar_vagas_vaga(q):
+        if vagas_permitidas is not None:
+            q = q.filter(Vaga.id.in_(vagas_permitidas))
+        if vaga_id:
+            q = q.filter(Vaga.id == vaga_id)
+        return q
 
     # ── Eventos de candidatura (transições de status) ─────────────────────────
     _TIPOS_CANDIDATURA = {"triagem_lote", "resultado_entrevista"}
-    _incluir_cand = not _apenas_especial or tipo in _TIPOS_CANDIDATURA or not tipo
 
     if not _apenas_especial or tipo in _TIPOS_CANDIDATURA:
-        query_cand = (
+        query_cand = _filtrar_vagas_cand(
             db.query(Candidatura, Candidato, Vaga)
             .join(Candidato, Candidatura.candidato_id == Candidato.id)
             .join(Vaga,      Candidatura.vaga_id      == Vaga.id)
         )
-        if vaga_id:
-            query_cand = query_cand.filter(Candidatura.vaga_id == vaga_id)
     else:
         query_cand = []
 
@@ -383,14 +398,13 @@ def auditoria(
             evt_para = evt.get("para") or ""
             evt_tipo = evt.get("tipo")
 
-            # Pular tipos especiais neste bloco (tratados abaixo)
             if evt_tipo in {"triagem_lote", "resultado_entrevista", "resubmissao_duplicata"}:
                 continue
             if ator and ator.lower() not in evt_ator.lower():
                 continue
             if para and para != evt_para:
                 continue
-            if tipo:  # quando tipo especial ativo, pular transições puras
+            if tipo:
                 continue
             eventos.append({
                 "tipo"           : None,
@@ -405,8 +419,8 @@ def auditoria(
                 "em"             : evt.get("em"),
             })
 
-    # ── Eventos de candidato (alterações de e-mail) — apenas sem filtro de vaga
-    if not vaga_id and not para and (not tipo or tipo == "alteracao_email"):
+    # ── Eventos de candidato (alterações de e-mail) — apenas admin, sem filtro de vaga
+    if is_admin and not vaga_id and not para and (not tipo or tipo == "alteracao_email"):
         for candidato in db.query(Candidato).all():
             for evt in (candidato.historico or []):
                 if evt.get("tipo") != "alteracao_email":
@@ -431,11 +445,7 @@ def auditoria(
     _TIPOS_VAGA = {"vaga_criada", "vaga_status", "pesos_alterados",
                    "requisitos_alterados", "candidatura_excluida"}
 
-    query_vagas = db.query(Vaga)
-    if vaga_id:
-        query_vagas = query_vagas.filter(Vaga.id == vaga_id)
-
-    for vaga in query_vagas.all():
+    for vaga in _filtrar_vagas_vaga(db.query(Vaga)).all():
         for evt in (vaga.historico or []):
             tipo_evt = evt.get("tipo")
             if tipo_evt not in _TIPOS_VAGA:
@@ -494,15 +504,13 @@ def auditoria(
                     "em"             : evt.get("em"),
                 })
 
-    # ── Eventos de triagem em lote (marcadores nos historicos de candidatura)
+    # ── Eventos de triagem em lote
     if (not para or para == "triagem_lote") and (not tipo or tipo == "triagem_lote"):
-        for cand, candidato, vaga in (
+        for cand, candidato, vaga in _filtrar_vagas_cand(
             db.query(Candidatura, Candidato, Vaga)
             .join(Candidato, Candidatura.candidato_id == Candidato.id)
             .join(Vaga,      Candidatura.vaga_id      == Vaga.id)
-            .filter(Candidatura.vaga_id == vaga_id if vaga_id else True)
-            .all()
-        ):
+        ).all():
             for evt in (cand.historico or []):
                 if evt.get("tipo") != "triagem_lote":
                     continue
@@ -525,37 +533,35 @@ def auditoria(
 
     # ── Resultado de entrevista
     if not tipo or tipo == "resultado_entrevista":
-      for cand, candidato, vaga in (
-        db.query(Candidatura, Candidato, Vaga)
-        .join(Candidato, Candidatura.candidato_id == Candidato.id)
-        .join(Vaga,      Candidatura.vaga_id      == Vaga.id)
-        .filter(Candidatura.vaga_id == vaga_id if vaga_id else True)
-        .all()
-      ):
-        for evt in (cand.historico or []):
-            if evt.get("tipo") != "resultado_entrevista":
-                continue
-            if para:
-                continue
-            evt_ator = evt.get("ator") or ""
-            if ator and ator.lower() not in evt_ator.lower():
-                continue
-            eventos.append({
-                "tipo"           : "resultado_entrevista",
-                "candidatura_id" : str(cand.id),
-                "candidato_id"   : str(candidato.id),
-                "candidato_nome" : candidato.nome,
-                "candidato_email": candidato.email,
-                "vaga_nome"      : vaga.nome,
-                "de"             : evt.get("tipo_entrevista"),
-                "para"           : str(evt.get("score", "")),
-                "ator"           : evt_ator or None,
-                "em"             : evt.get("em"),
-                "extra"          : {"reedicao": evt.get("reedicao", False)},
-            })
+        for cand, candidato, vaga in _filtrar_vagas_cand(
+            db.query(Candidatura, Candidato, Vaga)
+            .join(Candidato, Candidatura.candidato_id == Candidato.id)
+            .join(Vaga,      Candidatura.vaga_id      == Vaga.id)
+        ).all():
+            for evt in (cand.historico or []):
+                if evt.get("tipo") != "resultado_entrevista":
+                    continue
+                if para:
+                    continue
+                evt_ator = evt.get("ator") or ""
+                if ator and ator.lower() not in evt_ator.lower():
+                    continue
+                eventos.append({
+                    "tipo"           : "resultado_entrevista",
+                    "candidatura_id" : str(cand.id),
+                    "candidato_id"   : str(candidato.id),
+                    "candidato_nome" : candidato.nome,
+                    "candidato_email": candidato.email,
+                    "vaga_nome"      : vaga.nome,
+                    "de"             : evt.get("tipo_entrevista"),
+                    "para"           : str(evt.get("score", "")),
+                    "ator"           : evt_ator or None,
+                    "em"             : evt.get("em"),
+                    "extra"          : {"reedicao": evt.get("reedicao", False)},
+                })
 
-    # ── Eventos de login (sucesso, falha, fora de horário)
-    if not vaga_id and not para and (not tipo or tipo == "login"):
+    # ── Eventos de login (sucesso, falha, fora de horário) — apenas admin
+    if is_admin and not vaga_id and not para and (not tipo or tipo == "login"):
         for usr in db.query(Usuario).all():
             for evt in (usr.historico or []):
                 if evt.get("tipo") != "login":

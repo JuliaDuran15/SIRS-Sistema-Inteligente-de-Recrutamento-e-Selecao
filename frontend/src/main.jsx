@@ -18,9 +18,10 @@ import { Auditoria }       from "./pages/Auditoria"
 import api                   from "./api"
 import "./index.css"
 
-function Protegida({ children, apenasAdmin, usuario, onLogout }) {
+function Protegida({ children, apenasAdmin, apenasAdminOuRH, usuario, onLogout }) {
   if (!usuario) return <Navigate to="/login" replace />
   if (apenasAdmin && usuario.papel !== "admin") return <Navigate to="/" replace />
+  if (apenasAdminOuRH && usuario.papel !== "admin" && usuario.papel !== "rh") return <Navigate to="/" replace />
   return <Layout usuario={usuario} onLogout={onLogout}>{children}</Layout>
 }
 
@@ -76,7 +77,7 @@ export function App() {
           <Protegida {...p} apenasAdmin><AdminUsuarios /></Protegida>
         }/>
         <Route path="/auditoria" element={
-          <Protegida {...p} apenasAdmin><Auditoria /></Protegida>
+          <Protegida {...p} apenasAdminOuRH><Auditoria usuario={usuario} /></Protegida>
         }/>
         <Route path="/perfil" element={
           <Protegida {...p}><Perfil usuario={usuario} /></Protegida>

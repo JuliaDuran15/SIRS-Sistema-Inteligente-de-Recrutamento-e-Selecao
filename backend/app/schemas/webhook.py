@@ -37,6 +37,8 @@ class CandidatoImport(BaseModel):
     cep             : str | None  = Field(None, max_length=10)
     formacao        : list[FormacaoImport] = []
     curriculo_texto : str | None  = Field(None, max_length=100_000)
+    linkedin_url    : str | None  = Field(None, max_length=300)
+    portfolio_url   : str | None  = Field(None, max_length=300)
     # Referências para vincular a uma vaga
     vaga_external_id : str | None = Field(None, max_length=100)
     vaga_nome        : str | None = Field(None, max_length=200)
