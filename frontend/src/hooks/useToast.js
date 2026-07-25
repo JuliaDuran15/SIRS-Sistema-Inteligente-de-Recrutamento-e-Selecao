@@ -30,13 +30,15 @@ export function extrairErro(err, fallback = "Erro inesperado") {
   return fallback
 }
 
-export function useToast(duracao = 5000) {
+export function useToast(duracao = 4500) {
   const [toasts, setToasts] = useState([])
 
   function mostrarToast(msg, tipo = "info") {
     const id = ++_tid
     const texto = typeof msg === "string" ? msg : String(msg)
-    setToasts(prev => [...prev, { id, msg: texto, tipo }])
+    setToasts(prev => [...prev, { id, msg: texto, tipo, saindo: false }])
+    // marca como saindo 400ms antes de remover (tempo da animação de saída)
+    setTimeout(() => setToasts(prev => prev.map(t => t.id === id ? { ...t, saindo: true } : t)), duracao - 400)
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), duracao)
   }
 

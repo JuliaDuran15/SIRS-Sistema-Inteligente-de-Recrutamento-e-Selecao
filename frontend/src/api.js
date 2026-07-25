@@ -12,9 +12,11 @@ api.interceptors.request.use(config => {
 })
 
 export const loginUsuario = (email, senha) =>
-  api.post("/auth/token", new URLSearchParams({ username: email, password: senha }), {
+  api.post("/auth/login", new URLSearchParams({ username: email, password: senha }), {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
   })
+
+export const verificarSenha = (email, senha) => loginUsuario(email, senha)
 
 export const getVagas         = ()          => api.get("/vagas/")
 export const createVaga       = (data)      => api.post("/vagas/", data)
@@ -67,6 +69,9 @@ export const getAuditoria             = (params)  => api.get("/analytics/auditor
 export const alterarSenha   = (data)     => api.patch("/auth/senha", data)
 export const esqueceuSenha  = (email)    => api.post("/auth/esqueceu-senha", { email })
 export const resetarSenha   = (data)     => api.post("/auth/resetar-senha", data)
+
+export const getConfig    = ()     => api.get("/configuracoes/")
+export const updateConfig = (data) => api.patch("/configuracoes/", data)
 
 export const uploadCurriculo = (candidaturaId, arquivo) => {
   const form = new FormData()

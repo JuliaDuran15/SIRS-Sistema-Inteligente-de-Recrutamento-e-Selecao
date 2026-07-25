@@ -100,6 +100,8 @@ _HABILIDADES_TECH: frozenset[str] = frozenset({
     'cro', 'a/b test', 'teste a/b', 'otimização de conversão', 'landing page',
     # Design para marketing
     'canva', 'adobe photoshop', 'adobe illustrator', 'after effects', 'premiere',
+    # Idiomas (formas canônicas com acento)
+    'inglês', 'espanhol', 'francês', 'alemão', 'italiano', 'mandarim', 'japonês', 'português',
 })
 
 # ── Aliases → forma canônica ──────────────────────────────────────────────────
@@ -157,6 +159,14 @@ _ALIASES: dict[str, str] = {
     'growth': 'growth hacking',
     'seo on page': 'seo on-page', 'seo offpage': 'seo off-page',
     'photoshop': 'adobe photoshop', 'illustrator': 'adobe illustrator',
+    # Idiomas — sem acento e em inglês → forma canônica
+    'ingles': 'inglês', 'english': 'inglês',
+    'spanish': 'espanhol',
+    'frances': 'francês', 'french': 'francês',
+    'alemao': 'alemão', 'german': 'alemão',
+    'chinese': 'mandarim', 'mandarin': 'mandarim',
+    'japones': 'japonês', 'japanese': 'japonês',
+    'portugues': 'português',
 }
 
 

@@ -3,17 +3,28 @@ import { Link, useLocation } from "react-router-dom"
 import logo from "../assets/logo.png"
 import {
   IconBriefcase, IconUsers, IconBarChart, IconCog, IconActivity,
-  IconLogOut, IconSun, IconMoon, IconMenu,
+  IconLogOut, IconSun, IconMoon, IconMenu, IconSettings,
 } from "./Icons"
+
+function useNomeEmpresa() {
+  const [nome, setNome] = useState(() => localStorage.getItem("config_nome_empresa") || "SIRS")
+  useEffect(() => {
+    function atualizar(e) { setNome(e.detail) }
+    window.addEventListener("config_empresa_atualizada", atualizar)
+    return () => window.removeEventListener("config_empresa_atualizada", atualizar)
+  }, [])
+  return nome
+}
 
 const SIDEBAR_W = 240
 
 // Retorna a raiz de seção à qual um pathname pertence
 function getSectionRoot(path) {
-  if (path.startsWith("/candidatos")) return "/candidatos"
-  if (path.startsWith("/dashboard"))  return "/dashboard"
-  if (path.startsWith("/admin"))      return "/admin"
-  if (path.startsWith("/auditoria"))  return "/auditoria"
+  if (path.startsWith("/candidatos"))     return "/candidatos"
+  if (path.startsWith("/dashboard"))      return "/dashboard"
+  if (path.startsWith("/admin"))          return "/admin"
+  if (path.startsWith("/auditoria"))      return "/auditoria"
+  if (path.startsWith("/configuracoes"))  return "/configuracoes"
   return "/"   // Vagas: /, /vagas/*, /candidaturas/*
 }
 
@@ -78,7 +89,7 @@ function NavItem({ path, to, label, Icon, active, light }) {
   )
 }
 
-function SidebarContent({ nav, usuario, onLogout, light, setLight, currentSection, lastPaths }) {
+function SidebarContent({ nav, usuario, onLogout, light, setLight, currentSection, lastPaths, nomeEmpresa }) {
   return (
     <div className="flex flex-col h-full overflow-hidden">
 
@@ -87,7 +98,7 @@ function SidebarContent({ nav, usuario, onLogout, light, setLight, currentSectio
         <Link to="/" className="flex items-center gap-3 group">
           <img src={logo} alt="SIRS" className="h-9 w-auto object-contain rounded-lg flex-shrink-0 transition-opacity group-hover:opacity-90" />
           <div className="min-w-0">
-            <p className="text-sm font-bold text-brand-cloud leading-tight">SIRS</p>
+            <p className="text-sm font-bold text-brand-cloud leading-tight truncate">{nomeEmpresa}</p>
             <p className="text-xs leading-tight" style={{ color: "var(--t-sub)" }}>
               Recrutamento Inteligente
             </p>
@@ -188,6 +199,7 @@ export function Layout({ children, usuario, onLogout }) {
   const [light, setLight]         = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
   const lastPaths                 = useRef({})
+  const nomeEmpresa               = useNomeEmpresa()
 
   // Mantém o último caminho visitado por seção de navegação
   useEffect(() => {
@@ -201,8 +213,9 @@ export function Layout({ children, usuario, onLogout }) {
     { path: "/dashboard",  label: "Dashboard",  Icon: IconBarChart   },
     ...(usuario?.papel === "admin"
       ? [
-          { path: "/admin",     label: "Usuários",  Icon: IconCog      },
-          { path: "/auditoria", label: "Auditoria", Icon: IconActivity },
+          { path: "/admin",         label: "Usuários",      Icon: IconCog      },
+          { path: "/auditoria",     label: "Auditoria",     Icon: IconActivity },
+          { path: "/configuracoes", label: "Configurações", Icon: IconSettings },
         ]
       : usuario?.papel === "rh"
       ? [
@@ -215,7 +228,7 @@ export function Layout({ children, usuario, onLogout }) {
   useEffect(() => { setMobileOpen(false) }, [loc.pathname])
 
   const currentSection = getSectionRoot(loc.pathname)
-  const sidebarProps = { nav, usuario, onLogout, light, setLight, currentSection, lastPaths: lastPaths.current }
+  const sidebarProps = { nav, usuario, onLogout, light, setLight, currentSection, lastPaths: lastPaths.current, nomeEmpresa }
 
   return (
     <div className="min-h-screen flex">

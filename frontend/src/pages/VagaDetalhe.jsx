@@ -6,6 +6,7 @@ import { Badge } from "../components/Badge"
 import { CvPreview } from "../components/CvPreview"
 import { ComparacaoCandidatos } from "../components/ComparacaoCandidatos"
 import { ExplicacaoScore } from "../components/ExplicacaoScore"
+import { ToastContainer } from "../components/ToastContainer"
 
 const corStatus = {
   novo: "gray", triagem_pendente: "amber",
@@ -113,12 +114,13 @@ export function VagaDetalhe({ usuario }) {
   const [slaConfig]                       = useState(lerSlaConfig)
   const navigate = useNavigate()
 
-  // Ref keeps a stable handle so polling setTimeout always calls the latest version
+  let _tid = useRef(0)
   const mostrarToastRef = useRef(null)
   mostrarToastRef.current = (msg, tipo = "info") => {
-    const tid = Date.now()
-    setToasts(prev => [...prev, { tid, msg, tipo }])
-    setTimeout(() => setToasts(prev => prev.filter(t => t.tid !== tid)), 5000)
+    const id = ++_tid.current
+    setToasts(prev => [...prev, { id, msg, tipo, saindo: false }])
+    setTimeout(() => setToasts(prev => prev.map(t => t.id === id ? { ...t, saindo: true } : t)), 4100)
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4500)
   }
   function mostrarToast(msg, tipo = "info") { mostrarToastRef.current(msg, tipo) }
 
@@ -1403,25 +1405,7 @@ export function VagaDetalhe({ usuario }) {
         />
       )}
 
-      {/* Toasts de notificação */}
-      {toasts.length > 0 && (
-        <div className="fixed bottom-6 right-6 z-[70] flex flex-col gap-2 items-end pointer-events-none">
-          {toasts.map(t => (
-            <div
-              key={t.tid}
-              className="px-4 py-3 rounded-xl text-sm font-semibold shadow-lg pointer-events-auto"
-              style={t.tipo === "sucesso"
-                ? { background: "rgba(26,170,128,0.92)", color: "#fff", border: "1px solid rgba(46,232,180,0.4)" }
-                : t.tipo === "erro"
-                ? { background: "rgba(185,28,28,0.92)",  color: "#fff", border: "1px solid rgba(252,165,165,0.4)" }
-                : { background: "rgba(26,139,191,0.92)", color: "#fff", border: "1px solid rgba(77,200,232,0.4)" }
-              }
-            >
-              {t.msg}
-            </div>
-          ))}
-        </div>
-      )}
+      <ToastContainer toasts={toasts} />
     </div>
   )
 }

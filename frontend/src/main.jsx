@@ -15,7 +15,8 @@ import { Dashboard }        from "./pages/Dashboard"
 import { EsqueceuSenha }   from "./pages/EsqueceuSenha"
 import { ResetarSenha }    from "./pages/ResetarSenha"
 import { Auditoria }       from "./pages/Auditoria"
-import api                   from "./api"
+import { ConfigEmpresa }  from "./pages/ConfigEmpresa"
+import api, { getConfig }   from "./api"
 import "./index.css"
 
 function Protegida({ children, apenasAdmin, apenasAdminOuRH, usuario, onLogout }) {
@@ -33,8 +34,17 @@ export function App() {
 
   useEffect(() => {
     const token = localStorage.getItem("token")
-    if (token) api.defaults.headers.common["Authorization"] = `Bearer ${token}`
-  }, [])
+    if (token) {
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`
+      getConfig()
+        .then(r => {
+          const nome = r.data.nome_empresa
+          localStorage.setItem("config_nome_empresa", nome)
+          window.dispatchEvent(new CustomEvent("config_empresa_atualizada", { detail: nome }))
+        })
+        .catch(() => {})
+    }
+  }, [usuario])
 
   function handleLogin(u) { setUsuario(u) }
   function handleLogout() {
@@ -78,6 +88,9 @@ export function App() {
         }/>
         <Route path="/auditoria" element={
           <Protegida {...p} apenasAdminOuRH><Auditoria usuario={usuario} /></Protegida>
+        }/>
+        <Route path="/configuracoes" element={
+          <Protegida {...p} apenasAdmin><ConfigEmpresa /></Protegida>
         }/>
         <Route path="/perfil" element={
           <Protegida {...p}><Perfil usuario={usuario} /></Protegida>

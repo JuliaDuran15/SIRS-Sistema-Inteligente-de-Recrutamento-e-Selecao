@@ -1,5 +1,6 @@
 from app.db.session import Base  # noqa: F401
 from app.models.candidato import Candidato  # noqa: F401
+from app.models.configuracao import ConfiguracaoSistema  # noqa: F401
 from app.models.candidatura import Candidatura  # noqa: F401
 from app.models.curriculo import Curriculo  # noqa: F401
 from app.models.entrevista import Entrevista  # noqa: F401

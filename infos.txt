@@ -877,3 +877,35 @@ Dica geral: se quiser integrar isso aos testes existentes, adicione um arquivo t
 
 O gargalo mais provável é o parsear_curriculo (embedding model na primeira chamada faz lazy load). Na métrica 1, descarte a primeira iteração ou faça um "warm-up" antes de medir.
 
+A solução foi monitorar o banco de dados:
+
+Pegou-se uma candidatura real do banco que já tinha currículo vinculado
+Para cada rodada, o status da candidatura era resetado para AGUARDANDO_PROC (o estado que o worker espera antes de processar)
+processar_curriculo_texto.delay() era chamado disparando a task para o worker via Redis
+Um loop de polling com intervalo de 50ms verificava no banco quando o status mudava para TRIAGEM_PENDENTE (o estado final após processamento completo)
+O tempo entre o .delay() e a detecção da mudança de status é o tempo real ponta a ponta
+Foram feitas 5 rodadas para separar o cold start das execuções aquecidas.
+
+Abordagem para RAM
+
+Usou-se docker stats no container do worker antes e depois do benchmark — sem instrumentação dentro do processo, porque o worker roda num processo separado inacessível ao tracemalloc do script.
+
+Por que processar_curriculo_texto e não processar_curriculo
+
+A task de PDF (processar_curriculo) referenciava um caminho de arquivo que existia no container da API mas não no container do worker (volumes distintos). A task de texto evita esse problema passando o conteúdo do currículo diretamente na mensagem.
+Resultado real:
+
+Métrica	Valor
+Run 1 (cold start no worker)	8.2s
+Runs 2–5 (warm)	~165ms
+Direto parsear_curriculo (warm)	~123ms
+Overhead Celery real (warm)	+42ms (+34%)
+RAM worker idle	675 MB
+RAM worker após benchmark	1.4 GB
+Crescimento de RAM	+730 MB
+O que aconteceu:
+
+8.2s no run 1 = o worker estava carregando o modelo de embedding na memória pela primeira vez (cold start do processo Celery, não do API)
+165ms nos runs seguintes = pipeline completo (embedding + scores + XAI + escrita no banco) com overhead do broker de ~42ms
++730 MB de RAM = o modelo paraphrase-multilingual-MiniLM-L12-v2 ficou residente no worker — é um custo fixo que não cresce com mais currículos
+Resumindo: o Celery quase não adiciona latência uma vez aquecido (42ms), mas o worker precisa de ~1.4 GB de RAM por causa do modelo de embedding que ele carrega na primeira tarefa.
