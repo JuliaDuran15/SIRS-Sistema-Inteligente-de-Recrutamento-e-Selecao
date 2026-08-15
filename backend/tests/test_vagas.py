@@ -260,7 +260,7 @@ class TestDeletarVaga:
     def test_admin_pode_deletar(self, client, admin, db):
         v = make_vaga(db, nome="Para Deletar")
         r = client.delete(f"/vagas/{v.id}", headers=auth_header(admin))
-        assert r.status_code == 204
+        assert r.status_code == 200
 
     def test_deletar_fecha_vaga(self, client, admin, db):
         v = make_vaga(db, nome="Fecha Ao Deletar")
