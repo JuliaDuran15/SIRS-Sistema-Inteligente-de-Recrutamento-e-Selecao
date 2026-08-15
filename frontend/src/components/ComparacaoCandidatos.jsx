@@ -78,7 +78,7 @@ export function ComparacaoCandidatos({ candidaturas, rankMap, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(7,17,26,0.7)", backdropFilter: "blur(6px)" }}
       onClick={e => e.target === e.currentTarget && onClose()}
     >

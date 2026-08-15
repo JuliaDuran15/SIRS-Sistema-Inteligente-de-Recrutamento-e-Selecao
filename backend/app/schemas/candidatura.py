@@ -33,13 +33,15 @@ class CurriculoDetalhado(BaseModel):
 
 
 class CandidatoMin(BaseModel):
-    id       : UUID
-    nome     : str
-    email    : str
-    telefone : str | None
-    cidade   : str | None
-    estado   : str | None
-    formacao : Any
+    id            : UUID
+    nome          : str
+    email         : str
+    telefone      : str | None
+    cidade        : str | None
+    estado        : str | None
+    formacao      : Any
+    linkedin_url  : str | None = None
+    portfolio_url : str | None = None
 
     model_config = {"from_attributes": True}
 

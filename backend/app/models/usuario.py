@@ -5,7 +5,7 @@ from datetime import datetime
 from app.db.session import Base
 from sqlalchemy import DateTime, String
 from sqlalchemy import Enum as SAEnum
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 
@@ -24,5 +24,8 @@ class Usuario(Base):
     papel      : Mapped[PapelUsuario] = mapped_column(SAEnum(PapelUsuario), default=PapelUsuario.RH)
     ativo      : Mapped[bool]       = mapped_column(default=True)
     criado_em  : Mapped[datetime]   = mapped_column(DateTime, default=datetime.utcnow)
+
+    # Log de logins (sucesso e falhas) para auditoria
+    historico  : Mapped[list | None] = mapped_column(JSONB, default=list)
 
     entrevistas: Mapped[list["Entrevista"]] = relationship(back_populates="entrevistador")  # noqa: F821

@@ -80,6 +80,8 @@ def demo_json():
                 "telefone": "11999990001",
                 "cidade": "São Paulo",
                 "estado": "SP",
+                "linkedin_url": "https://linkedin.com/in/fernanda-oliveira-dev",
+                "portfolio_url": "https://github.com/fernandaoliveira-dev",
                 "formacao": [
                     {
                         "curso": "Ciência da Computação",
@@ -102,6 +104,7 @@ def demo_json():
                 "email": "rafael.costa@email.com",
                 "cidade": "Campinas",
                 "estado": "SP",
+                "linkedin_url": "https://linkedin.com/in/rafael-costa-backend",
                 "curriculo_texto": (
                     "Backend developer com 2 anos. Python, Django, PostgreSQL. "
                     "Iniciante em FastAPI e Docker."
@@ -126,6 +129,8 @@ def demo_upsert():
                 "telefone": "11988880001",
                 "cidade": "Campinas",
                 "estado": "SP",
+                "linkedin_url": "https://linkedin.com/in/fernanda-oliveira-dev",
+                "portfolio_url": "https://fernandaoliveira.dev",
             }
         ],
     }
@@ -150,6 +155,7 @@ def demo_xml():
       <telefone>21988880001</telefone>
       <cidade>Rio de Janeiro</cidade>
       <estado>RJ</estado>
+      <linkedin_url>https://linkedin.com/in/mariana-santos-financas</linkedin_url>
       <curriculo_texto>Analista financeira com 6 anos de experiencia em controladoria. SAP FI, Power BI, IFRS e planejamento orcamentario.</curriculo_texto>
       <formacao>
         <item nivel="graduacao" status="concluido" ano_conclusao="2016">

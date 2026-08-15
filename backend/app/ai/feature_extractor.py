@@ -100,6 +100,22 @@ _HABILIDADES_TECH: frozenset[str] = frozenset({
     'cro', 'a/b test', 'teste a/b', 'otimização de conversão', 'landing page',
     # Design para marketing
     'canva', 'adobe photoshop', 'adobe illustrator', 'after effects', 'premiere',
+    # Idiomas (formas canônicas com acento)
+    'inglês', 'espanhol', 'francês', 'alemão', 'italiano', 'mandarim', 'japonês', 'português',
+    # Ensino & plataformas EAD / LMS
+    'moodle', 'google classroom', 'canvas lms',
+    # Certificações de ensino de idiomas
+    'celta', 'delta', 'tefl', 'tesol',
+    # Exames de proficiência internacional
+    'ielts', 'toefl', 'dalf',
+    # Nutrição clínica
+    'avaliação nutricional', 'antropometria', 'plano alimentar',
+    'nutrição clínica', 'nutrição esportiva', 'nutrição hospitalar',
+    'dietoterapia', 'educação nutricional',
+    # Software de nutrição
+    'dietpro', 'avanutri', 'dietbox',
+    # Registro profissional
+    'crn',
 })
 
 # ── Aliases → forma canônica ──────────────────────────────────────────────────
@@ -157,6 +173,24 @@ _ALIASES: dict[str, str] = {
     'growth': 'growth hacking',
     'seo on page': 'seo on-page', 'seo offpage': 'seo off-page',
     'photoshop': 'adobe photoshop', 'illustrator': 'adobe illustrator',
+    # Idiomas — sem acento e em inglês → forma canônica
+    'ingles': 'inglês', 'english': 'inglês',
+    'spanish': 'espanhol',
+    'frances': 'francês', 'french': 'francês',
+    'alemao': 'alemão', 'german': 'alemão',
+    'chinese': 'mandarim', 'mandarin': 'mandarim',
+    'japones': 'japonês', 'japanese': 'japonês',
+    'portugues': 'português',
+    # Ensino / LMS
+    'lms': 'moodle',
+    'classroom': 'google classroom',
+    # Software de nutrição
+    'diet pro': 'dietpro',
+    'diet box': 'dietbox',
+    'ava nutri': 'avanutri', 'avamulti': 'avanutri', 'ava multi': 'avanutri',
+    # Nutrição — variações sem acento
+    'avaliacao nutricional': 'avaliação nutricional',
+    'educacao nutricional': 'educação nutricional',
 }
 
 
@@ -261,14 +295,14 @@ def calcular_bonus_estrutural(
     # ── 1. Experiência (±0.08, escalada pelo overlap para evitar premiar exp irrelevante) ──
     if anos_req > 0 and anos_cand > 0:
         ratio = anos_cand / anos_req
-        # Escala o bônus positivo pelo overlap: exp irrelevante vale menos
+        # Escala bônus E penalidade pelo overlap: quando skills não batem, anos importam menos
         escala = max(overlap, 0.3) if hab_req else 1.0
         if ratio >= 1.0:
             bonus += 0.08 * escala
         elif ratio >= 0.7:
             bonus += 0.03 * escala
         elif ratio < 0.35:
-            bonus -= 0.10          # penalidade por anos insuficientes não é escalada
+            bonus -= 0.10 * escala  # escalada: skills já penalizam, não punir duas vezes ao máximo
 
     # ── 2. Senioridade (penalidade proporcional ao gap) ───────────────────────
     if nivel_req > 0 and nivel_cand > 0:

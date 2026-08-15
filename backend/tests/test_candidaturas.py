@@ -296,11 +296,12 @@ class TestTriagemEmLote:
         client.post(self._URL, json={
             "candidatura_ids": [str(c1.id)],
             "novo_status": "aprovado_triagem",
-            "ator": "ana_supervisora",
         }, headers=auth_header(rh))
         db.refresh(c1)
-        assert c1.historico[-1]["para"] == "aprovado_triagem"
-        assert c1.historico[-1]["ator"] == "ana_supervisora"
+        # The lote endpoint appends a lote metadata entry after the transition entry
+        transicao = next(e for e in c1.historico if "para" in e)
+        assert transicao["para"] == "aprovado_triagem"
+        assert transicao["ator"] == rh.nome
 
     def test_transicao_invalida_gera_erro_parcial(self, client, rh, db):
         v = make_vaga(db, nome="Lote Trans Inv")

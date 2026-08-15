@@ -9,11 +9,14 @@ import {
   createCandidatura,
   deleteCandidatura,
   updateCandidato,
+  alterarEmailCandidato,
 } from "../api"
 import { Badge } from "../components/Badge"
 import { ScoreBar } from "../components/ScoreBar"
 import { CvPreview } from "../components/CvPreview"
 import { ExplicacaoScore } from "../components/ExplicacaoScore"
+import { ToastContainer } from "../components/ToastContainer"
+import { useToast, extrairErro } from "../hooks/useToast"
 
 const STATUS_COR = {
   novo: "gray", aguardando_processamento: "gray", processando_curriculo: "amber",
@@ -128,8 +131,8 @@ export function CandidatoDetalhe({ usuario }) {
   const [loading, setLoading]             = useState(true)
   const [novaVagaId, setNovaVagaId]         = useState("")
   const [vinculando, setVinculando]         = useState(false)
-  const [erroVinculo, setErroVinculo]       = useState(null)
   const [confirmDesvincular, setConfirm]    = useState(null)  // candidatura_id a confirmar
+  const { toasts, mostrarToast }            = useToast()
   const [desvinculando, setDesvinculando]   = useState(false)
   const [expandidos, setExpandidos]       = useState(new Set())
   const [editando, setEditando]           = useState(false)
@@ -145,6 +148,30 @@ export function CandidatoDetalhe({ usuario }) {
   })
 
   const podeGerenciar = usuario?.papel === "rh" || usuario?.papel === "admin"
+  const isAdmin       = usuario?.papel === "admin"
+
+  // ── Estado do modal de alteração de e-mail ──────────────────────────────
+  const [modalEmail, setModalEmail]     = useState(false)
+  const [novoEmail, setNovoEmail]       = useState("")
+  const [salvandoEmail, setSalvandoEmail] = useState(false)
+  const [erroEmail, setErroEmail]       = useState(null)
+
+  async function handleAlterarEmail(e) {
+    e.preventDefault()
+    if (!novoEmail.trim()) return
+    setSalvandoEmail(true); setErroEmail(null)
+    try {
+      const r = await alterarEmailCandidato(id, novoEmail.trim())
+      setCandidato(r.data)
+      setModalEmail(false)
+      setNovoEmail("")
+      mostrarToast("E-mail alterado com sucesso", "sucesso")
+    } catch (err) {
+      setErroEmail(err.response?.data?.detail ?? "Erro ao alterar e-mail")
+    } finally {
+      setSalvandoEmail(false)
+    }
+  }
 
   function abrirEdicao() {
     setFormEdit({
@@ -152,6 +179,8 @@ export function CandidatoDetalhe({ usuario }) {
       telefone: candidato.telefone ?? "",
       cidade: candidato.cidade ?? "",
       estado: candidato.estado ?? "",
+      linkedin_url: candidato.linkedin_url ?? "",
+      portfolio_url: candidato.portfolio_url ?? "",
     })
     setFormacoesEdit((candidato.formacao ?? []).map(f => ({ ...f, ano_conclusao: f.ano_conclusao ?? "" })))
     setErroEdit(null)
@@ -177,6 +206,8 @@ export function CandidatoDetalhe({ usuario }) {
         telefone: formEdit.telefone || undefined,
         cidade: formEdit.cidade || undefined,
         estado: formEdit.estado || undefined,
+        linkedin_url: formEdit.linkedin_url || null,
+        portfolio_url: formEdit.portfolio_url || null,
         formacao: formacoesEdit
           .filter(f => f.curso.trim() && f.instituicao.trim())
           .map(f => ({ ...f, ano_conclusao: f.ano_conclusao ? parseInt(f.ano_conclusao) : null })),
@@ -212,13 +243,13 @@ export function CandidatoDetalhe({ usuario }) {
   async function handleVincular(e) {
     e.preventDefault()
     if (!novaVagaId) return
-    setVinculando(true); setErroVinculo(null)
+    setVinculando(true)
     try {
       const r = await createCandidatura({ candidato_id: id, vaga_id: novaVagaId })
       setCandidaturas(prev => [...prev, r.data])
       setNovaVagaId("")
     } catch (err) {
-      setErroVinculo(err.response?.data?.detail ?? "Erro ao vincular")
+      mostrarToast(extrairErro(err, "Erro ao vincular candidatura"), "erro")
     } finally {
       setVinculando(false)
     }
@@ -277,7 +308,19 @@ export function CandidatoDetalhe({ usuario }) {
               </div>
               <div className="flex-1 min-w-0">
                 <h1 className="text-xl font-bold text-brand-cloud">{candidato.nome}</h1>
-                <p className="text-sm text-brand-pale/45 font-mono mt-0.5">{candidato.email}</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <p className="text-sm text-brand-pale/45 font-mono">{candidato.email}</p>
+                  {isAdmin && (
+                    <button
+                      onClick={() => { setNovoEmail(candidato.email); setErroEmail(null); setModalEmail(true) }}
+                      title="Alterar e-mail (admin)"
+                      className="text-xs px-1.5 py-0.5 rounded-md transition-all"
+                      style={{ background: "rgba(251,191,36,0.12)", border: "1px solid rgba(251,191,36,0.25)", color: "#fbbf24" }}
+                    >
+                      ✎
+                    </button>
+                  )}
+                </div>
                 {candidato.telefone && (
                   <p className="text-xs text-brand-pale/35 mt-0.5">{candidato.telefone}</p>
                 )}
@@ -285,6 +328,31 @@ export function CandidatoDetalhe({ usuario }) {
                   <p className="text-xs text-brand-pale/30 mt-0.5">
                     {candidato.cidade}{candidato.estado ? `, ${candidato.estado}` : ""}
                   </p>
+                )}
+                {(candidato.linkedin_url || candidato.portfolio_url) && (
+                  <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                    {candidato.linkedin_url && (
+                      <a href={candidato.linkedin_url} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all hover:opacity-80"
+                        style={{ background: "rgba(10,102,194,0.18)", border: "1px solid rgba(10,102,194,0.35)", color: "#60a5fa" }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                        </svg>
+                        LinkedIn
+                      </a>
+                    )}
+                    {candidato.portfolio_url && (
+                      <a href={candidato.portfolio_url} target="_blank" rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all hover:opacity-80"
+                        style={{ background: "rgba(77,200,232,0.12)", border: "1px solid rgba(77,200,232,0.28)", color: "#4DC8E8" }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                          <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+                        </svg>
+                        Portfólio
+                      </a>
+                    )}
+                  </div>
                 )}
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -341,6 +409,21 @@ export function CandidatoDetalhe({ usuario }) {
                     className="w-full rounded-xl px-3 py-2.5 text-sm transition-all" />
                 </div>
               ))}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-brand-pale/55 uppercase tracking-wider mb-1.5">LinkedIn</label>
+                <input type="url" value={formEdit.linkedin_url ?? ""} placeholder="https://linkedin.com/in/..."
+                  onChange={e => setFormEdit(f => ({ ...f, linkedin_url: e.target.value }))}
+                  className="w-full rounded-xl px-3 py-2.5 text-sm transition-all" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-brand-pale/55 uppercase tracking-wider mb-1.5">Portfólio</label>
+                <input type="url" value={formEdit.portfolio_url ?? ""} placeholder="https://..."
+                  onChange={e => setFormEdit(f => ({ ...f, portfolio_url: e.target.value }))}
+                  className="w-full rounded-xl px-3 py-2.5 text-sm transition-all" />
+              </div>
             </div>
 
             {/* Formação */}
@@ -453,6 +536,14 @@ export function CandidatoDetalhe({ usuario }) {
                   </div>
                 </div>
 
+                {/* Aviso de re-submissão via webhook */}
+                {c.historico?.some(h => h.tipo === "resubmissao_duplicata") && (
+                  <div className="mt-3 px-3 py-2 rounded-xl text-xs font-semibold"
+                    style={{ background: "rgba(161,98,7,0.15)", color: "#fbbf24", border: "1px solid rgba(234,179,8,0.3)" }}>
+                    ⚠ Re-submissão detectada via webhook — este candidato já tinha candidatura para esta vaga. Nenhuma alteração foi feita.
+                  </div>
+                )}
+
                 {/* Score curricular se já processado */}
                 {c.curriculo?.score_curriculo != null && (
                   <div className="mt-3 pt-3 space-y-2.5" style={{ borderTop: "1px solid rgba(77,200,232,0.08)" }}>
@@ -522,13 +613,12 @@ export function CandidatoDetalhe({ usuario }) {
               {vinculando ? "Vinculando…" : "Vincular"}
             </button>
           </form>
-          {erroVinculo && <p className="text-xs text-red-400">{erroVinculo}</p>}
         </div>
       )}
 
       {/* Modal de confirmação de desvínculo */}
       {confirmDesvincular && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+        <div className="modal-overlay fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: "rgba(7,17,26,0.75)", backdropFilter: "blur(4px)" }}>
           <div className="card-glass rounded-2xl p-6 w-full max-w-sm space-y-4"
             style={{ border: "1px solid rgba(252,165,165,0.25)" }}>
@@ -557,6 +647,60 @@ export function CandidatoDetalhe({ usuario }) {
           </div>
         </div>
       )}
+      {/* Modal de alteração de e-mail (apenas admin) */}
+      {modalEmail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.55)" }}
+          onClick={e => e.target === e.currentTarget && setModalEmail(false)}>
+          <div className="rounded-2xl p-6 w-full max-w-sm shadow-2xl"
+            style={{ background: "var(--s-card)", border: "1px solid var(--b-card)" }}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-brand-cloud">Alterar e-mail do candidato</h3>
+              <button onClick={() => setModalEmail(false)}
+                className="text-brand-pale/35 hover:text-brand-pale text-xl leading-none transition-colors">×</button>
+            </div>
+            <p className="text-xs text-brand-pale/40 mb-4">
+              Esta ação fica registrada na auditoria. O e-mail é usado como identificador único do candidato.
+            </p>
+            <form onSubmit={handleAlterarEmail} className="space-y-3">
+              <div>
+                <label className="block text-xs font-bold text-brand-pale/45 uppercase tracking-wider mb-1.5">
+                  Novo e-mail
+                </label>
+                <input
+                  type="email"
+                  value={novoEmail}
+                  onChange={e => setNovoEmail(e.target.value)}
+                  required
+                  autoFocus
+                  className="w-full rounded-xl px-3 py-2.5 text-sm font-mono"
+                  placeholder="novo@email.com"
+                />
+              </div>
+              {erroEmail && (
+                <p className="text-xs font-semibold rounded-lg px-3 py-2"
+                  style={{ background: "rgba(239,68,68,0.12)", color: "#f87171" }}>
+                  {erroEmail}
+                </p>
+              )}
+              <div className="flex gap-2 pt-1">
+                <button type="button" onClick={() => setModalEmail(false)}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+                  style={{ background: "var(--s-chip)", color: "var(--t-muted2)", border: "1px solid var(--b-subtle)" }}>
+                  Cancelar
+                </button>
+                <button type="submit" disabled={salvandoEmail || !novoEmail.trim()}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                  style={{ background: "rgba(251,191,36,0.15)", border: "1px solid rgba(251,191,36,0.35)", color: "#fbbf24" }}>
+                  {salvandoEmail ? "Salvando…" : "Confirmar alteração"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <ToastContainer toasts={toasts} />
     </div>
   )
 }

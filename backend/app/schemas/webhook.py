@@ -37,6 +37,8 @@ class CandidatoImport(BaseModel):
     cep             : str | None  = Field(None, max_length=10)
     formacao        : list[FormacaoImport] = []
     curriculo_texto : str | None  = Field(None, max_length=100_000)
+    linkedin_url    : str | None  = Field(None, max_length=300)
+    portfolio_url   : str | None  = Field(None, max_length=300)
     # Referências para vincular a uma vaga
     vaga_external_id : str | None = Field(None, max_length=100)
     vaga_nome        : str | None = Field(None, max_length=200)
@@ -69,7 +71,15 @@ class ErroImportacao(BaseModel):
     detalhe       : str
 
 
+class AvisoDuplicata(BaseModel):
+    email    : str   # e-mail do candidato duplicado
+    nome     : str   # nome do candidato
+    vaga_nome: str   # vaga em que a duplicata foi detectada
+
+
 class ImportacaoResponse(BaseModel):
-    importados  : ImportacaoResultado
-    erros       : list[ErroImportacao]
-    total_erros : int
+    importados    : ImportacaoResultado
+    erros         : list[ErroImportacao]
+    total_erros   : int
+    avisos        : list[AvisoDuplicata] = []
+    total_avisos  : int = 0

@@ -14,7 +14,7 @@ Fluxo por chamada:
 """
 import json
 import re
-from datetime import date
+from datetime import date, datetime
 
 import defusedxml.ElementTree as ET
 from app.ai.resume_parser import vetorizar_texto
@@ -28,6 +28,7 @@ from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.curriculo import Curriculo
 from app.models.vaga import Vaga
 from app.schemas.webhook import (
+    AvisoDuplicata,
     CandidatoImport,
     ErroImportacao,
     FormacaoImport,
@@ -121,6 +122,8 @@ def _parse_xml(body: bytes) -> ImportacaoPayload:
             cep              = c.findtext("cep"),
             formacao         = formacao,
             curriculo_texto  = c.findtext("curriculo_texto"),
+            linkedin_url     = c.findtext("linkedin_url") or c.get("linkedin_url"),
+            portfolio_url    = c.findtext("portfolio_url") or c.get("portfolio_url"),
             vaga_external_id = c.get("vaga_external_id") or c.findtext("vaga_external_id"),
             vaga_nome        = c.findtext("vaga_nome"),
         ))
@@ -137,6 +140,7 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
     )
     resultado = ImportacaoResultado()
     erros: list[ErroImportacao] = []
+    avisos: list[AvisoDuplicata] = []
     vagas_map: dict[str, Vaga] = {}  # external_id → instância Vaga
     tasks_pendentes: list = []       # (func, args) — despachadas após db.commit()
 
@@ -177,7 +181,8 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
             candidato = db.query(Candidato).filter(Candidato.email == cd.email).first()
             if candidato:
                 for campo in ("nome", "telefone", "data_nascimento",
-                              "logradouro", "bairro", "cidade", "estado", "cep"):
+                              "logradouro", "bairro", "cidade", "estado", "cep",
+                              "linkedin_url", "portfolio_url"):
                     val = getattr(cd, campo)
                     if val is not None:
                         setattr(candidato, campo, val)
@@ -196,6 +201,8 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
                     estado          = cd.estado,
                     cep             = cd.cep,
                     formacao        = [f.model_dump() for f in cd.formacao],
+                    linkedin_url    = cd.linkedin_url,
+                    portfolio_url   = cd.portfolio_url,
                 )
                 db.add(candidato)
                 db.flush()
@@ -226,12 +233,36 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
                     db.add(candidatura)
                     db.flush()
                     resultado.candidaturas_criadas += 1
+                else:
+                    # Candidatura já existe — mesmo email para a mesma vaga
+                    avisos.append(AvisoDuplicata(
+                        email     = candidato.email,
+                        nome      = candidato.nome,
+                        vaga_nome = vaga.nome,
+                    ))
+                    logger.warning(
+                        f"duplicata_detectada | fonte={dados.fonte or 'sem-fonte'} | "
+                        f"email={candidato.email} | vaga={vaga.nome} | "
+                        f"candidatura_id={candidatura.id}"
+                    )
+                    novo_historico = list(candidatura.historico or [])
+                    novo_historico.append({
+                        "tipo"  : "resubmissao_duplicata",
+                        "detalhe": (
+                            f"Re-submissão detectada via webhook "
+                            f"(fonte: {dados.fonte or 'sem-fonte'}). "
+                            "Candidatura já existia — nenhuma alteração feita."
+                        ),
+                        "em"    : datetime.utcnow().isoformat(),
+                    })
+                    candidatura.historico = novo_historico
 
             # ── 4. Currículo ──────────────────────────────────────────────────
             if cd.curriculo_texto and candidatura:
                 curriculo = db.query(Curriculo).filter(
                     Curriculo.candidatura_id == candidatura.id
                 ).first()
+                texto_mudou = True
                 if not curriculo:
                     curriculo = Curriculo(
                         candidatura_id = candidatura.id,
@@ -240,12 +271,15 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
                     db.add(curriculo)
                     db.flush()
                 else:
-                    curriculo.texto_extraido = cd.curriculo_texto
-                # Avança status para ativar o spinner no frontend enquanto a task roda
-                if candidatura.status == StatusCandidatura.NOVO:
-                    candidatura.status = StatusCandidatura.AGUARDANDO_PROC
-                tasks_pendentes.append((processar_curriculo_texto, [str(candidatura.id), cd.curriculo_texto]))
-                resultado.curriculos_processados += 1
+                    texto_mudou = curriculo.texto_extraido != cd.curriculo_texto
+                    if texto_mudou:
+                        curriculo.texto_extraido = cd.curriculo_texto
+                if texto_mudou:
+                    # Avança status para ativar o spinner no frontend enquanto a task roda
+                    if candidatura.status == StatusCandidatura.NOVO:
+                        candidatura.status = StatusCandidatura.AGUARDANDO_PROC
+                    tasks_pendentes.append((processar_curriculo_texto, [str(candidatura.id), cd.curriculo_texto]))
+                    resultado.curriculos_processados += 1
 
             sp.commit()
 
@@ -278,9 +312,11 @@ def _importar(dados: ImportacaoPayload, db: Session) -> ImportacaoResponse:
         f"curriculos={resultado.curriculos_processados}"
     )
     return ImportacaoResponse(
-        importados  = resultado,
-        erros       = erros,
-        total_erros = len(erros),
+        importados   = resultado,
+        erros        = erros,
+        total_erros  = len(erros),
+        avisos       = avisos,
+        total_avisos = len(avisos),
     )
 
 

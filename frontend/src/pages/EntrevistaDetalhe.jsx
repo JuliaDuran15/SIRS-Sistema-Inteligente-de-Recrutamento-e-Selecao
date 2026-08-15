@@ -8,7 +8,7 @@ import {
   atualizarStatusCandidatura,
   uploadCurriculo,
   uploadCurriculoTexto,
-  // resumirTranscricao,  // TODO: habilitar quando feature de transcrição for ativada
+  resumirTranscricao,
 } from "../api"
 import { Badge } from "../components/Badge"
 import { ScoreBar } from "../components/ScoreBar"
@@ -266,56 +266,56 @@ function UploadCurriculo({ candidaturaId, status, curriculo, podeUpload, onAtual
   )
 }
 
-// ── Análise de transcrição (desativado) ──────────────────────────────────────
-// function BotaoTranscricao({ entrevistaId, onPreenchido }) {
-//   const [aberto, setAberto]           = useState(false)
-//   const [transcricao, setTranscricao] = useState("")
-//   const [carregando, setCarregando]   = useState(false)
-//   const [erro, setErro]               = useState(null)
-//
-//   async function analisar() {
-//     if (!transcricao.trim()) return
-//     setCarregando(true); setErro(null)
-//     try {
-//       const r = await resumirTranscricao(entrevistaId, transcricao)
-//       onPreenchido(r.data)
-//       setAberto(false); setTranscricao("")
-//     } catch (err) {
-//       setErro(err.response?.data?.detail ?? "Erro ao analisar transcrição")
-//     } finally { setCarregando(false) }
-//   }
-//
-//   return (
-//     <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(167,139,250,0.25)" }}>
-//       <button type="button" onClick={() => setAberto(a => !a)}
-//         className="w-full flex items-center justify-between px-4 py-3 text-left"
-//         style={{ background: "rgba(167,139,250,0.08)" }}>
-//         <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#A78BFA" }}>
-//           Preencher com transcrição
-//         </span>
-//         <span className="text-sm" style={{ color: "rgba(167,139,250,0.5)" }}>{aberto ? "▲" : "▼"}</span>
-//       </button>
-//       {aberto && (
-//         <div className="p-4 space-y-3" style={{ background: "rgba(167,139,250,0.04)" }}>
-//           <p className="text-xs text-brand-pale/45">
-//             Cole a transcrição — pontos fortes, fracos e anotações extraídos automaticamente. Revise antes de salvar.
-//           </p>
-//           <textarea value={transcricao} onChange={e => setTranscricao(e.target.value)}
-//             rows={6} placeholder="Cole a transcrição aqui..."
-//             className="w-full px-3 py-2 rounded-xl text-sm resize-y font-mono"
-//             style={{ fontSize: "0.72rem" }} />
-//           {erro && <p className="text-xs text-red-400">{erro}</p>}
-//           <button type="button" onClick={analisar}
-//             disabled={carregando || !transcricao.trim()}
-//             className="px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 transition-all"
-//             style={{ background: "rgba(167,139,250,0.2)", color: "#A78BFA", border: "1px solid rgba(167,139,250,0.35)" }}>
-//             {carregando ? "Analisando..." : "Analisar e preencher"}
-//           </button>
-//         </div>
-//       )}
-//     </div>
-//   )
-// }
+// ── Análise de transcrição ───────────────────────────────────────────────────
+function BotaoTranscricao({ entrevistaId, onPreenchido }) {
+  const [aberto, setAberto]           = useState(false)
+  const [transcricao, setTranscricao] = useState("")
+  const [carregando, setCarregando]   = useState(false)
+  const [erro, setErro]               = useState(null)
+
+  async function analisar() {
+    if (!transcricao.trim()) return
+    setCarregando(true); setErro(null)
+    try {
+      const r = await resumirTranscricao(entrevistaId, transcricao)
+      onPreenchido(r.data)
+      setAberto(false); setTranscricao("")
+    } catch (err) {
+      setErro(err.response?.data?.detail ?? "Erro ao analisar transcrição")
+    } finally { setCarregando(false) }
+  }
+
+  return (
+    <div className="rounded-xl overflow-hidden" style={{ border: "1px solid rgba(167,139,250,0.25)" }}>
+      <button type="button" onClick={() => setAberto(a => !a)}
+        className="w-full flex items-center justify-between px-4 py-3 text-left"
+        style={{ background: "rgba(167,139,250,0.08)" }}>
+        <span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#A78BFA" }}>
+          Preencher com transcrição
+        </span>
+        <span className="text-sm" style={{ color: "rgba(167,139,250,0.5)" }}>{aberto ? "▲" : "▼"}</span>
+      </button>
+      {aberto && (
+        <div className="p-4 space-y-3" style={{ background: "rgba(167,139,250,0.04)" }}>
+          <p className="text-xs text-brand-pale/45">
+            Cole a transcrição — pontos fortes, fracos e anotação extraídos automaticamente por IA. Revise antes de salvar.
+          </p>
+          <textarea value={transcricao} onChange={e => setTranscricao(e.target.value)}
+            rows={6} placeholder="Cole a transcrição aqui..."
+            className="w-full px-3 py-2 rounded-xl text-sm resize-y font-mono"
+            style={{ fontSize: "0.72rem" }} />
+          {erro && <p className="text-xs text-red-400">{erro}</p>}
+          <button type="button" onClick={analisar}
+            disabled={carregando || !transcricao.trim()}
+            className="px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 transition-all"
+            style={{ background: "rgba(167,139,250,0.2)", color: "#A78BFA", border: "1px solid rgba(167,139,250,0.35)" }}>
+            {carregando ? "Analisando..." : "Analisar e preencher"}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ── Card entrevista ──────────────────────────────────────────────────────────
 function CardEntrevista({ entrevista: initial, usuario, candidatura, onResultadoSalvo }) {
@@ -457,7 +457,7 @@ function CardEntrevista({ entrevista: initial, usuario, candidatura, onResultado
                   <p className="text-xs font-bold text-brand-mint/70 uppercase tracking-wider mb-2">Pontos fortes</p>
                   <div className="flex flex-wrap gap-1.5">
                     {entrevista.pontos_fortes.map(t => (
-                      <span key={t} className="px-2.5 py-1 rounded-lg text-xs font-semibold"
+                      <span key={t} className="chip-fortes px-2.5 py-1 rounded-lg text-xs font-semibold"
                         style={{ background: "rgba(26,170,128,0.18)", color: "#2EE8B4" }}>{t}</span>
                     ))}
                   </div>
@@ -500,14 +500,14 @@ function CardEntrevista({ entrevista: initial, usuario, candidatura, onResultado
             <button type="button" onClick={() => setOpen(false)}
               className="text-brand-pale/35 hover:text-brand-pale transition-colors text-lg leading-none">×</button>
           </div>
-          {/* <BotaoTranscricao
+          <BotaoTranscricao
             entrevistaId={entrevista.id}
             onPreenchido={({ pontos_fortes, pontos_fracos, anotacoes: an }) => {
               if (pontos_fortes?.length) setFortes(pontos_fortes)
               if (pontos_fracos?.length) setFracos(pontos_fracos)
               if (an) setAnotacoes(an)
             }}
-          /> */}
+          />
           <div>
             <label className="block text-xs font-bold text-brand-pale/55 uppercase tracking-wider mb-2">
               Score (0–10)
@@ -750,6 +750,31 @@ export function EntrevistaDetalhe({ usuario }) {
               <p className="text-xs text-brand-pale/30 mt-0.5">
                 {cand.cidade}{cand.estado ? `, ${cand.estado}` : ""}
               </p>
+            )}
+            {(cand?.linkedin_url || cand?.portfolio_url) && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {cand.linkedin_url && (
+                  <a href={cand.linkedin_url} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all hover:opacity-80"
+                    style={{ background: "rgba(10,102,194,0.15)", color: "#4DC8E8", border: "1px solid rgba(10,102,194,0.3)" }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+                    </svg>
+                    LinkedIn
+                  </a>
+                )}
+                {cand.portfolio_url && (
+                  <a href={cand.portfolio_url} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all hover:opacity-80"
+                    style={{ background: "rgba(46,232,180,0.12)", color: "#2EE8B4", border: "1px solid rgba(46,232,180,0.25)" }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                      <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/>
+                    </svg>
+                    Portfólio
+                  </a>
+                )}
+              </div>
             )}
           </div>
           <div className="text-right space-y-1">

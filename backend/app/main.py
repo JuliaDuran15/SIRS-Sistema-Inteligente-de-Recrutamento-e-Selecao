@@ -6,6 +6,7 @@ from app.api.endpoints import (
     auth,
     candidatos,
     candidaturas,
+    configuracoes,
     entrevistas,
     usuarios,
     vagas,
@@ -63,7 +64,8 @@ app.include_router(candidatos.router,   prefix="/candidatos",   tags=["candidato
 app.include_router(candidaturas.router, prefix="/candidaturas", tags=["candidaturas"])
 app.include_router(entrevistas.router,  prefix="/entrevistas",  tags=["entrevistas"])
 app.include_router(webhook.router,      prefix="/webhook",      tags=["webhook"])
-app.include_router(analytics.router,    prefix="/analytics",    tags=["analytics"])
+app.include_router(analytics.router,      prefix="/analytics",      tags=["analytics"])
+app.include_router(configuracoes.router,  prefix="/configuracoes",  tags=["configuracoes"])
 
 @app.get("/health")
 def health():

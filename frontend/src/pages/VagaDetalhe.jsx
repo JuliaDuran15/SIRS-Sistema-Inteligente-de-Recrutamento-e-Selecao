@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useParams, Link, useNavigate } from "react-router-dom"
 import { getVaga, getCandidaturas, analisarMercado, rerankarVaga, updatePesos, updateGestores, updateRhsAutorizados, updateVagaInfo, getUsuarios, atualizarStatusCandidatura, triagemEmLote, exportarVaga } from "../api"
 import { ScoreBar } from "../components/ScoreBar"
@@ -6,6 +6,7 @@ import { Badge } from "../components/Badge"
 import { CvPreview } from "../components/CvPreview"
 import { ComparacaoCandidatos } from "../components/ComparacaoCandidatos"
 import { ExplicacaoScore } from "../components/ExplicacaoScore"
+import { ToastContainer } from "../components/ToastContainer"
 
 const corStatus = {
   novo: "gray", triagem_pendente: "amber",
@@ -61,6 +62,18 @@ const rankStyle = [
   { background: "var(--b-strong)",                   color: "#4DC8E8" },
 ]
 
+const SLA_DEFAULT = {
+  triagem_pendente: { valor: 3, unidade: "dias" },
+  decisao_pendente: { valor: 2, unidade: "dias" },
+  outros_ativos:    { valor: 7, unidade: "dias" },
+}
+const SLA_MULT   = { minutos: 1 / 1440, horas: 1 / 24, dias: 1 }
+const EM_PROC    = new Set(["aguardando_processamento", "processando_curriculo"])
+
+function lerSlaConfig() {
+  try { return JSON.parse(localStorage.getItem("sla_config")) ?? SLA_DEFAULT } catch { return SLA_DEFAULT }
+}
+
 export function VagaDetalhe({ usuario }) {
   const { id }                          = useParams()
   const [vaga, setVaga]                 = useState(null)
@@ -97,7 +110,44 @@ export function VagaDetalhe({ usuario }) {
   const [painelDescarte, setPainelDescarte] = useState(false)
   const [notaMinima, setNotaMinima]       = useState(50)
   const [descartando, setDescartando]     = useState(false)
+  const [toasts, setToasts]               = useState([])
+  const [slaConfig]                       = useState(lerSlaConfig)
   const navigate = useNavigate()
+
+  let _tid = useRef(0)
+  const mostrarToastRef = useRef(null)
+  mostrarToastRef.current = (msg, tipo = "info") => {
+    const id = ++_tid.current
+    setToasts(prev => [...prev, { id, msg, tipo, saindo: false }])
+    setTimeout(() => setToasts(prev => prev.map(t => t.id === id ? { ...t, saindo: true } : t)), 4100)
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4500)
+  }
+  // IDs já notificados nesta sessão — evita toast duplo
+  const notifiedRef = useRef(new Set())
+
+  // Parse seguro de timestamp UTC enviado sem sufixo Z pelo backend
+  function parseUTC(ts) { return new Date(ts.endsWith("Z") ? ts : ts + "Z") }
+
+  // Verifica CVs processados nos últimos 5 min (detecta Celery rápido + retorno de outra página)
+  function detectarNovosProcessados(lista) {
+    const agora = Date.now()
+    lista.forEach(c => {
+      const cid = String(c.id)
+      if (notifiedRef.current.has(cid)) return
+      notifiedRef.current.add(cid)        // marca como visto independente de toast
+      if (EM_PROC.has(c.status)) return   // ainda processando, não notifica
+      const processadoEm = c.curriculo?.processado_em
+      if (!processadoEm) return
+      if (agora - parseUTC(processadoEm).getTime() > 5 * 60 * 1000) return  // mais de 5 min
+      const ok = !STATUS_REPROVADOS.has(c.status)
+      mostrarToastRef.current?.(`${ok ? "✓" : "✗"} CV processado — ${c.candidato?.nome ?? "Candidato"}`, ok ? "sucesso" : "erro")
+    })
+  }
+
+  function slaEmDias(status) {
+    const cfg = slaConfig[status] ?? slaConfig.outros_ativos
+    return cfg.valor * (SLA_MULT[cfg.unidade] ?? 1)
+  }
 
   function toggleComparando(cid) {
     setComparando(prev => {
@@ -151,18 +201,43 @@ export function VagaDetalhe({ usuario }) {
     }
   }
 
-  // Polling automático enquanto algum CV está sendo processado
+  // Ref com o snapshot mais recente das candidaturas — evita deps no efeito de polling
+  const candidaturasRef = useRef([])
+  useEffect(() => { candidaturasRef.current = candidaturas }, [candidaturas])
+
+  // Polling: roda sempre. Rápido (3s) quando há CV processando, lento (12s) no idle.
+  // Dois mecanismos de detecção:
+  //   1. prevMap: vê transição EM_PROC → outro status em tempo real
+  //   2. detectarNovosProcessados: usa processado_em (<5 min) para pegar Celery rápido
   useEffect(() => {
-    const EM_PROC = new Set(["aguardando_processamento", "processando_curriculo"])
-    const temProcessando = candidaturas.some(c => EM_PROC.has(c.status))
-    if (!temProcessando) return
+    let nextTimer = null
 
-    const timer = setInterval(() => {
-      getCandidaturas(id).then(r => setCandidaturas(r.data))
-    }, 5000)
+    function tick() {
+      getCandidaturas(id).then(r => {
+        const novas   = r.data
+        const prevMap = new Map(candidaturasRef.current.map(c => [String(c.id), c]))
 
-    return () => clearInterval(timer)
-  }, [candidaturas, id])
+        // Mecanismo 1: transição em tempo real
+        novas.forEach(c => {
+          const anterior = prevMap.get(String(c.id))
+          if (anterior && EM_PROC.has(anterior.status) && !EM_PROC.has(c.status)) {
+            const ok = !STATUS_REPROVADOS.has(c.status)
+            notifiedRef.current.add(String(c.id))  // evita duplo via mecanismo 2
+            mostrarToastRef.current?.(`${ok ? "✓" : "✗"} CV processado — ${c.candidato?.nome ?? "Candidato"}`, ok ? "sucesso" : "erro")
+          }
+        })
+
+        // Mecanismo 2: processado_em recente (Celery terminou antes da página carregar)
+        detectarNovosProcessados(novas)
+
+        setCandidaturas(novas)
+        nextTimer = setTimeout(tick, novas.some(c => EM_PROC.has(c.status)) ? 3000 : 12000)
+      }).catch(() => { nextTimer = setTimeout(tick, 12000) })
+    }
+
+    nextTimer = setTimeout(tick, candidaturasRef.current.some(c => EM_PROC.has(c.status)) ? 3000 : 12000)
+    return () => clearTimeout(nextTimer)
+  }, [id])
 
   useEffect(() => {
     const reqs = [getVaga(id), getCandidaturas(id)]
@@ -170,6 +245,7 @@ export function VagaDetalhe({ usuario }) {
     Promise.all(reqs).then(([rv, rc, ru]) => {
       setVaga(rv.data)
       setCandidaturas(rc.data)
+      detectarNovosProcessados(rc.data)  // tosta CVs processados nos últimos 5 min ao abrir a página
       if (ru) {
         setGestoresList(ru.data.filter(u => u.papel === "gestor"))
         setRhsList(ru.data.filter(u => u.papel === "rh"))
@@ -1004,14 +1080,27 @@ export function VagaDetalhe({ usuario }) {
                 const scoreEntTec    = c.score_entrevista_tec ?? null
                 const temEntrevistas = scoreEntRH !== null || scoreEntTec !== null
                 const scoreFinal     = c.score_total ?? curriculo?.score_curriculo ?? null
-                const processando    = c.status === "processando_curriculo" ||
+                const processando    = EM_PROC.has(c.status) ||
                                     (c.status === "triagem_pendente" && scoreRH === null)
 
                 const scoreCor =
-                  scoreFinal >= 70 ? "var(--score-high)" :
-                  scoreFinal >= 50 ? "var(--score-mid)"  : "var(--score-low)"
+                  scoreFinal === null ? "var(--t-muted2)"   :
+                  scoreFinal >= 70   ? "var(--score-high)" :
+                  scoreFinal >= 50   ? "var(--score-mid)"  : "var(--score-low)"
 
                 const emTriagem = c.status === "triagem_pendente"
+
+                // SLA: dias sem movimentação (a partir de atualizado_em)
+                const STATUS_FINAIS = new Set(["contratado", "nao_aprovado", "banco_de_talentos",
+                  "reprovado_triagem", "reprovado_rh", "reprovado_tecnico"])
+                const diasNaEtapa = c.atualizado_em
+                  ? (Date.now() - parseUTC(c.atualizado_em).getTime()) / 864e5
+                  : null
+                const slaThreshold = slaEmDias(c.status)
+                const slaAlerta = diasNaEtapa !== null
+                  && diasNaEtapa >= slaThreshold
+                  && !STATUS_FINAIS.has(c.status)
+                  && !processando
 
                 return (
                   <div
@@ -1042,9 +1131,11 @@ export function VagaDetalhe({ usuario }) {
                           {i + 1}
                         </div>
                         <div>
-                          <p className="font-bold text-brand-cloud">
+                          <Link
+                            to={`/candidatos/${c.candidato_id}`}
+                            className="font-bold text-brand-cloud hover:text-brand-sky transition-colors">
                             {c.candidato?.nome ?? "Candidato"}
-                          </p>
+                          </Link>
                           <p className="text-xs text-brand-pale/40 font-mono mt-0.5">
                             {c.candidato?.email}
                           </p>
@@ -1062,6 +1153,24 @@ export function VagaDetalhe({ usuario }) {
                         <Badge cor={corStatus[c.status] ?? "gray"}>
                           {labelStatus[c.status] ?? c.status}
                         </Badge>
+                        {slaAlerta && (() => {
+                          const minutos = Math.round(diasNaEtapa * 1440)
+                          const label = minutos < 60
+                            ? `${minutos}min`
+                            : minutos < 1440
+                              ? `${Math.floor(minutos / 60)}h`
+                              : `${Math.floor(diasNaEtapa)}d`
+                          const cfg = slaConfig[c.status] ?? slaConfig.outros_ativos
+                          return (
+                            <span
+                              title={`${label} nesta etapa — limite: ${cfg.valor} ${cfg.unidade}`}
+                              className="badge-sla text-xs font-bold px-2 py-0.5 rounded-lg flex-shrink-0"
+                              style={{ background: "rgba(245,158,11,0.15)", color: "#FCD34D", border: "1px solid rgba(245,158,11,0.3)" }}
+                            >
+                              ⏱ {label}
+                            </span>
+                          )
+                        })()}
                       </div>
                     </div>
 
@@ -1294,6 +1403,8 @@ export function VagaDetalhe({ usuario }) {
           onClose={() => setModalComparacao(false)}
         />
       )}
+
+      <ToastContainer toasts={toasts} />
     </div>
   )
 }

@@ -3,6 +3,8 @@ import { Link } from "react-router-dom"
 import { getCandidatos, createCandidato, getVagas, createCandidatura, uploadCurriculoTexto } from "../api"
 import { Badge } from "../components/Badge"
 import { IconSearch, IconUsers } from "../components/Icons"
+import { ToastContainer } from "../components/ToastContainer"
+import { useToast, extrairErro } from "../hooks/useToast"
 
 const inputClass = "w-full rounded-xl px-4 py-2.5 text-sm transition-all"
 const LIMIT = 30
@@ -18,9 +20,12 @@ export function Candidatos() {
   const [form, setForm]         = useState({
     nome: "", email: "", telefone: "",
     cidade: "", estado: "", vaga_id: "",
+    linkedin_url: "", portfolio_url: "",
     curriculo_texto: "",
   })
   const [formacoes, setFormacoes] = useState([])
+  const [erroForm, setErroForm]   = useState(null)
+  const { toasts } = useToast()
 
   const carregar = useCallback((off = 0, q = busca, orig = origem) => {
     setLoading(true)
@@ -58,23 +63,42 @@ export function Candidatos() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    const { vaga_id, curriculo_texto, ...dados } = form
+    setErroForm(null)
+    const { vaga_id, curriculo_texto, linkedin_url, portfolio_url, ...rest } = form
+    const dados = {
+      ...rest,
+      linkedin_url: linkedin_url || null,
+      portfolio_url: portfolio_url || null,
+    }
     const formacaoLimpa = formacoes
       .filter(f => f.curso.trim() && f.instituicao.trim())
       .map(f => ({ ...f, ano_conclusao: f.ano_conclusao ? parseInt(f.ano_conclusao) : null }))
     if (formacaoLimpa.length) dados.formacao = formacaoLimpa
 
-    const r = await createCandidato(dados)
-    let candidaturaId = null
-    if (vaga_id) {
-      const rc = await createCandidatura({ candidato_id: r.data.id, vaga_id })
-      candidaturaId = rc.data.id
+    let candidatoId, candidaturaId
+    try {
+      const r = await createCandidato(dados)
+      candidatoId = r.data.id
+    } catch (err) {
+      setErroForm(extrairErro(err, "Erro ao cadastrar candidato"))
+      return
     }
+
+    if (vaga_id) {
+      try {
+        const rc = await createCandidatura({ candidato_id: candidatoId, vaga_id })
+        candidaturaId = rc.data.id
+      } catch (err) {
+        setErroForm(extrairErro(err, "Erro ao vincular candidatura"))
+        return
+      }
+    }
+
     if (curriculo_texto.trim() && candidaturaId) {
       await uploadCurriculoTexto(candidaturaId, curriculo_texto.trim())
     }
     setCriando(false)
-    setForm({ nome: "", email: "", telefone: "", cidade: "", estado: "", vaga_id: "", curriculo_texto: "" })
+    setForm({ nome: "", email: "", telefone: "", cidade: "", estado: "", vaga_id: "", linkedin_url: "", portfolio_url: "", curriculo_texto: "" })
     setFormacoes([])
     carregar(0)
   }
@@ -154,6 +178,20 @@ export function Candidatos() {
                 </div>
               ))}
             </div>
+            {/* Links */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-brand-pale/65 uppercase tracking-wider mb-1.5">LinkedIn</label>
+                <input type="url" value={form.linkedin_url} onChange={set("linkedin_url")}
+                  placeholder="https://linkedin.com/in/..." className={inputClass} />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-brand-pale/65 uppercase tracking-wider mb-1.5">Portfólio</label>
+                <input type="url" value={form.portfolio_url} onChange={set("portfolio_url")}
+                  placeholder="https://..." className={inputClass} />
+              </div>
+            </div>
+
             {/* Formação acadêmica */}
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -231,13 +269,20 @@ export function Candidatos() {
               </div>
             )}
 
+            {erroForm && (
+              <p className="text-sm font-semibold px-3 py-2.5 rounded-xl"
+                style={{ background: "rgba(239,68,68,0.12)", color: "#f87171", border: "1px solid rgba(239,68,68,0.3)" }}>
+                {erroForm}
+              </p>
+            )}
+
             <div className="flex items-center gap-3 pt-1">
               <button type="submit"
                 className="px-5 py-2.5 text-brand-black text-sm font-bold rounded-xl hover:opacity-90"
                 style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}>
                 Cadastrar
               </button>
-              <button type="button" onClick={() => setCriando(false)}
+              <button type="button" onClick={() => { setCriando(false); setErroForm(null) }}
                 className="px-5 py-2.5 text-brand-pale/45 hover:text-brand-cloud text-sm font-semibold transition-colors">
                 Cancelar
               </button>
@@ -333,6 +378,7 @@ export function Candidatos() {
           </div>
         </div>
       )}
+      <ToastContainer toasts={toasts} />
     </div>
   )
 }

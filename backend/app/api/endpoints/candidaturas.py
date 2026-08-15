@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.models.candidato import Candidato
 from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.curriculo import Curriculo
+from app.models.usuario import PapelUsuario
 from app.models.vaga import Vaga
 from app.schemas.candidatura import CandidaturaCreate, CandidaturaResponse, CurriculoDetalhado
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
@@ -64,6 +65,15 @@ def criar_candidatura(dados: CandidaturaCreate, db: Session = DB, _=RH_OU_ADMIN)
         raise HTTPException(status_code=404, detail="Candidato não encontrado")
     if not db.query(Vaga).filter(Vaga.id == dados.vaga_id).first():
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
+    duplicata = db.query(Candidatura).filter(
+        Candidatura.candidato_id == dados.candidato_id,
+        Candidatura.vaga_id      == dados.vaga_id,
+    ).first()
+    if duplicata:
+        raise HTTPException(
+            status_code=409,
+            detail="Este candidato já possui uma candidatura para esta vaga",
+        )
     candidatura = Candidatura(
         candidato_id=dados.candidato_id,
         vaga_id=dados.vaga_id,
@@ -104,13 +114,30 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.post("/{candidatura_id}/curriculo", response_model=CandidaturaResponse)
 def upload_curriculo(candidatura_id: str, arquivo: UploadFile = File(...),
-                     db: Session = DB, _=RH_OU_ADMIN):
+                     db: Session = DB, usuario=RH_OU_ADMIN):
     if not arquivo.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Apenas arquivos PDF são aceitos")
+
+    arquivo.file.seek(0, 2)
+    tamanho = arquivo.file.tell()
+    arquivo.file.seek(0)
+    if tamanho > 20 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Arquivo muito grande — limite de 20 MB")
 
     candidatura = db.query(Candidatura).filter(Candidatura.id == candidatura_id).first()
     if not candidatura:
         raise HTTPException(status_code=404, detail="Candidatura não encontrada")
+
+    if candidatura.status != StatusCandidatura.NOVO:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Currículo não pode ser enviado neste momento (status: {candidatura.status.value})",
+        )
+
+    if usuario.papel == PapelUsuario.RH:
+        vaga = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
+        if vaga and vaga.rhs_autorizados and str(usuario.id) not in vaga.rhs_autorizados:
+            raise HTTPException(status_code=403, detail="Você não tem acesso a esta vaga")
 
     nome_arquivo = f"{uuid_lib.uuid4()}.pdf"
     caminho      = UPLOAD_DIR / nome_arquivo
@@ -152,7 +179,7 @@ def upload_curriculo_texto(
     candidatura_id: str,
     dados: CurriculoTextoInput,
     db: Session = DB,
-    _=RH_OU_ADMIN,
+    usuario=RH_OU_ADMIN,
 ):
     if not dados.texto.strip():
         raise HTTPException(status_code=400, detail="Texto do currículo não pode estar vazio")
@@ -160,6 +187,17 @@ def upload_curriculo_texto(
     candidatura = db.query(Candidatura).filter(Candidatura.id == candidatura_id).first()
     if not candidatura:
         raise HTTPException(status_code=404, detail="Candidatura não encontrada")
+
+    if candidatura.status != StatusCandidatura.NOVO:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Currículo não pode ser enviado neste momento (status: {candidatura.status.value})",
+        )
+
+    if usuario.papel == PapelUsuario.RH:
+        vaga = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
+        if vaga and vaga.rhs_autorizados and str(usuario.id) not in vaga.rhs_autorizados:
+            raise HTTPException(status_code=403, detail="Você não tem acesso a esta vaga")
 
     curriculo = db.query(Curriculo).filter(Curriculo.candidatura_id == candidatura_id).first()
     if not curriculo:
@@ -221,7 +259,6 @@ _TRIAGEM_DESTINOS = {
 class TriagemEmLoteRequest(BaseModel):
     candidatura_ids : list[str]
     novo_status     : StatusCandidatura
-    ator            : str = "rh"
 
 
 class TriagemEmLoteResponse(BaseModel):
@@ -250,6 +287,8 @@ def triagem_em_lote(
 
     atualizadas = 0
     erros: list[dict] = []
+    lote_id = str(uuid_lib.uuid4())
+    total   = len(dados.candidatura_ids)
 
     for cid in dados.candidatura_ids:
         sp = db.begin_nested()
@@ -259,7 +298,18 @@ def triagem_em_lote(
                 erros.append({"id": cid, "detalhe": "Não encontrada"})
                 sp.rollback()
                 continue
-            transicionar(candidatura, dados.novo_status, ator=dados.ator)
+            transicionar(candidatura, dados.novo_status, ator=usuario.nome)
+
+            novo_hist = list(candidatura.historico or [])
+            novo_hist.append({
+                "tipo"    : "triagem_lote",
+                "lote_id" : lote_id,
+                "total"   : total,
+                "ator"    : usuario.nome,
+                "em"      : datetime.utcnow().isoformat(),
+            })
+            candidatura.historico = novo_hist
+
             sp.commit()
             atualizadas += 1
         except Exception as exc:
@@ -312,7 +362,29 @@ def atualizar_status(
                 nome_rh        = usuario.nome,
                 candidato_nome = candidato.nome,
                 vaga_nome      = vaga_obj.nome,
-                aprovado       = (novo_status == StatusCandidatura.APROVADO_TRIAGEM),
+                aprovado       = novo_status == StatusCandidatura.APROVADO_TRIAGEM,
+            )
+
+    if novo_status == StatusCandidatura.CONTRATADO:
+        from app.core.email import email_contratacao_candidato
+        from app.models.candidato import Candidato
+        from app.models.usuario import Usuario
+        candidato = db.query(Candidato).filter(Candidato.id == candidatura.candidato_id).first()
+        vaga_obj  = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
+        if candidato and candidato.email and vaga_obj:
+            rh_ids = list(dict.fromkeys(
+                list(vaga_obj.rhs_autorizados or []) +
+                ([str(vaga_obj.criado_por_id)] if vaga_obj.criado_por_id else [])
+            ))
+            rh_emails = [
+                u.email for u in db.query(Usuario).filter(Usuario.id.in_(rh_ids)).all()
+                if u.email
+            ]
+            email_contratacao_candidato(
+                destinatario   = candidato.email,
+                candidato_nome = candidato.nome,
+                vaga_nome      = vaga_obj.nome,
+                email_rh       = rh_emails[0] if rh_emails else "",
             )
 
     return candidatura
@@ -322,13 +394,29 @@ def atualizar_status(
 def desvincular_candidatura(
     candidatura_id: str,
     db: Session = DB,
-    _=APENAS_ADMIN,
+    usuario=APENAS_ADMIN,
 ):
     """Remove a candidatura e todos os seus dados associados (currículo, entrevistas).
     Exclusivo para Admin — usar apenas para corrigir erros de vínculo."""
     candidatura = db.query(Candidatura).filter(Candidatura.id == candidatura_id).first()
     if not candidatura:
         raise HTTPException(status_code=404, detail="Candidatura não encontrada")
+
+    # Salva evento de auditoria na vaga ANTES de deletar a candidatura
+    candidato = db.query(Candidato).filter(Candidato.id == candidatura.candidato_id).first()
+    vaga      = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
+    if vaga:
+        novo_hist = list(vaga.historico or [])
+        novo_hist.append({
+            "tipo"            : "candidatura_excluida",
+            "candidatura_id"  : str(candidatura.id),
+            "candidato_nome"  : candidato.nome  if candidato else None,
+            "candidato_email" : candidato.email if candidato else None,
+            "status_era"      : candidatura.status.value if candidatura.status else None,
+            "ator"            : usuario.nome,
+            "em"              : datetime.utcnow().isoformat(),
+        })
+        vaga.historico = novo_hist
 
     from app.models.entrevista import Entrevista
     db.query(Entrevista).filter(Entrevista.candidatura_id == candidatura_id).delete()

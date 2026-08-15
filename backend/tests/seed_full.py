@@ -3,9 +3,9 @@ Seed completo — popula o banco com dados realistas e inter-relacionados.
 
 Cria:
   6 usuários  (2 RH, 3 gestores, 1 admin)
- 10 vagas     (tech, rh, direito, engenharia, financeiro, marketing)
- 30 candidatos com formações e perfis variados
- ~55 candidaturas distribuídas em TODAS as etapas do pipeline
+ 12 vagas     (tech, rh, direito, engenharia, financeiro, marketing, nutrição, idiomas)
+ 36 candidatos com formações e perfis variados
+ ~65 candidaturas distribuídas em TODAS as etapas do pipeline
  Currículos processados (scores reais via embedding)
  Entrevistas agendadas e realizadas com notas e histórico de edições
 
@@ -92,6 +92,8 @@ GESTORES_POR_VAGA = [
     ["daniela@sirs.com", "eduardo@sirs.com"],          # 7: Financeiro
     ["carlos@sirs.com", "daniela@sirs.com"],           # 8: Product Designer
     ["eduardo@sirs.com"],                              # 9: Marketing
+    ["daniela@sirs.com"],                              # 10: Nutricionista
+    ["daniela@sirs.com", "eduardo@sirs.com"],          # 11: Professora Idiomas
 ]
 
 SPECS_VAGAS = [
@@ -175,6 +177,28 @@ SPECS_VAGAS = [
             "Criação de conteúdo, copywriting e gestão de social media. Growth hacking é plus."
         ),
     },
+    {
+        "nome": "Nutricionista Clínica",
+        "req": (
+            "Nutricionista para atendimento clínico em consultório e ambulatório hospitalar. "
+            "CRN ativo obrigatório. Experiência em avaliação nutricional, antropometria e "
+            "elaboração de planos alimentares individualizados. Conhecimento em dietoterapia "
+            "aplicada a diabetes, hipertensão, obesidade e doenças renais. "
+            "Habilidade com software DietPro ou AvaNutri. Educação nutricional em grupo. "
+            "Diferencial: nutrição esportiva, nutrição hospitalar e prontuário eletrônico."
+        ),
+    },
+    {
+        "nome": "Professora de Idiomas — Inglês e Espanhol",
+        "req": (
+            "Professora de idiomas para ensino de inglês e espanhol, nível intermediário ao avançado. "
+            "Domínio fluente de inglês (C1/C2) e espanhol nativo ou fluente obrigatórios. "
+            "Experiência em preparação para exames internacionais: IELTS, TOEFL, DELE e DALF. "
+            "Diferenciais: francês, alemão ou mandarim. Certificação CELTA ou equivalente. "
+            "Uso de plataformas AVA (Moodle), elaboração de materiais didáticos próprios, "
+            "ensino presencial e online. Perfil dinâmico, didático e comprometido."
+        ),
+    },
 ]
 
 def criar_vagas(usuarios):
@@ -218,166 +242,306 @@ CANDIDATOS_DATA = [
     # Tech — Python
     dict(nome="Lucas Ferreira",     email="lucas.ferreira@email.com",    tel="11991110001",
          nasc=date(1993,4,12), cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/lucas-ferreira-dev",
+         portfolio="https://github.com/lucasferreira-dev",
          formacao=[{"curso":"Ciência da Computação","instituicao":"USP","nivel":"graduacao","status":"concluido","ano_conclusao":2015}],
          cv="Desenvolvedor Python com 10 anos de experiência. Especialista em FastAPI, SQLAlchemy, PostgreSQL, Docker e AWS. Liderou equipe de 5 devs. Fluente em inglês."),
 
     dict(nome="Mariana Costa",      email="mariana.costa@email.com",     tel="11991110002",
          nasc=date(1996,7,23), cidade="Campinas",     uf="SP",
+         linkedin="https://linkedin.com/in/mariana-costa-backend",
+         portfolio="https://github.com/marianacosta",
          formacao=[{"curso":"Sistemas de Informação","instituicao":"UNICAMP","nivel":"graduacao","status":"concluido","ano_conclusao":2018}],
          cv="Backend Python, FastAPI, Django, Redis, Celery, PostgreSQL. 6 anos de experiência. Participou de migração de monolito para microsserviços."),
 
     dict(nome="Rafael Santos",      email="rafael.santos@email.com",     tel="11991110003",
          nasc=date(1998,1,5),  cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/rafael-santos-py",
+         portfolio=None,
          formacao=[{"curso":"Engenharia de Software","instituicao":"FIAP","nivel":"graduacao","status":"concluido","ano_conclusao":2020}],
          cv="Desenvolvedor Python 3 anos, Django REST, FastAPI, Docker, CI/CD GitHub Actions, PostgreSQL. Inglês intermediário."),
 
     # Tech — Full Stack
     dict(nome="Camila Rodrigues",   email="camila.rodrigues@email.com",  tel="11991110004",
          nasc=date(1995,9,30), cidade="Rio de Janeiro", uf="RJ",
+         linkedin="https://linkedin.com/in/camila-rodrigues-fullstack",
+         portfolio="https://camilarodrigues.dev",
          formacao=[{"curso":"Engenharia da Computação","instituicao":"PUC-Rio","nivel":"graduacao","status":"concluido","ano_conclusao":2017}],
          cv="Full stack React, TypeScript, Node.js, GraphQL, PostgreSQL. 8 anos de experiência. Jest, Vitest, GitHub Actions CI/CD. Inglês fluente."),
 
     dict(nome="Felipe Alves",       email="felipe.alves@email.com",      tel="11991110005",
          nasc=date(1997,3,18), cidade="Belo Horizonte", uf="MG",
+         linkedin="https://linkedin.com/in/felipe-alves-frontend",
+         portfolio="https://github.com/felipealves-ui",
          formacao=[{"curso":"Análise e Desenvolvimento de Sistemas","instituicao":"FATEC","nivel":"tecnologo","status":"concluido","ano_conclusao":2019}],
          cv="Frontend React, TypeScript, Redux, Styled-components. Backend Node.js, Express, MongoDB. 5 anos. Experiência com acessibilidade e design systems."),
 
     dict(nome="Isabela Nunes",      email="isabela.nunes@email.com",     tel="11991110006",
          nasc=date(1999,11,8), cidade="Recife",         uf="PE",
+         linkedin="https://linkedin.com/in/isabela-nunes",
+         portfolio=None,
          formacao=[{"curso":"Ciência da Computação","instituicao":"UFPE","nivel":"graduacao","status":"em_andamento","ano_conclusao":None}],
          cv="Desenvolvedora fullstack júnior, React, Vue.js, Node.js, MySQL. 2 anos. Projetos pessoais e estágio em startup."),
 
     # Tech — Dados
     dict(nome="André Oliveira",     email="andre.oliveira@email.com",    tel="11991110007",
          nasc=date(1991,6,14), cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/andre-oliveira-data",
+         portfolio="https://github.com/andreoliveira-eng",
          formacao=[{"curso":"Estatística","instituicao":"USP","nivel":"graduacao","status":"concluido","ano_conclusao":2013},
                    {"curso":"Engenharia de Dados","instituicao":"IGTI","nivel":"especializacao","status":"concluido","ano_conclusao":2018}],
          cv="Engenheiro de dados sênior. Apache Spark, Airflow, dbt, AWS Glue/Redshift/S3, Python, SQL avançado, Kafka. 12 anos de experiência."),
 
     dict(nome="Tatiane Lima",       email="tatiane.lima@email.com",      tel="11991110008",
          nasc=date(1994,2,27), cidade="Curitiba",      uf="PR",
+         linkedin="https://linkedin.com/in/tatiane-lima-dados",
+         portfolio=None,
          formacao=[{"curso":"Ciência de Dados","instituicao":"PUCPR","nivel":"graduacao","status":"concluido","ano_conclusao":2016}],
          cv="Data engineer com 7 anos. Python, PySpark, Airflow, Redshift, dbt, Terraform AWS. Experiência com modelagem dimensional e Data Mesh."),
 
     dict(nome="Gabriel Martins",    email="gabriel.martins@email.com",   tel="11991110009",
          nasc=date(2000,5,3),  cidade="Porto Alegre",  uf="RS",
+         linkedin=None,
+         portfolio=None,
          formacao=[{"curso":"Engenharia de Computação","instituicao":"PUCRS","nivel":"graduacao","status":"concluido","ano_conclusao":2022}],
          cv="Analista de dados 2 anos. Python, pandas, SQL, Power BI. Projetos de ETL simples e visualização."),
 
     # Tech — DevOps
     dict(nome="Bruno Carvalho",     email="bruno.carvalho@email.com",    tel="11991110010",
          nasc=date(1990,8,22), cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/bruno-carvalho-sre",
+         portfolio="https://github.com/brunocarvalho-ops",
          formacao=[{"curso":"Redes de Computadores","instituicao":"SENAI","nivel":"tecnologo","status":"concluido","ano_conclusao":2012}],
          cv="DevOps sênior. Kubernetes, Terraform, Ansible, AWS, GCP, ArgoCD, Prometheus, Grafana, Python, Bash. 13 anos. SRE culture, SLO/SLI."),
 
     dict(nome="Fernanda Souza",     email="fernanda.souza@email.com",    tel="11991110011",
          nasc=date(1993,12,9), cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/fernanda-souza-devops",
+         portfolio=None,
          formacao=[{"curso":"Engenharia de Software","instituicao":"Mackenzie","nivel":"graduacao","status":"concluido","ano_conclusao":2015}],
          cv="SRE/DevOps 8 anos. Kubernetes, Docker, Terraform, CI/CD GitHub Actions, AWS EKS, observabilidade com Prometheus e Grafana."),
 
     dict(nome="Ricardo Pereira",    email="ricardo.pereira@email.com",   tel="11991110012",
          nasc=date(2001,4,17), cidade="Florianópolis", uf="SC",
+         linkedin="https://linkedin.com/in/ricardo-pereira-infra",
+         portfolio=None,
          formacao=[{"curso":"Ciência da Computação","instituicao":"UFSC","nivel":"graduacao","status":"em_andamento","ano_conclusao":None}],
          cv="Estagiário DevOps 1 ano. Docker, CI/CD básico, Linux, Bash scripting. Aprendendo Kubernetes e Terraform."),
 
     # RH
     dict(nome="Juliana Mendes",     email="juliana.mendes@email.com",    tel="11991110013",
          nasc=date(1992,10,4), cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/juliana-mendes-rh",
+         portfolio=None,
          formacao=[{"curso":"Psicologia","instituicao":"USP","nivel":"graduacao","status":"concluido","ano_conclusao":2014},
                    {"curso":"MBA RH","instituicao":"FGV","nivel":"mba","status":"concluido","ano_conclusao":2017}],
          cv="Analista de RH sênior. Recrutamento e seleção, People Analytics, Power BI, Gupy, eSocial, LGPD, entrevistas por competências. 10 anos."),
 
     dict(nome="Patricia Gomes",     email="patricia.gomes@email.com",    tel="11991110014",
          nasc=date(1995,3,21), cidade="Campinas",      uf="SP",
+         linkedin="https://linkedin.com/in/patricia-gomes-rh",
+         portfolio=None,
          formacao=[{"curso":"Administração com ênfase em RH","instituicao":"PUC-Campinas","nivel":"graduacao","status":"concluido","ano_conclusao":2017}],
          cv="Analista de RH pleno. Recrutamento, onboarding, clima organizacional, eSocial, Excel avançado, ATS Greenhouse. 6 anos."),
 
     dict(nome="Thiago Barbosa",     email="thiago.barbosa@email.com",    tel="11991110015",
          nasc=date(1998,8,11), cidade="Rio de Janeiro", uf="RJ",
+         linkedin=None,
+         portfolio=None,
          formacao=[{"curso":"Recursos Humanos","instituicao":"SENAC-RJ","nivel":"tecnologo","status":"concluido","ano_conclusao":2020}],
          cv="RH júnior. Recrutamento básico, triagem de currículos, agendamento de entrevistas, controle de eSocial. 3 anos."),
 
     # Direito
     dict(nome="Amanda Ribeiro",     email="amanda.ribeiro@email.com",    tel="11991110016",
          nasc=date(1988,5,15), cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/amanda-ribeiro-adv",
+         portfolio=None,
          formacao=[{"curso":"Direito","instituicao":"PUC-SP","nivel":"graduacao","status":"concluido","ano_conclusao":2010},
                    {"curso":"Direito Trabalhista","instituicao":"Mackenzie","nivel":"especializacao","status":"concluido","ano_conclusao":2013}],
          cv="Advogada trabalhista sênior. OAB ativa. Contencioso judicial TST e TRTs, negociação coletiva, eSocial, FGTS, PJe. 15 anos. Inglês fluente."),
 
     dict(nome="Rodrigo Teixeira",   email="rodrigo.teixeira@email.com",  tel="11991110017",
          nasc=date(1991,9,7),  cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/rodrigo-teixeira-trabalhista",
+         portfolio=None,
          formacao=[{"curso":"Direito","instituicao":"Mackenzie","nivel":"graduacao","status":"concluido","ano_conclusao":2013}],
          cv="Advogado trabalhista pleno. OAB ativa. Reclamações trabalhistas, audiências, cálculos trabalhistas, eSocial, CLTQ. 10 anos."),
 
     dict(nome="Larissa Freitas",    email="larissa.freitas@email.com",   tel="11991110018",
          nasc=date(1997,1,29), cidade="Brasília",      uf="DF",
+         linkedin=None,
+         portfolio=None,
          formacao=[{"curso":"Direito","instituicao":"UnB","nivel":"graduacao","status":"concluido","ano_conclusao":2019}],
          cv="Advogada júnior. OAB ativa. Revisão de contratos, triagem processual, PJe, CPC básico. 3 anos."),
 
     # Engenharia Civil
     dict(nome="Gustavo Araújo",     email="gustavo.araujo@email.com",    tel="11991110019",
          nasc=date(1987,7,6),  cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/gustavo-araujo-eng",
+         portfolio=None,
          formacao=[{"curso":"Engenharia Civil","instituicao":"USP","nivel":"graduacao","status":"concluido","ano_conclusao":2010}],
          cv="Engenheiro civil sênior. CREA ativo. Gestão de obras comerciais e industriais, AutoCAD, Revit, BIM, MS Project, SINAPI, NR-18. 16 anos."),
 
     dict(nome="Beatriz Castro",     email="beatriz.castro@email.com",    tel="11991110020",
          nasc=date(1994,11,18),cidade="Belo Horizonte", uf="MG",
+         linkedin="https://linkedin.com/in/beatriz-castro-civil",
+         portfolio=None,
          formacao=[{"curso":"Engenharia Civil","instituicao":"UFMG","nivel":"graduacao","status":"concluido","ano_conclusao":2016}],
          cv="Engenheira civil plena. CREA ativo. AutoCAD, Revit, gestão de obras residenciais, orçamento SINAPI, topografia. 7 anos."),
 
     dict(nome="Diego Monteiro",     email="diego.monteiro@email.com",    tel="11991110021",
          nasc=date(1999,3,25), cidade="Curitiba",      uf="PR",
+         linkedin=None,
+         portfolio=None,
          formacao=[{"curso":"Engenharia Civil","instituicao":"UTFPR","nivel":"graduacao","status":"concluido","ano_conclusao":2022}],
          cv="Engenheiro civil júnior. AutoCAD, MS Project básico, CREA em processo de registro. Experiência em estágio em construtora. 1 ano."),
 
     # Financeiro
     dict(nome="Vanessa Correia",    email="vanessa.correia@email.com",   tel="11991110022",
          nasc=date(1990,6,3),  cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/vanessa-correia-controladoria",
+         portfolio=None,
          formacao=[{"curso":"Ciências Contábeis","instituicao":"FEA-USP","nivel":"graduacao","status":"concluido","ano_conclusao":2012},
                    {"curso":"Controladoria e Finanças","instituicao":"FGV","nivel":"mba","status":"concluido","ano_conclusao":2015}],
          cv="Analista financeira sênior. Controladoria, IFRS, CPC, SAP FI, Power BI, DRE, fluxo de caixa, conciliação bancária. CRC ativo. 13 anos."),
 
     dict(nome="Leonardo Azevedo",   email="leonardo.azevedo@email.com",  tel="11991110023",
          nasc=date(1993,8,14), cidade="Rio de Janeiro", uf="RJ",
+         linkedin="https://linkedin.com/in/leonardo-azevedo-financas",
+         portfolio=None,
          formacao=[{"curso":"Administração","instituicao":"FGV-RJ","nivel":"graduacao","status":"concluido","ano_conclusao":2015}],
          cv="Analista financeiro pleno. Planejamento orçamentário, Excel avançado, Power BI, SAP FI, conciliação, fluxo de caixa. 8 anos."),
 
     dict(nome="Renata Moreira",     email="renata.moreira@email.com",    tel="11991110024",
          nasc=date(1997,5,20), cidade="São Paulo",     uf="SP",
+         linkedin=None,
+         portfolio=None,
          formacao=[{"curso":"Ciências Contábeis","instituicao":"Mackenzie","nivel":"graduacao","status":"concluido","ano_conclusao":2019}],
          cv="Analista financeira júnior. Excel avançado, conciliação bancária, ERP TOTVS, relatórios gerenciais. CRC em andamento. 4 anos."),
 
     # Design UX/UI
     dict(nome="Stephanie Ramos",    email="stephanie.ramos@email.com",   tel="11991110025",
          nasc=date(1995,2,8),  cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/stephanie-ramos-ux",
+         portfolio="https://behance.net/stephanieramos",
          formacao=[{"curso":"Design Digital","instituicao":"ESPM","nivel":"graduacao","status":"concluido","ano_conclusao":2017}],
          cv="Product designer sênior. Figma, prototipação, pesquisa com usuários, design system, testes de usabilidade, acessibilidade WCAG. 8 anos."),
 
     dict(nome="Henrique Barros",    email="henrique.barros@email.com",   tel="11991110026",
          nasc=date(1998,9,12), cidade="Rio de Janeiro", uf="RJ",
+         linkedin="https://linkedin.com/in/henrique-barros-design",
+         portfolio="https://behance.net/henriquebarros",
          formacao=[{"curso":"Design Gráfico","instituicao":"PUC-Rio","nivel":"graduacao","status":"concluido","ano_conclusao":2020}],
          cv="UX/UI designer pleno. Figma, design de interfaces, pesquisa qualitativa, prototipação, handoff para devs. 5 anos."),
 
     dict(nome="Alice Fernandes",    email="alice.fernandes@email.com",   tel="11991110027",
          nasc=date(2001,7,31), cidade="Campinas",      uf="SP",
+         linkedin="https://linkedin.com/in/alice-fernandes-design",
+         portfolio="https://alicefernandes.myportfolio.com",
          formacao=[{"curso":"Design","instituicao":"UNICAMP","nivel":"graduacao","status":"em_andamento","ano_conclusao":None}],
          cv="Designer júnior. Figma, Adobe XD, noções de pesquisa com usuários. 1 ano e meio."),
 
     # Marketing
     dict(nome="Carolina Lima",      email="carolina.lima@email.com",     tel="11991110028",
          nasc=date(1992,4,16), cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/carolina-lima-marketing",
+         portfolio=None,
          formacao=[{"curso":"Publicidade e Propaganda","instituicao":"ESPM","nivel":"graduacao","status":"concluido","ano_conclusao":2014}],
          cv="Analista de marketing digital sênior. Google Ads, Meta Ads, SEO, GA4, HubSpot, email marketing, copywriting, growth hacking. 11 anos."),
 
     dict(nome="Marcos Vieira",      email="marcos.vieira@email.com",     tel="11991110029",
          nasc=date(1996,11,22),cidade="Curitiba",      uf="PR",
+         linkedin="https://linkedin.com/in/marcos-vieira-mkt",
+         portfolio=None,
          formacao=[{"curso":"Marketing","instituicao":"FAE","nivel":"graduacao","status":"concluido","ano_conclusao":2018}],
          cv="Analista de marketing digital pleno. Google Analytics, Google Ads, Meta Ads, RD Station, SEO on-page, gestão de redes sociais. 6 anos."),
 
     dict(nome="Priscila Sousa",     email="priscila.sousa@email.com",    tel="11991110030",
          nasc=date(1999,6,5),  cidade="Fortaleza",     uf="CE",
+         linkedin=None,
+         portfolio=None,
          formacao=[{"curso":"Comunicação Social","instituicao":"UFC","nivel":"graduacao","status":"concluido","ano_conclusao":2021}],
          cv="Marketing digital júnior. Social media, criação de conteúdo, Google Analytics básico, Canva. 2 anos."),
+
+    # Nutrição — candidatos para testar detecção de skills nutricionais (30–32)
+    dict(nome="Beatriz Nogueira",   email="beatriz.nogueira@email.com",  tel="11991110034",
+         nasc=date(1989,5,8),  cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/beatriz-nogueira-nutri",
+         portfolio=None,
+         formacao=[{"curso":"Nutrição","instituicao":"USP","nivel":"graduacao","status":"concluido","ano_conclusao":2011},
+                   {"curso":"Nutrição Clínica e Esportiva","instituicao":"GANEP","nivel":"especializacao","status":"concluido","ano_conclusao":2014}],
+         cv=(
+             "Nutricionista clínica sênior com 14 anos de experiência. CRN ativo. "
+             "Avaliação nutricional e antropometria. Elaboração de planos alimentares individualizados. "
+             "Dietoterapia aplicada a diabetes, hipertensão e obesidade. "
+             "Nutrição esportiva e nutrição hospitalar. Software DietPro avançado. "
+             "Educação nutricional em grupo e prontuário eletrônico. "
+             "Docência em cursos de pós-graduação em nutrição clínica."
+         )),
+
+    dict(nome="Camila Nascimento",  email="camila.nascimento@email.com", tel="11991110035",
+         nasc=date(1994,9,14), cidade="Campinas",      uf="SP",
+         linkedin="https://linkedin.com/in/camila-nascimento-nutri",
+         portfolio=None,
+         formacao=[{"curso":"Nutrição","instituicao":"UNICAMP","nivel":"graduacao","status":"concluido","ano_conclusao":2016}],
+         cv=(
+             "Nutricionista plena com 7 anos de experiência em nutrição hospitalar e clínica. "
+             "CRN ativo. Avaliação nutricional e plano alimentar para pacientes com doenças renais e oncológicas. "
+             "Antropometria e triagem nutricional. AvaNutri e prontuário eletrônico. "
+             "Experiência em UTI e enfermarias. Educação nutricional e orientação alimentar."
+         )),
+
+    dict(nome="Renato Cavalcante",  email="renato.cavalcante@email.com", tel="11991110036",
+         nasc=date(2000,2,21), cidade="Recife",         uf="PE",
+         linkedin=None,
+         portfolio=None,
+         formacao=[{"curso":"Nutrição","instituicao":"UFPE","nivel":"graduacao","status":"concluido","ano_conclusao":2022}],
+         cv=(
+             "Nutricionista júnior com 2 anos de experiência em consultório particular. "
+             "CRN ativo. Atendimento clínico, avaliação nutricional básica e planos alimentares. "
+             "Foco em educação nutricional e reeducação alimentar. DietBox. "
+             "Interesse em nutrição esportiva. Excel e Google Workspace."
+         )),
+
+    # Idiomas — candidatos para testar detecção de skills de línguas (33–35)
+    dict(nome="Sofia Andrade",      email="sofia.andrade@email.com",     tel="11991110031",
+         nasc=date(1990,3,14), cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/sofia-andrade-idiomas",
+         portfolio=None,
+         formacao=[{"curso":"Letras — Inglês","instituicao":"USP","nivel":"graduacao","status":"concluido","ano_conclusao":2012},
+                   {"curso":"Língua e Cultura Espanhola","instituicao":"Universidad de Salamanca","nivel":"especializacao","status":"concluido","ano_conclusao":2015}],
+         cv=(
+             "Professora de inglês e espanhol com 12 anos de experiência em cursos de idiomas e corporativo. "
+             "Certificação CELTA (Cambridge) e DELE C2 (espanhol). "
+             "Inglês fluente (C2) e espanhol nativo. Noções de francês e italiano. "
+             "Preparação para IELTS, TOEFL e DELE. Uso avançado de Moodle e Google Classroom. "
+             "Elaboração de materiais didáticos próprios. Ensino presencial e online."
+         )),
+
+    dict(nome="Pedro Yamamoto",     email="pedro.yamamoto@email.com",    tel="11991110032",
+         nasc=date(1988,7,22), cidade="São Paulo",     uf="SP",
+         linkedin=None,
+         portfolio=None,
+         formacao=[{"curso":"Letras — Português/Inglês","instituicao":"UNIFESP","nivel":"graduacao","status":"concluido","ano_conclusao":2011}],
+         cv=(
+             "Professor de inglês com 13 anos de experiência. Certificação CELTA. "
+             "English fluent (C2), japonês nativo (N1). "
+             "Preparação para IELTS e TOEFL. Sem domínio de espanhol ou outras línguas latinas. "
+             "Experiência em escola de idiomas e aulas particulares. Moodle e Zoom."
+         )),
+
+    dict(nome="Marie Dupont",       email="marie.dupont@email.com",      tel="11991110033",
+         nasc=date(1993,11,5), cidade="Rio de Janeiro", uf="RJ",
+         linkedin="https://linkedin.com/in/marie-dupont-idiomas",
+         portfolio=None,
+         formacao=[{"curso":"Letras — Francês/Português","instituicao":"UFRJ","nivel":"graduacao","status":"concluido","ano_conclusao":2015}],
+         cv=(
+             "Professora de francês e inglês com 8 anos de experiência. "
+             "Francês nativo (C2), inglês fluente (C1), espanhol intermediário (B2), alemão básico (A2). "
+             "Certificação DALF C2 e Cambridge CPE. Preparação para DELF/DALF e Cambridge Exams. "
+             "Experiência em cursos livres, colégio bilíngue e preparatório para vestibular. "
+             "Moodle, Teams e materiais autorais."
+         )),
 ]
 
 def criar_candidatos():
@@ -388,6 +552,8 @@ def criar_candidatos():
             data_nascimento=d["nasc"],
             cidade=d["cidade"], estado=d["uf"],
             formacao=d["formacao"],
+            linkedin_url=d.get("linkedin"),
+            portfolio_url=d.get("portfolio"),
         )
         candidatos.append(c)
     db.add_all(candidatos)
@@ -473,6 +639,20 @@ VINCULOS = [
     (29, 9, "aprovado_triagem"),    # Priscila             → aprovada
     (24, 9, "banco_talentos"),      # Stephanie (design)   → banco talentos
     (12, 9, "triagem_pendente"),    # Juliana (RH)         → triagem
+
+    # ── Nutricionista Clínica (vaga 10) ───────────────────────────────────────
+    (30, 10, "contratada"),         # Beatriz N. (sênior, DietPro)    → contratada
+    (31, 10, "tec_realizada"),      # Camila N. (plena, hospitalar)   → aguardando decisão
+    (32, 10, "aprovado_triagem"),   # Renato N. (júnior, esp. esp.)   → aprovado triagem
+    (13, 10, "reprovado_triagem"),  # Patricia (RH, sem nutrição)     → reprovada
+    (22, 10, "triagem_pendente"),   # Leonardo (financeiro)           → triagem
+
+    # ── Professora de Idiomas (vaga 11) ───────────────────────────────────────
+    (33, 11, "contratada"),         # Sofia (inglês+esp. C2)       → contratada
+    (34, 11, "tec_realizada"),      # Pedro (inglês C2, sem esp.)  → aguardando decisão
+    (35, 11, "aprovado_triagem"),   # Marie (fr nativo+ing+esp B2) → aprovada triagem
+    (13, 11, "reprovado_triagem"),  # Patricia (RH, sem idiomas)   → reprovada
+    (17, 11, "triagem_pendente"),   # Larissa (direito)            → triagem
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

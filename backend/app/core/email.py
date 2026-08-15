@@ -8,6 +8,7 @@ na resposta (útil em desenvolvimento/testes).
 import smtplib
 import ssl
 from datetime import datetime
+from email.header import Header
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -28,7 +29,7 @@ def enviar_email(destinatario: str, assunto: str, corpo_html: str) -> bool:
 
     remetente = settings.SMTP_FROM or settings.SMTP_USER
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = assunto
+    msg["Subject"] = Header(assunto, "utf-8")
     msg["From"]    = remetente
     msg["To"]      = destinatario
     msg.attach(MIMEText(corpo_html, "html", "utf-8"))
@@ -298,6 +299,81 @@ def email_entrevista_agendada(
     return enviar_email(destinatario, assunto, corpo)
 
 
+def email_entrevista_candidato(
+    destinatario   : str,
+    candidato_nome : str,
+    vaga_nome      : str,
+    agendada_para  : datetime,
+    email_rh       : str = "",
+    tipo           : str = "rh",
+) -> bool:
+    data_fmt    = _fmt_data(agendada_para)
+    tipo_label  = "Entrevista com RH" if tipo == "rh" else "Entrevista Técnica"
+    assunto     = f"Parabens! Voce foi selecionado(a) para {tipo_label} — {vaga_nome}"
+
+    contato_html = (
+        '<p style="margin:16px 0 0;font-size:13px;color:#475569;line-height:1.6">'
+        'Caso nao consiga comparecer, entre em contato com nosso RH pelo e-mail '
+        '<a href="mailto:' + email_rh + '" style="color:#2563eb;font-weight:600">' + email_rh + '</a>.'
+        '</p>'
+    ) if email_rh else ""
+
+    corpo = f"""<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f0fdf4;font-family:'Segoe UI',Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:40px 16px">
+      <table width="480" cellpadding="0" cellspacing="0"
+             style="background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #bbf7d0">
+
+        <!-- Header -->
+        <tr>
+          <td style="background:linear-gradient(135deg,#16a34a,#22c55e);padding:28px 32px;text-align:center">
+            <p style="margin:0;font-size:32px">&#127881;</p>
+            <p style="margin:8px 0 0;font-size:20px;font-weight:800;color:#ffffff">Parabéns!</p>
+          </td>
+        </tr>
+
+        <!-- Body -->
+        <tr>
+          <td style="padding:32px">
+            <p style="margin:0 0 16px;font-size:16px;font-weight:700;color:#14532d">
+              Olá, {candidato_nome}!
+            </p>
+            <p style="margin:0 0 24px;font-size:14px;color:#374151;line-height:1.8">
+              Você foi selecionado(a) para uma <strong style="color:#16a34a">{tipo_label}</strong>
+              para a vaga de <strong>{vaga_nome}</strong> e ela já está agendada!
+            </p>
+
+            <!-- Card data -->
+            <table width="100%" cellpadding="0" cellspacing="0"
+                   style="background:#f0fdf4;border-radius:12px;border:1px solid #bbf7d0;margin-bottom:8px">
+              <tr><td style="padding:20px 24px;text-align:center">
+                <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#16a34a;
+                   text-transform:uppercase;letter-spacing:1px">Data da entrevista</p>
+                <p style="margin:0;font-size:18px;font-weight:800;color:#14532d">{data_fmt}</p>
+              </td></tr>
+            </table>
+            {contato_html}
+          </td>
+        </tr>
+
+        <!-- Footer -->
+        <tr>
+          <td style="padding:14px 32px 20px;border-top:1px solid #dcfce7;text-align:center">
+            <p style="margin:0;font-size:11px;color:#9ca3af">
+              E-mail automático — por favor não responda diretamente.
+            </p>
+          </td>
+        </tr>
+
+      </table>
+    </td></tr>
+  </table>
+</body></html>"""
+    return enviar_email(destinatario, assunto, corpo)
+
+
 def email_triagem_resultado(
     destinatario   : str,
     nome_rh        : str,
@@ -373,4 +449,57 @@ def email_triagem_resultado(
 
         '</table></td></tr></table></body></html>'
     )
+    return enviar_email(destinatario, assunto, corpo)
+
+
+def email_contratacao_candidato(
+    destinatario   : str,
+    candidato_nome : str,
+    vaga_nome      : str,
+    email_rh       : str = "",
+) -> bool:
+    assunto = f"Parabens! Voce foi contratado(a) para a vaga de {vaga_nome}"
+
+    contato_html = (
+        '<p style="margin:16px 0 0;font-size:13px;color:#475569;line-height:1.6">'
+        'Qualquer duvida, entre em contato com nosso RH pelo e-mail '
+        '<a href="mailto:' + email_rh + '" style="color:#2563eb;font-weight:600">' + email_rh + '</a>.'
+        '</p>'
+    ) if email_rh else ""
+
+    corpo = f"""<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#f0fdf4;font-family:'Segoe UI',Arial,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0">
+    <tr><td align="center" style="padding:40px 16px">
+      <table width="480" cellpadding="0" cellspacing="0"
+             style="background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #bbf7d0">
+        <tr>
+          <td style="background:linear-gradient(135deg,#16a34a,#22c55e);padding:28px 32px;text-align:center">
+            <p style="margin:0;font-size:32px">&#127881;</p>
+            <p style="margin:8px 0 0;font-size:20px;font-weight:800;color:#ffffff">Parabéns!</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:32px">
+            <p style="margin:0 0 16px;font-size:16px;font-weight:700;color:#14532d">Olá, {candidato_nome}!</p>
+            <p style="margin:0 0 8px;font-size:14px;color:#374151;line-height:1.8">
+              Temos uma ótima notícia — você foi <strong style="color:#16a34a">contratado(a)</strong>
+              para a vaga de <strong>{vaga_nome}</strong>!
+            </p>
+            <p style="margin:0;font-size:14px;color:#374151;line-height:1.8">
+              Em breve nossa equipe entrará em contato com os detalhes da integração.
+            </p>
+            {contato_html}
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:14px 32px 20px;border-top:1px solid #dcfce7;text-align:center">
+            <p style="margin:0;font-size:11px;color:#9ca3af">E-mail automático — por favor não responda diretamente.</p>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>"""
     return enviar_email(destinatario, assunto, corpo)

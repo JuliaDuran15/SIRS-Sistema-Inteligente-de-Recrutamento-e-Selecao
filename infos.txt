@@ -522,3 +522,392 @@ WEBHOOK_SECRET_KEY obrigatório em produção — hoje é opcional mesmo no READ
 docker compose exec api pytest tests/test_setores_especificos.py::TestPipelineSetores::test_relatorio_setores -m slow -s
 
 docker compose exec api pytest tests/test_entrevistas.py -v -s
+
+
+
+
+
+
+
+
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+---
+
+## Comandos essenciais
+
+```bash
+# Subir todos os serviços (API, worker Celery, PostgreSQL, Redis, frontend)
+docker compose up -d
+
+# Logs em tempo real
+docker compose logs -f api worker
+
+# Aplicar migrações (necessário após qualquer mudança de schema)
+docker compose exec api alembic upgrade head
+
+# Criar nova migração
+docker compose exec api alembic revision --autogenerate -m "descricao"
+
+# Seed completo do banco (limpa e repopula)
+docker compose exec api python tests/seed_full.py
+
+# Reiniciar worker Celery (obrigatório após alterar tasks.py ou módulos de IA)
+docker compose restart worker
+```
+
+### Testes
+
+```bash
+# Todos os testes
+docker compose exec api pytest tests/ -v
+
+# Um arquivo específico
+docker compose exec api pytest tests/test_candidaturas.py -v
+
+# Um teste específico
+docker compose exec api pytest tests/test_feature_extractor.py::TestBonusEstrutural::test_zero_overlap -v
+
+# Testes de IA com embedding real (lentos ~30s)
+docker compose exec api pytest tests/test_ai_curriculo.py tests/test_novos_curriculos.py -m slow -s -v
+
+# Relatório completo de scoring (imprime breakdown de cada CV)
+docker compose exec api pytest tests/test_novos_curriculos.py::TestPipelineNovos::test_relatorio_completo -m slow -s
+
+# Testes do reranker
+docker compose exec api pytest tests/test_reranker.py -v
+```
+
+O banco de testes (`sirs_test_db`) usa isolamento por **savepoint** por teste — não requer recriação do banco entre runs. Celery tasks e o modelo de embedding são mockados nos testes de API para velocidade.
+
+---
+
+## Arquitetura
+
+### Serviços (docker-compose)
+
+| Serviço | Porta | Função |
+|---|---|---|
+| `api` | 8000 | FastAPI + Uvicorn, auto-migrações no boot |
+| `worker` | — | Celery worker, processa CVs e mercado em background |
+| `db` | 5432 | PostgreSQL 16 + pgvector (vetores 384d) |
+| `redis` | 6379 | Broker + result backend do Celery |
+| `frontend` | 3000 | React 18 + Vite, proxy `/api/*` → api:8000 |
+
+### Pipeline de processamento de currículo
+
+Quando um PDF é enviado ou texto chega via webhook:
+
+1. **API** (`candidaturas.py`) salva o arquivo e dispara `processar_curriculo.delay()` via Celery
+2. **Celery task** (`tasks.py`) chama:
+   - `resume_parser.parsear_curriculo()` → extrai texto, gera `vetor_embedding` + `vetor_secao_exp` + `vetor_secao_skills`
+   - `matching_engine.calcular_score_rh_multi_secao()` → `score_rh` (usa seções quando disponíveis)
+   - `market_analyzer.obter_vetor_mercado()` → `score_mercado`
+   - `feature_extractor.extrair_features_curriculo()` + `extrair_features_vaga()` → bônus estrutural
+   - `matching_engine.gerar_explicacao()` → XAI salvo no `candidatura.historico`
+3. Candidatura avança para `TRIAGEM_PENDENTE`
+
+### Fórmula de scoring
+
+```
+score_rh (com seções):
+  0.60 × sim(vetor_exp_section, vetor_vaga)
++ 0.40 × sim(vetor_cv_completo, vetor_vaga)
++ bonus_estrutural × 0.6
+
+score_curriculo = clamp(score_rh × peso_rh + score_mercado × peso_mercado, 0, 1) × 100
+
+score_total = (score_curriculo/100 × peso_curriculo)
+            + (score_entrevista_rh/10 × peso_entrevista_rh)
+            + (score_entrevista_tec/10 × peso_entrevista_tec)
+```
+
+`score_rerank` (cross-encoder, sob demanda) não é persistido — retornado só na resposta do endpoint.
+
+### Máquina de estados das candidaturas
+
+Transições válidas definidas em `candidaturas.py:TRANSICOES`. Cada transição é registrada em `candidatura.historico` (JSONB) com `{de, para, ator, em}`.
+
+**Armadilha crítica do SQLAlchemy — mutação de JSONB:** Para que o SQLAlchemy detecte mudança num campo JSONB, é obrigatório criar um novo objeto list/dict:
+
+```python
+# ERRADO — SQLAlchemy não detecta a mudança, não persiste
+historico = candidatura.historico or []
+historico.append({...})
+candidatura.historico = historico  # mesma referência
+
+# CORRETO
+historico = list(candidatura.historico or [])  # nova referência
+historico.append({...})
+candidatura.historico = historico
+```
+
+O mesmo vale para qualquer campo JSONB mutado in-place (`ranking_mercado`, `gestores_ids`, etc.).
+
+### Controle de acesso (RBAC)
+
+Três papéis: `RH`, `GESTOR`, `ADMIN`. Além do papel, vagas têm `rhs_autorizados` (lista de IDs). Um RH só gerencia vagas onde é criador ou está nessa lista; vagas criadas por admin são acessíveis a qualquer RH.
+
+Guards reutilizáveis em `core/auth.py`: `QUALQUER_PAPEL`, `RH_OU_ADMIN`, `get_usuario_atual`.
+
+### Módulos de IA (`backend/app/ai/`)
+
+| Módulo | Responsabilidade |
+|---|---|
+| `resume_parser.py` | PDF → texto + vetores (embedding model singleton, lazy load) |
+| `section_extractor.py` | Segmenta CV em seções; `texto_para_rerank()` para o cross-encoder |
+| `feature_extractor.py` | Regex puro: anos (3 estratégias), senioridade, skills + proficiência, bônus ±0.25 |
+| `matching_engine.py` | Calcula `score_rh`, `score_mercado`, `score_curriculo`, `score_total`, `gerar_explicacao()` |
+| `market_analyzer.py` | Kaggle dataset + Adzuna API → vetor de mercado por cargo; filtro de EEO/benefits em `limpar_skills_desc()` |
+| `reranker.py` | Cross-encoder `BAAI/bge-reranker-base` (~270MB), lazy load na 1ª chamada; normaliza logits via sigmoid |
+| `tasks.py` | Tasks Celery: `processar_curriculo`, `processar_curriculo_texto`, `atualizar_mercado_vaga` |
+
+**Armadilha — vetores numpy como booleanos:** Campos `vetor_embedding` e `vetor_vaga` são arrays numpy. Usar `if curriculo.vetor_embedding:` levanta `ValueError`. Sempre usar:
+```python
+if curriculo.vetor_embedding is not None and vaga.vetor_vaga is not None:
+```
+
+### Recálculo de scores
+
+Quando pesos ou requisitos de uma vaga mudam, `_recalcular_scores_vaga()` em `vagas.py` recalcula `score_rh`, `score_mercado`, `score_curriculo` **e** `explicacao` para todos os currículos da vaga. É chamado automaticamente pelos endpoints `PATCH /vagas/{id}/pesos` e `PATCH /vagas/{id}/requisitos`.
+
+### Frontend (`frontend/src/`)
+
+SPA React com React Router. Navegar para a mesma rota não força remount — páginas com dados frescos (ex: Auditoria) devem ter botão de atualizar explícito ou `useEffect` com chave de navegação.
+
+Componentes compartilhados em `components/`:
+- `ExplicacaoScore.jsx` — breakdown de score (aderência, mercado, skills); usado em `VagaDetalhe` e `CandidatoDetalhe`
+- `ComparacaoCandidatos.jsx` — modal de comparação lado a lado (2–3 candidatos)
+- `Layout.jsx` — sidebar com link Auditoria visível apenas para admin
+
+`api.js` centraliza todas as chamadas HTTP via axios com interceptor JWT.
+
+### Webhook de importação
+
+`POST /webhook/importar` aceita JSON ou XML. Autenticação via header `X-Webhook-Key` (opcional em dev, configurar `WEBHOOK_SECRET_KEY` em produção). Cada candidato roda em savepoint isolado — falhas individuais não cancelam a importação dos demais.
+
+---
+
+## Variáveis de ambiente relevantes
+
+```env
+EMBEDDING_MODEL=paraphrase-multilingual-MiniLM-L12-v2   # mudar exige migração + reprocessamento
+EMBEDDING_DIM=384
+RERANKER_MODEL=BAAI/bge-reranker-base
+RERANKER_TOP_N=20
+MARKET_ANALYZER_SOURCE=kaggle   # "kaggle" | "adzuna" | "ambos"
+```
+
+Para usar o Kaggle como fonte de mercado, colocar `backend/data/postings.csv` do [LinkedIn Job Postings dataset](https://www.kaggle.com/datasets/arshkon/linkedin-job-postings).
+
+---
+
+## Estrutura de testes
+
+| Arquivo | Foco |
+|---|---|
+| `test_feature_extractor.py` | Anos (3 estratégias), senioridade, skills, proficiência, bônus estrutural |
+| `test_matching_engine.py` | Scores RH/mercado/multi-seção, XAI, score final |
+| `test_market_analyzer.py` | Detecção de categoria, extração de skills, filtragem EEO |
+| `test_ai_curriculo.py` + `test_novos_curriculos.py` | Pipeline completo com CVs reais (marcados `@pytest.mark.slow`) |
+| `test_reranker.py` | Cross-encoder unidade + endpoint, logging, fallback em erro |
+| `test_candidaturas.py` | Máquina de estados, triagem em lote, savepoints |
+| `test_entrevistas.py` | Permissões por papel e por vaga (gestor só técnica) |
+| `test_vagas.py` | CRUD, `rhs_autorizados`, recálculo de scores ao mudar pesos |
+
+
+UX / Fluxo
+
+Kanban do funil — arrastar candidatos entre etapas visualmente, em vez de trocar status por dropdown. Alto impacto para o RH no dia a dia.
+Preview de PDF inline — abrir o currículo numa lateral sem sair da página, em vez de download.
+Busca global — campo único que busca por nome de candidato, vaga ou email em qualquer tela.
+
+
+Badge de novidades — quando um CV termina de ser processado pelo Celery, mostrar notificação na interface sem precisar recarregar a página (polling simples ou WebSocket).
+Alertas de SLA — destacar candidatos que estão numa etapa há mais de X dias sem movimentação.
+IA / Matching
+
+Sugestão de perguntas de entrevista — com base no CV e nos requisitos da vaga, gerar 5–8 perguntas relevantes antes da entrevista.
+Resumo automático do candidato — parágrafo gerado pela IA com pontos chave do CV, visível no card da candidatura sem precisar abrir o PDF.
+Analytics
+
+Tempo médio por etapa — quantos dias em média um candidato fica em triagem, em entrevista, etc. Identifica gargalos no processo.
+Taxa de conversão por vaga — % de candidatos que avançam de cada etapa para a próxima, comparando vagas entre si.
+Origem dos candidatos — manual vs webhook, por vaga.
+Processo / Comunicação
+
+Templates de email automático — email pré-configurado enviado automaticamente em transições chave (aprovado triagem, reprovado, contratado).
+Formulário de feedback estruturado — após registrar resultado de entrevista, pedir avaliações em dimensões fixas (comunicação, técnica, fit cultural) com nota 1–5, além do texto livre.
+Segurança / Compliance
+
+LGPD / anonimização — opção de anonimizar dados pessoais (nome, email, telefone) de candidatos não aprovados após 6 meses.
+
+Candidatos.jsx (o que acabei de implementar): banner vermelho com borda dentro do formulário, logo acima dos botões "Cadastrar / Cancelar"
+CandidatoDetalhe.jsx (já existia): texto simples vermelho abaixo do formulário de vínculo
+
+Mais baixa (mas útil):
+
+Logins — especialmente tentativas falhas ou logins fora do horário
+Alteração de papel de usuário — escalonamento de privilégio (admin promovendo alguém)
+Recálculo manual de scores — ação admin que muda todos os rankings
+
+Backend — novos eventos auditados:
+
+Ação	Onde é gravado	Campos chave
+Vaga criada	vaga.historico	ator, em
+Status da vaga alterado	vaga.historico	de, para, ator, em
+Pesos alterados	vaga.historico	pesos_anteriores, pesos_novos, ator, em
+Requisitos alterados	vaga.historico	ator, em
+Candidatura excluída	vaga.historico (antes do DELETE)	candidato_nome/email, status_era, ator, em
+Triagem em lote	candidatura.historico (cada uma)	lote_id, total, ator, em
+Resultado de entrevista	candidatura.historico	tipo_entrevista, score, reedicao
+Tentativa falha → ponto vermelho, "Tentativa de login falhou" + motivo + IP
+Login fora do horário → ponto âmbar, "Login fora do horário" + papel + IP
+Login normal → ponto verde, "Login" + papel + IP
+
+
+TESTES 
+1. Tempo médio de processamento de currículo
+
+Escreva um script que chama as funções diretamente (sem Celery), com time.perf_counter():
+
+
+docker compose exec -T api python - <<'EOF'
+import time, statistics
+from app.ai.resume_parser import parsear_curriculo
+from app.ai.matching_engine import calcular_score_rh_multi_secao
+
+PDF = "tests/fixtures/curriculo_exemplo.pdf"  # coloque um PDF real aqui
+tempos = []
+for _ in range(5):
+    t0 = time.perf_counter()
+    resultado = parsear_curriculo(PDF)
+    tempos.append(time.perf_counter() - t0)
+
+print(f"média: {statistics.mean(tempos):.2f}s  |  min: {min(tempos):.2f}s  |  max: {max(tempos):.2f}s")
+EOF
+
+
+
+2. Ranking de 100 candidatos
+
+docker compose exec -T api python - <<'EOF'
+import time
+import app.models.candidato, app.models.candidatura, app.models.curriculo
+import app.models.vaga, app.models.entrevista, app.models.usuario
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+from app.core.config import settings
+from app.ai.matching_engine import calcular_score_rh_multi_secao
+from app.models.curriculo import Curriculo
+from app.models.vaga import Vaga
+
+engine = create_engine(settings.DATABASE_URL)
+with Session(engine) as db:
+    vaga      = db.query(Vaga).filter(Vaga.vetor_vaga != None).first()
+    curriculos = db.query(Curriculo).filter(Curriculo.vetor_embedding != None).limit(100).all()
+
+    if not vaga or not curriculos:
+        print("Sem dados suficientes — rode seed_full.py primeiro")
+    else:
+        print(f"Rankeando {len(curriculos)} currículos contra: {vaga.nome}")
+        t0 = time.perf_counter()
+        scores = [
+            calcular_score_rh_multi_secao(
+                c.vetor_embedding,
+                vaga.vetor_vaga,
+                c.vetor_secao_exp,
+            )
+            for c in curriculos
+        ]
+        elapsed = time.perf_counter() - t0
+        print(f"{len(scores)} candidatos rankeados em {elapsed:.3f}s")
+        print(f"Média por candidato : {elapsed/len(scores)*1000:.2f}ms")
+        print(f"Score mín / máx     : {min(scores):.3f} / {max(scores):.3f}")
+EOF
+
+
+3. Precisão da segmentação
+
+Requer um gabarito manual — você anota as seções esperadas em alguns currículos e compara com o output de section_extractor:
+docker compose exec -T api python - <<'EOF'
+from app.ai.section_extractor import extrair_secoes
+
+# monte um gabarito: {arquivo: seções esperadas}
+GABARITO = {
+    "tests/fixtures/cv1.txt": ["experiencia", "formacao", "habilidades"],
+    "tests/fixtures/cv2.txt": ["experiencia", "habilidades"],
+}
+
+acertos = total = 0
+for arq, esperadas in GABARITO.items():
+    texto = open(arq).read()
+    secoes = extrair_secoes(texto)          # retorna dict com as seções encontradas
+    encontradas = [k for k, v in secoes.items() if v]
+    for s in esperadas:
+        total += 1
+        if s in encontradas:
+            acertos += 1
+        else:
+            print(f"  FALTOU '{s}' em {arq}")
+
+print(f"precisão: {acertos}/{total} = {acertos/total:.0%}")
+EOF
+
+4. Consumo de memória
+
+# instala memory_profiler se não tiver
+docker compose exec -T api pip install memory-profiler -q
+
+docker compose exec -T api python - <<'EOF'
+import tracemalloc
+from app.ai.resume_parser import parsear_curriculo
+
+tracemalloc.start()
+parsear_curriculo("tests/fixtures/curriculo_exemplo.pdf")
+atual, pico = tracemalloc.get_traced_memory()
+tracemalloc.stop()
+print(f"pico de memória: {pico / 1024 / 1024:.1f} MB")
+EOF
+
+Dica geral: se quiser integrar isso aos testes existentes, adicione um arquivo tests/test_benchmark.py com @pytest.mark.slow e rode com pytest tests/test_benchmark.py -s -v. Assim fica rastreável por execução — você vê se uma mudança no modelo ou no parser degradou a performance.
+
+O gargalo mais provável é o parsear_curriculo (embedding model na primeira chamada faz lazy load). Na métrica 1, descarte a primeira iteração ou faça um "warm-up" antes de medir.
+
+A solução foi monitorar o banco de dados:
+
+Pegou-se uma candidatura real do banco que já tinha currículo vinculado
+Para cada rodada, o status da candidatura era resetado para AGUARDANDO_PROC (o estado que o worker espera antes de processar)
+processar_curriculo_texto.delay() era chamado disparando a task para o worker via Redis
+Um loop de polling com intervalo de 50ms verificava no banco quando o status mudava para TRIAGEM_PENDENTE (o estado final após processamento completo)
+O tempo entre o .delay() e a detecção da mudança de status é o tempo real ponta a ponta
+Foram feitas 5 rodadas para separar o cold start das execuções aquecidas.
+
+Abordagem para RAM
+
+Usou-se docker stats no container do worker antes e depois do benchmark — sem instrumentação dentro do processo, porque o worker roda num processo separado inacessível ao tracemalloc do script.
+
+Por que processar_curriculo_texto e não processar_curriculo
+
+A task de PDF (processar_curriculo) referenciava um caminho de arquivo que existia no container da API mas não no container do worker (volumes distintos). A task de texto evita esse problema passando o conteúdo do currículo diretamente na mensagem.
+Resultado real:
+
+Métrica	Valor
+Run 1 (cold start no worker)	8.2s
+Runs 2–5 (warm)	~165ms
+Direto parsear_curriculo (warm)	~123ms
+Overhead Celery real (warm)	+42ms (+34%)
+RAM worker idle	675 MB
+RAM worker após benchmark	1.4 GB
+Crescimento de RAM	+730 MB
+O que aconteceu:
+
+8.2s no run 1 = o worker estava carregando o modelo de embedding na memória pela primeira vez (cold start do processo Celery, não do API)
+165ms nos runs seguintes = pipeline completo (embedding + scores + XAI + escrita no banco) com overhead do broker de ~42ms
++730 MB de RAM = o modelo paraphrase-multilingual-MiniLM-L12-v2 ficou residente no worker — é um custo fixo que não cresce com mais currículos
+Resumindo: o Celery quase não adiciona latência uma vez aquecido (42ms), mas o worker precisa de ~1.4 GB de RAM por causa do modelo de embedding que ele carrega na primeira tarefa.
+
+/mnt/c/Windows/explorer.exe "$(wslpath -w /home/julia/projetos/sirs-v2/docs/documentacao_tecnica.html)"

@@ -12,9 +12,11 @@ api.interceptors.request.use(config => {
 })
 
 export const loginUsuario = (email, senha) =>
-  api.post("/auth/token", new URLSearchParams({ username: email, password: senha }), {
+  api.post("/auth/login", new URLSearchParams({ username: email, password: senha }), {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
   })
+
+export const verificarSenha = (email, senha) => loginUsuario(email, senha)
 
 export const getVagas         = ()          => api.get("/vagas/")
 export const createVaga       = (data)      => api.post("/vagas/", data)
@@ -28,10 +30,11 @@ export const analisarMercado  = (id)        => api.post(`/vagas/${id}/analisar-m
 export const rerankarVaga     = (id)        => api.post(`/vagas/${id}/rerankar`)
 export const exportarVaga     = (id)        => api.get(`/vagas/${id}/exportar`, { responseType: "blob" })
 
-export const getCandidatos    = (params)      => api.get("/candidatos/", { params })
-export const createCandidato  = (data)        => api.post("/candidatos/", data)
-export const getCandidato     = (id)          => api.get(`/candidatos/${id}`)
-export const updateCandidato  = (id, data)    => api.patch(`/candidatos/${id}`, data)
+export const getCandidatos       = (params)      => api.get("/candidatos/", { params })
+export const createCandidato     = (data)        => api.post("/candidatos/", data)
+export const getCandidato        = (id)          => api.get(`/candidatos/${id}`)
+export const updateCandidato     = (id, data)    => api.patch(`/candidatos/${id}`, data)
+export const alterarEmailCandidato = (id, emailNovo) => api.patch(`/candidatos/${id}/email`, { email_novo: emailNovo })
 
 export const getCandidaturas    = (vagaId)      => api.get(`/candidaturas/?vaga_id=${vagaId}`)
 export const getCandidaturasPorCandidato = (cid)=> api.get(`/candidaturas/?candidato_id=${cid}`)
@@ -56,14 +59,20 @@ export const getUsuarios    = ()         => api.get("/usuarios/")
 export const createUsuario  = (data)     => api.post("/usuarios/", data)
 export const updateUsuario  = (id, data) => api.patch(`/usuarios/${id}`, data)
 export const deleteUsuario  = (id)       => api.delete(`/usuarios/${id}`)
-export const getAnalyticsResumo  = ()         => api.get("/analytics/resumo")
-export const getAnalyticsFunil   = (vaga_id)  => api.get("/analytics/funil",  vaga_id ? { params: { vaga_id } } : {})
-export const getAnalyticsScores  = (vaga_id)  => api.get("/analytics/scores", { params: { vaga_id } })
-export const getAuditoria        = (params)   => api.get("/analytics/auditoria", { params })
+export const getAnalyticsResumo       = ()        => api.get("/analytics/resumo")
+export const getAnalyticsFunil        = (vaga_id) => api.get("/analytics/funil",  vaga_id ? { params: { vaga_id } } : {})
+export const getAnalyticsScores       = (vaga_id) => api.get("/analytics/scores", { params: { vaga_id } })
+export const getAnalyticsScoresPorVaga = ()       => api.get("/analytics/scores-por-vaga")
+export const getAnalyticsTopSkills    = (vaga_id) => api.get("/analytics/top-skills", vaga_id ? { params: { vaga_id } } : {})
+export const getAnalyticsPreview      = (tipo, limit = 10) => api.get("/analytics/preview", { params: { tipo, limit } })
+export const getAuditoria             = (params)  => api.get("/analytics/auditoria", { params })
 
 export const alterarSenha   = (data)     => api.patch("/auth/senha", data)
 export const esqueceuSenha  = (email)    => api.post("/auth/esqueceu-senha", { email })
 export const resetarSenha   = (data)     => api.post("/auth/resetar-senha", data)
+
+export const getConfig    = ()     => api.get("/configuracoes/")
+export const updateConfig = (data) => api.patch("/configuracoes/", data)
 
 export const uploadCurriculo = (candidaturaId, arquivo) => {
   const form = new FormData()

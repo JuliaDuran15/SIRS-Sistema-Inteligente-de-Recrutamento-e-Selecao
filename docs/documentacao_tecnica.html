@@ -668,7 +668,7 @@ sim(a, b) = a · b = Σ(aᵢ × bᵢ)  ∈ [−1, 1]
 </table>
 
 <h4>4.3 — Skills técnicas</h4>
-<p>Catálogo de 100+ skills canônicas (linguagens, frameworks, bancos de dados, cloud, DevOps, ferramentas de negócio, metodologias). Aliases normalizam variações: <code>k8s → kubernetes</code>, <code>next.js → nextjs</code>, <code>devops → ci/cd</code>, <code>spring boot → springboot</code>.</p>
+<p>Catálogo de 130+ skills canônicas (linguagens, frameworks, bancos de dados, cloud, DevOps, ferramentas de negócio, metodologias, certificações de idioma, plataformas EAD e skills de nutrição clínica). Aliases normalizam variações: <code>k8s → kubernetes</code>, <code>next.js → nextjs</code>, <code>devops → ci/cd</code>, <code>spring boot → springboot</code>, <code>lms → moodle</code>, <code>diet pro → dietpro</code>.</p>
 
 <p>A detecção usa word-boundaries customizados que incluem pontos — necessário para detectar <code>node.js</code> sem fazer falso positivo com substrings.</p>
 
@@ -922,6 +922,9 @@ score_curriculo = clamp(
   <tr><td>GET</td><td><code>/analytics/resumo</code></td><td>autenticado</td><td>Cards de resumo: vagas abertas, candidatos totais, contratados...</td></tr>
   <tr><td>GET</td><td><code>/analytics/funil</code></td><td>autenticado</td><td>Candidatos por etapa, filtrável por vaga.</td></tr>
   <tr><td>GET</td><td><code>/analytics/scores</code></td><td>autenticado</td><td>Distribuição de scores por faixa de 10 pontos, média, mediana.</td></tr>
+  <tr><td>GET</td><td><code>/analytics/scores-por-vaga</code></td><td>autenticado</td><td>Score médio e total de candidatos por vaga (top 10).</td></tr>
+  <tr><td>GET</td><td><code>/analytics/top-skills</code></td><td>autenticado</td><td>Skills mais frequentes nos CVs processados (top 15, filtrável por vaga).</td></tr>
+  <tr><td>GET</td><td><code>/analytics/preview</code></td><td>autenticado</td><td>Lista compacta (nome + vaga + status) por grupo: <code>ativas</code>, <code>decisoes_pendentes</code>, <code>contratados</code>, <code>banco_de_talentos</code>, <code>entrevistas_agendadas</code>. Usado para hover/click preview nos cards do dashboard.</td></tr>
   <tr><td>GET</td><td><code>/analytics/auditoria</code></td><td><strong>admin</strong></td><td>Log completo de todas as transições. Filtros: vaga, ator, tipo de ação, paginação.</td></tr>
 </table>
 
@@ -1060,7 +1063,7 @@ NOVO
   <tr><td><code>/vagas/:id</code></td><td><code>pages/VagaDetalhe.jsx</code></td><td>Candidatos ranqueados, triagem, editar vaga, pesos, gestores, breakdown de score.</td></tr>
   <tr><td><code>/candidatos/:id</code></td><td><code>pages/CandidatoDetalhe.jsx</code></td><td>Histórico de candidaturas, scores, breakdown XAI via <code>ExplicacaoScore</code>.</td></tr>
   <tr><td><code>/candidaturas/:id</code></td><td><code>pages/EntrevistaDetalhe.jsx</code></td><td>Entrevistas, formulário de resultado, analisador de transcrição, histórico de auditoria.</td></tr>
-  <tr><td><code>/analytics</code></td><td><code>pages/Analytics.jsx</code></td><td>Cards resumo, funil por etapa, distribuição de scores.</td></tr>
+  <tr><td><code>/dashboard</code></td><td><code>pages/Dashboard.jsx</code></td><td>Cards de resumo com hover/click preview por grupo de status, funil por etapa, distribuição de scores, score médio por vaga, top skills.</td></tr>
   <tr><td><code>/auditoria</code></td><td><code>pages/Auditoria.jsx</code></td><td>Log completo de transições (admin). Botão de refresh explícito.</td></tr>
 </table>
 
@@ -1162,6 +1165,11 @@ docker compose exec api pytest tests/test_novos_curriculos.py::TestPipelineNovos
   <tr><td><code>test_candidaturas.py</code></td><td>25</td><td>CRUD, máquina de estados, triagem em lote, historico JSONB persistido corretamente</td></tr>
   <tr><td><code>test_entrevistas.py</code></td><td>37</td><td>Permissões por papel e por vaga</td></tr>
   <tr><td><code>test_webhook.py</code></td><td>22</td><td>JSON, XML, upsert, erros parciais, origem</td></tr>
+  <tr><td><code>test_usuarios.py</code></td><td>19</td><td>CRUD de usuários, inativo não lista, admin protegido</td></tr>
+  <tr><td><code>test_analytics.py</code></td><td>22</td><td>Resumo, funil, scores, preview — filtros por papel (RH/gestor/admin)</td></tr>
+  <tr><td><code>test_setores_especificos.py</code></td><td>28</td><td>Feature extractor para setores não-tech: gastronomia, arquitetura, nutrição, idiomas (anos, senioridade, skills)</td></tr>
+  <tr><td><code>test_segmentacao.py</code></td><td>2</td><td>Gabarito de precisão da segmentação por cabeçalho e por densidade; relatório de cobertura</td></tr>
+  <tr><td><code>test_fluxo_completo.py</code></td><td>7</td><td>Fluxo end-to-end: criação de vaga → candidato → candidatura → upload CV → triagem → entrevistas → decisão final</td></tr>
 </table>
 
 

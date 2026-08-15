@@ -188,16 +188,20 @@ class TestEsqueceuSenha:
         assert body["reset_url"] is not None
         assert "token=" in body["reset_url"]
 
-    def test_email_inexistente_retorna_404(self, client):
+    def test_email_inexistente_retorna_200(self, client):
         r = client.post("/auth/esqueceu-senha", json={"email": "nao_existe@teste.com"})
-        assert r.status_code == 404
+        assert r.status_code == 200
+        assert r.json()["enviado"] is True
+        assert r.json()["reset_url"] is None
 
-    def test_usuario_inativo_retorna_404(self, client, db):
+    def test_usuario_inativo_retorna_200(self, client, db):
         u = make_usuario(db, email="inativo_forgot@teste.com")
         u.ativo = False
         db.flush()
         r = client.post("/auth/esqueceu-senha", json={"email": "inativo_forgot@teste.com"})
-        assert r.status_code == 404
+        assert r.status_code == 200
+        assert r.json()["enviado"] is True
+        assert r.json()["reset_url"] is None
 
 
 class TestResetarSenha:
