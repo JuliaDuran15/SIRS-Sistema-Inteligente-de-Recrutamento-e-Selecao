@@ -25,7 +25,7 @@ export function Candidatos() {
   })
   const [formacoes, setFormacoes] = useState([])
   const [erroForm, setErroForm]   = useState(null)
-  const { toasts, mostrarToast } = useToast()
+  const { toasts } = useToast()
 
   const carregar = useCallback((off = 0, q = busca, orig = origem) => {
     setLoading(true)

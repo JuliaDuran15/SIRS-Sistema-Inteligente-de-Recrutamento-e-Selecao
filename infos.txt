@@ -909,3 +909,5 @@ O que aconteceu:
 165ms nos runs seguintes = pipeline completo (embedding + scores + XAI + escrita no banco) com overhead do broker de ~42ms
 +730 MB de RAM = o modelo paraphrase-multilingual-MiniLM-L12-v2 ficou residente no worker — é um custo fixo que não cresce com mais currículos
 Resumindo: o Celery quase não adiciona latência uma vez aquecido (42ms), mas o worker precisa de ~1.4 GB de RAM por causa do modelo de embedding que ele carrega na primeira tarefa.
+
+/mnt/c/Windows/explorer.exe "$(wslpath -w /home/julia/projetos/sirs-v2/docs/documentacao_tecnica.html)"

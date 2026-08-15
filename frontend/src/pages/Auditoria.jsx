@@ -86,9 +86,8 @@ function ComboboxAcao({ value, onChange, opcoes }) {
 
   const opcaoAtual = opcoes.find(o => o.id === value)
 
-  useEffect(() => {
-    if (!aberto) setTexto("")
-  }, [aberto])
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { if (!aberto) setTexto("") }, [aberto])
 
   useEffect(() => {
     function fechar(e) { if (ref.current && !ref.current.contains(e.target)) setAberto(false) }
@@ -186,11 +185,6 @@ function ComboboxAcao({ value, onChange, opcoes }) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function fmt(iso) {
-  if (!iso) return "—"
-  const d = new Date(iso.endsWith("Z") ? iso : iso + "Z")
-  return d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
-}
 
 function fmtDia(iso) {
   if (!iso) return ""

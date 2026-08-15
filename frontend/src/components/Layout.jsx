@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Link, useLocation } from "react-router-dom"
 import logo from "../assets/logo.png"
 import {
@@ -198,13 +198,14 @@ export function Layout({ children, usuario, onLogout }) {
   const loc                       = useLocation()
   const [light, setLight]         = useTheme()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const lastPaths                 = useRef({})
+  const [lastPaths, setLastPaths] = useState({})
   const nomeEmpresa               = useNomeEmpresa()
 
   // Mantém o último caminho visitado por seção de navegação
   useEffect(() => {
     const root = getSectionRoot(loc.pathname)
-    lastPaths.current[root] = loc.pathname
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLastPaths(prev => ({ ...prev, [root]: loc.pathname }))
   }, [loc.pathname])
 
   const nav = [
@@ -228,7 +229,7 @@ export function Layout({ children, usuario, onLogout }) {
   useEffect(() => { setMobileOpen(false) }, [loc.pathname])
 
   const currentSection = getSectionRoot(loc.pathname)
-  const sidebarProps = { nav, usuario, onLogout, light, setLight, currentSection, lastPaths: lastPaths.current, nomeEmpresa }
+  const sidebarProps = { nav, usuario, onLogout, light, setLight, currentSection, lastPaths, nomeEmpresa }
 
   return (
     <div className="min-h-screen flex">

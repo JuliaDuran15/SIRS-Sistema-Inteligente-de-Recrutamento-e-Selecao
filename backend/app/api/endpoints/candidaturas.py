@@ -5,11 +5,11 @@ from pathlib import Path
 
 from app.api.deps import DB
 from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL, RH_OU_ADMIN, get_usuario_atual
-from app.models.usuario import PapelUsuario
 from app.core.config import settings
 from app.models.candidato import Candidato
 from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.curriculo import Curriculo
+from app.models.usuario import PapelUsuario
 from app.models.vaga import Vaga
 from app.schemas.candidatura import CandidaturaCreate, CandidaturaResponse, CurriculoDetalhado
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile

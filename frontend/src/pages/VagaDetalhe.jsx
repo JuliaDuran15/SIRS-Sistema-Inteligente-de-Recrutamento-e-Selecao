@@ -122,8 +122,6 @@ export function VagaDetalhe({ usuario }) {
     setTimeout(() => setToasts(prev => prev.map(t => t.id === id ? { ...t, saindo: true } : t)), 4100)
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4500)
   }
-  function mostrarToast(msg, tipo = "info") { mostrarToastRef.current(msg, tipo) }
-
   // IDs já notificados nesta sessão — evita toast duplo
   const notifiedRef = useRef(new Set())
 
