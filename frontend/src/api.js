@@ -64,6 +64,7 @@ export const getAnalyticsFunil        = (vaga_id) => api.get("/analytics/funil",
 export const getAnalyticsScores       = (vaga_id) => api.get("/analytics/scores", { params: { vaga_id } })
 export const getAnalyticsScoresPorVaga = ()       => api.get("/analytics/scores-por-vaga")
 export const getAnalyticsTopSkills    = (vaga_id) => api.get("/analytics/top-skills", vaga_id ? { params: { vaga_id } } : {})
+export const getAnalyticsPreview      = (tipo, limit = 10) => api.get("/analytics/preview", { params: { tipo, limit } })
 export const getAuditoria             = (params)  => api.get("/analytics/auditoria", { params })
 
 export const alterarSenha   = (data)     => api.patch("/auth/senha", data)

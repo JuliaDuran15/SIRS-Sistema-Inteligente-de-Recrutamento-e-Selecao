@@ -1082,12 +1082,13 @@ export function VagaDetalhe({ usuario }) {
                 const scoreEntTec    = c.score_entrevista_tec ?? null
                 const temEntrevistas = scoreEntRH !== null || scoreEntTec !== null
                 const scoreFinal     = c.score_total ?? curriculo?.score_curriculo ?? null
-                const processando    = c.status === "processando_curriculo" ||
+                const processando    = EM_PROC.has(c.status) ||
                                     (c.status === "triagem_pendente" && scoreRH === null)
 
                 const scoreCor =
-                  scoreFinal >= 70 ? "var(--score-high)" :
-                  scoreFinal >= 50 ? "var(--score-mid)"  : "var(--score-low)"
+                  scoreFinal === null ? "var(--t-muted2)"   :
+                  scoreFinal >= 70   ? "var(--score-high)" :
+                  scoreFinal >= 50   ? "var(--score-mid)"  : "var(--score-low)"
 
                 const emTriagem = c.status === "triagem_pendente"
 

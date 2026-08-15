@@ -102,6 +102,20 @@ _HABILIDADES_TECH: frozenset[str] = frozenset({
     'canva', 'adobe photoshop', 'adobe illustrator', 'after effects', 'premiere',
     # Idiomas (formas canônicas com acento)
     'inglês', 'espanhol', 'francês', 'alemão', 'italiano', 'mandarim', 'japonês', 'português',
+    # Ensino & plataformas EAD / LMS
+    'moodle', 'google classroom', 'canvas lms',
+    # Certificações de ensino de idiomas
+    'celta', 'delta', 'tefl', 'tesol',
+    # Exames de proficiência internacional
+    'ielts', 'toefl', 'dalf',
+    # Nutrição clínica
+    'avaliação nutricional', 'antropometria', 'plano alimentar',
+    'nutrição clínica', 'nutrição esportiva', 'nutrição hospitalar',
+    'dietoterapia', 'educação nutricional',
+    # Software de nutrição
+    'dietpro', 'avanutri', 'dietbox',
+    # Registro profissional
+    'crn',
 })
 
 # ── Aliases → forma canônica ──────────────────────────────────────────────────
@@ -167,6 +181,16 @@ _ALIASES: dict[str, str] = {
     'chinese': 'mandarim', 'mandarin': 'mandarim',
     'japones': 'japonês', 'japanese': 'japonês',
     'portugues': 'português',
+    # Ensino / LMS
+    'lms': 'moodle',
+    'classroom': 'google classroom',
+    # Software de nutrição
+    'diet pro': 'dietpro',
+    'diet box': 'dietbox',
+    'ava nutri': 'avanutri', 'avamulti': 'avanutri', 'ava multi': 'avanutri',
+    # Nutrição — variações sem acento
+    'avaliacao nutricional': 'avaliação nutricional',
+    'educacao nutricional': 'educação nutricional',
 }
 
 

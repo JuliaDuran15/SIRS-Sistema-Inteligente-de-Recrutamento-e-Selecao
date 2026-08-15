@@ -3,9 +3,9 @@ Seed completo — popula o banco com dados realistas e inter-relacionados.
 
 Cria:
   6 usuários  (2 RH, 3 gestores, 1 admin)
- 10 vagas     (tech, rh, direito, engenharia, financeiro, marketing)
- 30 candidatos com formações e perfis variados
- ~55 candidaturas distribuídas em TODAS as etapas do pipeline
+ 12 vagas     (tech, rh, direito, engenharia, financeiro, marketing, nutrição, idiomas)
+ 36 candidatos com formações e perfis variados
+ ~65 candidaturas distribuídas em TODAS as etapas do pipeline
  Currículos processados (scores reais via embedding)
  Entrevistas agendadas e realizadas com notas e histórico de edições
 
@@ -92,6 +92,8 @@ GESTORES_POR_VAGA = [
     ["daniela@sirs.com", "eduardo@sirs.com"],          # 7: Financeiro
     ["carlos@sirs.com", "daniela@sirs.com"],           # 8: Product Designer
     ["eduardo@sirs.com"],                              # 9: Marketing
+    ["daniela@sirs.com"],                              # 10: Nutricionista
+    ["daniela@sirs.com", "eduardo@sirs.com"],          # 11: Professora Idiomas
 ]
 
 SPECS_VAGAS = [
@@ -173,6 +175,28 @@ SPECS_VAGAS = [
             "Analista de marketing digital com experiência em Google Ads, Meta Ads, SEO, "
             "Google Analytics 4, CRM (HubSpot/RD Station) e email marketing. "
             "Criação de conteúdo, copywriting e gestão de social media. Growth hacking é plus."
+        ),
+    },
+    {
+        "nome": "Nutricionista Clínica",
+        "req": (
+            "Nutricionista para atendimento clínico em consultório e ambulatório hospitalar. "
+            "CRN ativo obrigatório. Experiência em avaliação nutricional, antropometria e "
+            "elaboração de planos alimentares individualizados. Conhecimento em dietoterapia "
+            "aplicada a diabetes, hipertensão, obesidade e doenças renais. "
+            "Habilidade com software DietPro ou AvaNutri. Educação nutricional em grupo. "
+            "Diferencial: nutrição esportiva, nutrição hospitalar e prontuário eletrônico."
+        ),
+    },
+    {
+        "nome": "Professora de Idiomas — Inglês e Espanhol",
+        "req": (
+            "Professora de idiomas para ensino de inglês e espanhol, nível intermediário ao avançado. "
+            "Domínio fluente de inglês (C1/C2) e espanhol nativo ou fluente obrigatórios. "
+            "Experiência em preparação para exames internacionais: IELTS, TOEFL, DELE e DALF. "
+            "Diferenciais: francês, alemão ou mandarim. Certificação CELTA ou equivalente. "
+            "Uso de plataformas AVA (Moodle), elaboração de materiais didáticos próprios, "
+            "ensino presencial e online. Perfil dinâmico, didático e comprometido."
         ),
     },
 ]
@@ -438,6 +462,86 @@ CANDIDATOS_DATA = [
          portfolio=None,
          formacao=[{"curso":"Comunicação Social","instituicao":"UFC","nivel":"graduacao","status":"concluido","ano_conclusao":2021}],
          cv="Marketing digital júnior. Social media, criação de conteúdo, Google Analytics básico, Canva. 2 anos."),
+
+    # Nutrição — candidatos para testar detecção de skills nutricionais (30–32)
+    dict(nome="Beatriz Nogueira",   email="beatriz.nogueira@email.com",  tel="11991110034",
+         nasc=date(1989,5,8),  cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/beatriz-nogueira-nutri",
+         portfolio=None,
+         formacao=[{"curso":"Nutrição","instituicao":"USP","nivel":"graduacao","status":"concluido","ano_conclusao":2011},
+                   {"curso":"Nutrição Clínica e Esportiva","instituicao":"GANEP","nivel":"especializacao","status":"concluido","ano_conclusao":2014}],
+         cv=(
+             "Nutricionista clínica sênior com 14 anos de experiência. CRN ativo. "
+             "Avaliação nutricional e antropometria. Elaboração de planos alimentares individualizados. "
+             "Dietoterapia aplicada a diabetes, hipertensão e obesidade. "
+             "Nutrição esportiva e nutrição hospitalar. Software DietPro avançado. "
+             "Educação nutricional em grupo e prontuário eletrônico. "
+             "Docência em cursos de pós-graduação em nutrição clínica."
+         )),
+
+    dict(nome="Camila Nascimento",  email="camila.nascimento@email.com", tel="11991110035",
+         nasc=date(1994,9,14), cidade="Campinas",      uf="SP",
+         linkedin="https://linkedin.com/in/camila-nascimento-nutri",
+         portfolio=None,
+         formacao=[{"curso":"Nutrição","instituicao":"UNICAMP","nivel":"graduacao","status":"concluido","ano_conclusao":2016}],
+         cv=(
+             "Nutricionista plena com 7 anos de experiência em nutrição hospitalar e clínica. "
+             "CRN ativo. Avaliação nutricional e plano alimentar para pacientes com doenças renais e oncológicas. "
+             "Antropometria e triagem nutricional. AvaNutri e prontuário eletrônico. "
+             "Experiência em UTI e enfermarias. Educação nutricional e orientação alimentar."
+         )),
+
+    dict(nome="Renato Cavalcante",  email="renato.cavalcante@email.com", tel="11991110036",
+         nasc=date(2000,2,21), cidade="Recife",         uf="PE",
+         linkedin=None,
+         portfolio=None,
+         formacao=[{"curso":"Nutrição","instituicao":"UFPE","nivel":"graduacao","status":"concluido","ano_conclusao":2022}],
+         cv=(
+             "Nutricionista júnior com 2 anos de experiência em consultório particular. "
+             "CRN ativo. Atendimento clínico, avaliação nutricional básica e planos alimentares. "
+             "Foco em educação nutricional e reeducação alimentar. DietBox. "
+             "Interesse em nutrição esportiva. Excel e Google Workspace."
+         )),
+
+    # Idiomas — candidatos para testar detecção de skills de línguas (33–35)
+    dict(nome="Sofia Andrade",      email="sofia.andrade@email.com",     tel="11991110031",
+         nasc=date(1990,3,14), cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/sofia-andrade-idiomas",
+         portfolio=None,
+         formacao=[{"curso":"Letras — Inglês","instituicao":"USP","nivel":"graduacao","status":"concluido","ano_conclusao":2012},
+                   {"curso":"Língua e Cultura Espanhola","instituicao":"Universidad de Salamanca","nivel":"especializacao","status":"concluido","ano_conclusao":2015}],
+         cv=(
+             "Professora de inglês e espanhol com 12 anos de experiência em cursos de idiomas e corporativo. "
+             "Certificação CELTA (Cambridge) e DELE C2 (espanhol). "
+             "Inglês fluente (C2) e espanhol nativo. Noções de francês e italiano. "
+             "Preparação para IELTS, TOEFL e DELE. Uso avançado de Moodle e Google Classroom. "
+             "Elaboração de materiais didáticos próprios. Ensino presencial e online."
+         )),
+
+    dict(nome="Pedro Yamamoto",     email="pedro.yamamoto@email.com",    tel="11991110032",
+         nasc=date(1988,7,22), cidade="São Paulo",     uf="SP",
+         linkedin=None,
+         portfolio=None,
+         formacao=[{"curso":"Letras — Português/Inglês","instituicao":"UNIFESP","nivel":"graduacao","status":"concluido","ano_conclusao":2011}],
+         cv=(
+             "Professor de inglês com 13 anos de experiência. Certificação CELTA. "
+             "English fluent (C2), japonês nativo (N1). "
+             "Preparação para IELTS e TOEFL. Sem domínio de espanhol ou outras línguas latinas. "
+             "Experiência em escola de idiomas e aulas particulares. Moodle e Zoom."
+         )),
+
+    dict(nome="Marie Dupont",       email="marie.dupont@email.com",      tel="11991110033",
+         nasc=date(1993,11,5), cidade="Rio de Janeiro", uf="RJ",
+         linkedin="https://linkedin.com/in/marie-dupont-idiomas",
+         portfolio=None,
+         formacao=[{"curso":"Letras — Francês/Português","instituicao":"UFRJ","nivel":"graduacao","status":"concluido","ano_conclusao":2015}],
+         cv=(
+             "Professora de francês e inglês com 8 anos de experiência. "
+             "Francês nativo (C2), inglês fluente (C1), espanhol intermediário (B2), alemão básico (A2). "
+             "Certificação DALF C2 e Cambridge CPE. Preparação para DELF/DALF e Cambridge Exams. "
+             "Experiência em cursos livres, colégio bilíngue e preparatório para vestibular. "
+             "Moodle, Teams e materiais autorais."
+         )),
 ]
 
 def criar_candidatos():
@@ -535,6 +639,20 @@ VINCULOS = [
     (29, 9, "aprovado_triagem"),    # Priscila             → aprovada
     (24, 9, "banco_talentos"),      # Stephanie (design)   → banco talentos
     (12, 9, "triagem_pendente"),    # Juliana (RH)         → triagem
+
+    # ── Nutricionista Clínica (vaga 10) ───────────────────────────────────────
+    (30, 10, "contratada"),         # Beatriz N. (sênior, DietPro)    → contratada
+    (31, 10, "tec_realizada"),      # Camila N. (plena, hospitalar)   → aguardando decisão
+    (32, 10, "aprovado_triagem"),   # Renato N. (júnior, esp. esp.)   → aprovado triagem
+    (13, 10, "reprovado_triagem"),  # Patricia (RH, sem nutrição)     → reprovada
+    (22, 10, "triagem_pendente"),   # Leonardo (financeiro)           → triagem
+
+    # ── Professora de Idiomas (vaga 11) ───────────────────────────────────────
+    (33, 11, "contratada"),         # Sofia (inglês+esp. C2)       → contratada
+    (34, 11, "tec_realizada"),      # Pedro (inglês C2, sem esp.)  → aguardando decisão
+    (35, 11, "aprovado_triagem"),   # Marie (fr nativo+ing+esp B2) → aprovada triagem
+    (13, 11, "reprovado_triagem"),  # Patricia (RH, sem idiomas)   → reprovada
+    (17, 11, "triagem_pendente"),   # Larissa (direito)            → triagem
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

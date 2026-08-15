@@ -1,5 +1,5 @@
 from app.api.deps import DB
-from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL
+from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL, RH_OU_ADMIN
 from app.models.usuario import PapelUsuario, Usuario
 from app.schemas.usuario import UsuarioCreate, UsuarioResponse, UsuarioUpdate
 from fastapi import APIRouter, HTTPException
@@ -27,7 +27,7 @@ def criar_usuario(dados: UsuarioCreate, db: Session = DB, _=APENAS_ADMIN):
 
 
 @router.get("/", response_model=list[UsuarioResponse])
-def listar_usuarios(db: Session = DB, _=QUALQUER_PAPEL):
+def listar_usuarios(db: Session = DB, _=RH_OU_ADMIN):
     return db.query(Usuario).filter(Usuario.ativo == True).all()  # noqa: E712
 
 

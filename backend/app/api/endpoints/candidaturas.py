@@ -5,6 +5,7 @@ from pathlib import Path
 
 from app.api.deps import DB
 from app.core.auth import APENAS_ADMIN, QUALQUER_PAPEL, RH_OU_ADMIN, get_usuario_atual
+from app.models.usuario import PapelUsuario
 from app.core.config import settings
 from app.models.candidato import Candidato
 from app.models.candidatura import Candidatura, StatusCandidatura
@@ -113,7 +114,7 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 @router.post("/{candidatura_id}/curriculo", response_model=CandidaturaResponse)
 def upload_curriculo(candidatura_id: str, arquivo: UploadFile = File(...),
-                     db: Session = DB, _=RH_OU_ADMIN):
+                     db: Session = DB, usuario=RH_OU_ADMIN):
     if not arquivo.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Apenas arquivos PDF são aceitos")
 
@@ -126,6 +127,17 @@ def upload_curriculo(candidatura_id: str, arquivo: UploadFile = File(...),
     candidatura = db.query(Candidatura).filter(Candidatura.id == candidatura_id).first()
     if not candidatura:
         raise HTTPException(status_code=404, detail="Candidatura não encontrada")
+
+    if candidatura.status != StatusCandidatura.NOVO:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Currículo não pode ser enviado neste momento (status: {candidatura.status.value})",
+        )
+
+    if usuario.papel == PapelUsuario.RH:
+        vaga = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
+        if vaga and vaga.rhs_autorizados and str(usuario.id) not in vaga.rhs_autorizados:
+            raise HTTPException(status_code=403, detail="Você não tem acesso a esta vaga")
 
     nome_arquivo = f"{uuid_lib.uuid4()}.pdf"
     caminho      = UPLOAD_DIR / nome_arquivo
@@ -167,7 +179,7 @@ def upload_curriculo_texto(
     candidatura_id: str,
     dados: CurriculoTextoInput,
     db: Session = DB,
-    _=RH_OU_ADMIN,
+    usuario=RH_OU_ADMIN,
 ):
     if not dados.texto.strip():
         raise HTTPException(status_code=400, detail="Texto do currículo não pode estar vazio")
@@ -175,6 +187,17 @@ def upload_curriculo_texto(
     candidatura = db.query(Candidatura).filter(Candidatura.id == candidatura_id).first()
     if not candidatura:
         raise HTTPException(status_code=404, detail="Candidatura não encontrada")
+
+    if candidatura.status != StatusCandidatura.NOVO:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Currículo não pode ser enviado neste momento (status: {candidatura.status.value})",
+        )
+
+    if usuario.papel == PapelUsuario.RH:
+        vaga = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
+        if vaga and vaga.rhs_autorizados and str(usuario.id) not in vaga.rhs_autorizados:
+            raise HTTPException(status_code=403, detail="Você não tem acesso a esta vaga")
 
     curriculo = db.query(Curriculo).filter(Curriculo.candidatura_id == candidatura_id).first()
     if not curriculo:
@@ -236,7 +259,6 @@ _TRIAGEM_DESTINOS = {
 class TriagemEmLoteRequest(BaseModel):
     candidatura_ids : list[str]
     novo_status     : StatusCandidatura
-    ator            : str = "rh"
 
 
 class TriagemEmLoteResponse(BaseModel):
@@ -276,14 +298,14 @@ def triagem_em_lote(
                 erros.append({"id": cid, "detalhe": "Não encontrada"})
                 sp.rollback()
                 continue
-            transicionar(candidatura, dados.novo_status, ator=dados.ator)
+            transicionar(candidatura, dados.novo_status, ator=usuario.nome)
 
             novo_hist = list(candidatura.historico or [])
             novo_hist.append({
                 "tipo"    : "triagem_lote",
                 "lote_id" : lote_id,
                 "total"   : total,
-                "ator"    : dados.ator,
+                "ator"    : usuario.nome,
                 "em"      : datetime.utcnow().isoformat(),
             })
             candidatura.historico = novo_hist
@@ -350,9 +372,10 @@ def atualizar_status(
         candidato = db.query(Candidato).filter(Candidato.id == candidatura.candidato_id).first()
         vaga_obj  = db.query(Vaga).filter(Vaga.id == candidatura.vaga_id).first()
         if candidato and candidato.email and vaga_obj:
-            rh_ids = list(vaga_obj.rhs_autorizados or [])
-            if vaga_obj.criado_por_id:
-                rh_ids.append(str(vaga_obj.criado_por_id))
+            rh_ids = list(dict.fromkeys(
+                list(vaga_obj.rhs_autorizados or []) +
+                ([str(vaga_obj.criado_por_id)] if vaga_obj.criado_por_id else [])
+            ))
             rh_emails = [
                 u.email for u in db.query(Usuario).filter(Usuario.id.in_(rh_ids)).all()
                 if u.email

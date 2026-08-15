@@ -15,7 +15,7 @@ from app.models.usuario import PapelUsuario, Usuario
 from app.models.vaga import Vaga
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import func, or_
+from sqlalchemy import case, func, or_
 from sqlalchemy.orm import Session
 
 router = APIRouter()
@@ -46,6 +46,17 @@ class ResumoGeral(BaseModel):
     entrevistas_agendadas  : int
     decisoes_pendentes     : int
     contratados_total      : int
+
+
+class PreviewItem(BaseModel):
+    candidatura_id : str
+    candidato_nome : str
+    vaga_nome      : str
+    status         : str
+
+class PreviewResponse(BaseModel):
+    items : list[PreviewItem]
+    total : int
 
 
 class BucketScore(BaseModel):
@@ -315,6 +326,73 @@ def top_skills(
         skills=[SkillCount(skill=s, contagem=c) for s, c in top],
         vaga_id=vaga_id,
         vaga_nome=vaga_nome,
+    )
+
+
+_PREVIEW_STATUSES: dict[str, list] = {
+    "ativas"               : list(_STATUSES_ATIVOS),
+    "decisoes_pendentes"   : [StatusCandidatura.DECISAO_PENDENTE],
+    "contratados"          : [StatusCandidatura.CONTRATADO],
+    "banco_de_talentos"    : [StatusCandidatura.BANCO_TALENTOS],
+    "entrevistas_agendadas": [
+        StatusCandidatura.ENTREVISTA_RH_AGENDADA,
+        StatusCandidatura.ENTREVISTA_TEC_AGENDADA,
+    ],
+}
+
+_TIPOS_VALIDOS = "|".join(_PREVIEW_STATUSES.keys())
+
+
+@router.get("/preview", response_model=PreviewResponse)
+def preview_candidaturas(
+    tipo    : str     = Query(..., regex=f"^({_TIPOS_VALIDOS})$"),
+    limit   : int     = Query(100, ge=1, le=200),
+    db      : Session = DB,
+    usuario           = Depends(get_usuario_atual),
+):
+    """Lista compacta de candidaturas por grupo para hover/click preview."""
+    vaga_ids = _vagas_ids_query(usuario, db)
+    statuses = _PREVIEW_STATUSES[tipo]
+
+    # Para "ativas", triagem_pendente aparece primeiro; demais ordenam por data
+    prioridade = case(
+        (Candidatura.status == StatusCandidatura.TRIAGEM_PENDENTE, 0),
+        else_=1,
+    )
+
+    rows = (
+        db.query(Candidatura, Candidato.nome, Vaga.nome)
+        .join(Candidato, Candidatura.candidato_id == Candidato.id)
+        .join(Vaga,      Candidatura.vaga_id      == Vaga.id)
+        .filter(
+            Candidatura.vaga_id.in_(vaga_ids),
+            Candidatura.status.in_(statuses),
+        )
+        .order_by(prioridade, Candidatura.criado_em.desc())
+        .limit(limit)
+        .all()
+    )
+
+    total = (
+        db.query(func.count(Candidatura.id))
+        .filter(
+            Candidatura.vaga_id.in_(vaga_ids),
+            Candidatura.status.in_(statuses),
+        )
+        .scalar()
+    )
+
+    return PreviewResponse(
+        items=[
+            PreviewItem(
+                candidatura_id=str(c.id),
+                candidato_nome=candidato_nome,
+                vaga_nome=vaga_nome,
+                status=c.status.value,
+            )
+            for c, candidato_nome, vaga_nome in rows
+        ],
+        total=total,
     )
 
 

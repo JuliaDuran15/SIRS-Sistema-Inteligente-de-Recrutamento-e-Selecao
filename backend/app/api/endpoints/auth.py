@@ -20,7 +20,7 @@ _BRT = timezone(timedelta(hours=-3))
 def _fora_horario_comercial(agora_utc: datetime) -> bool:
     """True se o login for fora do horário comercial brasileiro (seg-sex 07h-22h BRT)."""
     brt = agora_utc.replace(tzinfo=timezone.utc).astimezone(_BRT)
-    return brt.weekday() >= 5 or brt.hour < 7 or brt.hour >= 24
+    return brt.weekday() >= 5 or brt.hour < 7 or brt.hour >= 22
 
 
 def _registrar_login(usuario: Usuario, db: Session, *, sucesso: bool,
@@ -153,7 +153,7 @@ def esqueceu_senha(dados: EsqueceuSenhaRequest, db: Session = DB):
         Usuario.email == dados.email, Usuario.ativo == True  # noqa: E712
     ).first()
     if not usuario:
-        raise HTTPException(status_code=404, detail="Email não encontrado")
+        return {"enviado": True, "reset_url": None}
 
     token = criar_token({
         "sub" : usuario.email,

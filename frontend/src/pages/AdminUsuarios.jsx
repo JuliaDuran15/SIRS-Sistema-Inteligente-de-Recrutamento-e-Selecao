@@ -168,7 +168,7 @@ function SeletorPapel({ valor, onChange }) {
   return (
     <Campo label="Papel">
       <div className="flex gap-2">
-        {["rh", "gestor"].map(p => (
+        {["rh", "gestor", "admin"].map(p => (
           <button key={p} type="button"
             onClick={() => onChange(p)}
             className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all"

@@ -11,6 +11,7 @@ from app.ai.feature_extractor import (
 from app.ai.market_analyzer import analisar_mercado
 from app.ai.matching_engine import (
     calcular_score_curriculo,
+    calcular_score_final,
     calcular_score_mercado,
     calcular_score_rh,
     calcular_score_rh_multi_secao,
@@ -66,6 +67,25 @@ def _verificar_nome_cv(nome_candidato: str, texto_cv: str) -> dict:
         "tokens_ausentes"  : ausentes,
         "trecho_analisado" : trecho.strip()[:120],
     }
+
+
+def _transicionar(candidatura, novo_status, ator: str = "sistema") -> None:
+    """Aplica transição de estado registrando no histórico (sem HTTPException)."""
+    from app.api.endpoints.candidaturas import TRANSICOES
+    permitidos = TRANSICOES.get(candidatura.status, [])
+    if novo_status not in permitidos:
+        raise ValueError(
+            f"Transição inválida: {candidatura.status.value} → {novo_status.value}"
+        )
+    historico = list(candidatura.historico or [])
+    historico.append({
+        "de"  : candidatura.status.value,
+        "para": novo_status.value,
+        "ator": ator,
+        "em"  : datetime.utcnow().isoformat(),
+    })
+    candidatura.historico = historico
+    candidatura.status    = novo_status
 
 
 def _recalcular_scores_mercado(db, vaga: Vaga) -> int:
@@ -124,6 +144,16 @@ def _recalcular_scores_mercado(db, vaga: Vaga) -> int:
             cur.score_mercado   = round(novo_mkt * 100, 1)
             cur.score_curriculo = novo_final
             cur.explicacao      = nova_expl
+            cand = db.query(_Cand).filter(_Cand.id == cur.candidatura_id).first()
+            if cand:
+                cand.score_total = calcular_score_final(
+                    novo_final,
+                    cand.score_entrevista_rh,
+                    cand.score_entrevista_tec,
+                    vaga.peso_curriculo,
+                    vaga.peso_entrevista_rh,
+                    vaga.peso_entrevista_tec,
+                )
             count += 1
         except Exception as exc:
             logger.warning(f"curriculo {cur.id} | falha no recálculo de scores: {exc}")
@@ -175,6 +205,11 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
 
         if vaga.vetor_vaga is None:
             raise ValueError("Vaga não possui vetor — crie a vaga antes de processar currículos")
+
+        # Transição: AGUARDANDO_PROC → PROCESSANDO (retry-safe)
+        if candidatura.status == StatusCandidatura.AGUARDANDO_PROC:
+            _transicionar(candidatura, StatusCandidatura.PROCESSANDO)
+            db.commit()
 
         # 2. Parseia o currículo — extrai texto e gera vetor
         resultado = parsear_curriculo(caminho_pdf)
@@ -230,8 +265,8 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
             )
             hist = list(candidatura.historico or [])
             hist.append({
-                "de"    : str(candidatura.status),
-                "para"  : str(candidatura.status),
+                "de"    : candidatura.status.value,
+                "para"  : candidatura.status.value,
                 "ator"  : "sistema",
                 "em"    : datetime.utcnow().isoformat(),
                 "alerta": "nome_cv_divergente",
@@ -263,8 +298,8 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
         curriculo.explicacao      = explicacao
         curriculo.processado_em   = datetime.utcnow()
 
-        candidatura.status = StatusCandidatura.TRIAGEM_PENDENTE
-        from app.ai.matching_engine import calcular_score_final
+        if candidatura.status == StatusCandidatura.PROCESSANDO:
+            _transicionar(candidatura, StatusCandidatura.TRIAGEM_PENDENTE)
         candidatura.score_total = calcular_score_final(
             score_curriculo,
             candidatura.score_entrevista_rh,
@@ -297,8 +332,8 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
             if cand:
                 hist = list(cand.historico or [])
                 hist.append({
-                    "de"  : str(cand.status),
-                    "para": StatusCandidatura.NOVO,
+                    "de"  : cand.status.value,
+                    "para": StatusCandidatura.NOVO.value,
                     "ator": "sistema",
                     "em"  : datetime.utcnow().isoformat(),
                     "erro": str(exc),
@@ -394,6 +429,11 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
         if vaga.vetor_vaga is None:
             raise ValueError("Vaga não possui vetor — tente novamente após a vaga ser vetorizada")
 
+        # Transição: AGUARDANDO_PROC → PROCESSANDO (retry-safe)
+        if candidatura.status == StatusCandidatura.AGUARDANDO_PROC:
+            _transicionar(candidatura, StatusCandidatura.PROCESSANDO)
+            db.commit()
+
         vetor  = vetorizar_texto(texto)
         secs   = vetorizar_secoes(texto)
         termos = (vaga.ranking_mercado or {}).get("termos")
@@ -440,8 +480,8 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
             )
             hist = list(candidatura.historico or [])
             hist.append({
-                "de"    : str(candidatura.status),
-                "para"  : str(candidatura.status),
+                "de"    : candidatura.status.value,
+                "para"  : candidatura.status.value,
                 "ator"  : "sistema",
                 "em"    : datetime.utcnow().isoformat(),
                 "alerta": "nome_cv_divergente",
@@ -471,8 +511,8 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
         curriculo.explicacao      = explicacao
         curriculo.processado_em   = datetime.utcnow()
 
-        candidatura.status = StatusCandidatura.TRIAGEM_PENDENTE
-        from app.ai.matching_engine import calcular_score_final
+        if candidatura.status == StatusCandidatura.PROCESSANDO:
+            _transicionar(candidatura, StatusCandidatura.TRIAGEM_PENDENTE)
         candidatura.score_total = calcular_score_final(
             score_curriculo,
             candidatura.score_entrevista_rh,
@@ -505,8 +545,8 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
             if cand:
                 hist = list(cand.historico or [])
                 hist.append({
-                    "de"  : str(cand.status),
-                    "para": StatusCandidatura.NOVO,
+                    "de"  : cand.status.value,
+                    "para": StatusCandidatura.NOVO.value,
                     "ator": "sistema",
                     "em"  : datetime.utcnow().isoformat(),
                     "erro": str(exc),

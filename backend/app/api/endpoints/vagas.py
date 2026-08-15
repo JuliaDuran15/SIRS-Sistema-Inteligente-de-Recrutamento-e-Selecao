@@ -201,6 +201,8 @@ def _recalcular_scores_vaga(vaga: Vaga, db: Session) -> int:
             vaga.peso_mercado,
             bonus,
         )
+        curriculo.score_rh        = round(s_rh * 100, 1)
+        curriculo.score_mercado   = round(s_mkt * 100, 1)
         curriculo.score_curriculo = novo_score
         curriculo.explicacao = gerar_explicacao(
             s_rh, s_mkt, novo_score,
@@ -351,13 +353,15 @@ def atualizar_rhs_autorizados(
     return vaga
 
 
-@router.delete("/{vaga_id}", status_code=204)
+@router.delete("/{vaga_id}", response_model=VagaResponse, status_code=200)
 def deletar_vaga(vaga_id: str, db: Session = DB, _=APENAS_ADMIN):
     vaga = db.query(Vaga).filter(Vaga.id == vaga_id).first()
     if not vaga:
         raise HTTPException(status_code=404, detail="Vaga não encontrada")
     vaga.status = "fechada"
     db.commit()
+    db.refresh(vaga)
+    return vaga
 
 
 @router.post("/{vaga_id}/rerankar", response_model=list[CandidaturaRerankItem])

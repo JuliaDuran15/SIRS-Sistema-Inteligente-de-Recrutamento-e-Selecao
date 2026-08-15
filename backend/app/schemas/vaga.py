@@ -11,13 +11,13 @@ class VagaCreate(BaseModel):
     gestores_ids     : list[str] = []
 
     # Pesos do score curricular — devem somar 1.0
-    peso_rh      : float = 0.6
-    peso_mercado : float = 0.4
+    peso_rh      : float = Field(0.6,  ge=0.0, le=1.0)
+    peso_mercado : float = Field(0.4,  ge=0.0, le=1.0)
 
     # Pesos do score consolidado final — devem somar 1.0
-    peso_curriculo      : float = 0.50
-    peso_entrevista_rh  : float = 0.25
-    peso_entrevista_tec : float = 0.25
+    peso_curriculo      : float = Field(0.50, ge=0.0, le=1.0)
+    peso_entrevista_rh  : float = Field(0.25, ge=0.0, le=1.0)
+    peso_entrevista_tec : float = Field(0.25, ge=0.0, le=1.0)
 
     @field_validator("nome", "requisitos_texto", mode="before")
     @classmethod
@@ -68,11 +68,11 @@ class RhsAutorizadosUpdate(BaseModel):
 
 
 class VagaUpdatePesos(BaseModel):
-    peso_rh             : float
-    peso_mercado        : float
-    peso_curriculo      : float
-    peso_entrevista_rh  : float
-    peso_entrevista_tec : float
+    peso_rh             : float = Field(..., ge=0.0, le=1.0)
+    peso_mercado        : float = Field(..., ge=0.0, le=1.0)
+    peso_curriculo      : float = Field(..., ge=0.0, le=1.0)
+    peso_entrevista_rh  : float = Field(..., ge=0.0, le=1.0)
+    peso_entrevista_tec : float = Field(..., ge=0.0, le=1.0)
 
     @model_validator(mode="after")
     def validar_pesos(self):
