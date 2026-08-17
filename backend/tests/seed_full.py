@@ -2,9 +2,9 @@
 Seed completo — popula o banco com dados realistas e inter-relacionados.
 
 Cria:
-  6 usuários  (2 RH, 3 gestores, 1 admin)
+  7 usuários  (3 RH, 3 gestores, 1 admin)
  12 vagas     (tech, rh, direito, engenharia, financeiro, marketing, nutrição, idiomas)
- 36 candidatos com formações e perfis variados
+ 37 candidatos com formações e perfis variados
  ~65 candidaturas distribuídas em TODAS as etapas do pipeline
  Currículos processados (scores reais via embedding)
  Entrevistas agendadas e realizadas com notas e histórico de edições
@@ -61,12 +61,13 @@ def limpar():
 # ─────────────────────────────────────────────────────────────────────────────
 def criar_usuarios():
     rows = [
-        ("Ana Paula Ramos",    "ana@sirs.com",          "senha123",           PapelUsuario.RH),
-        ("Bruno Mendes",       "bruno@sirs.com",        "senha123",           PapelUsuario.RH),
-        ("Carlos Andrade",     "carlos@sirs.com",       "senha123",           PapelUsuario.GESTOR),
-        ("Daniela Torres",     "daniela@sirs.com",      "senha123",           PapelUsuario.GESTOR),
-        ("Eduardo Silva",      "eduardo@sirs.com",      "senha123",           PapelUsuario.GESTOR),
-        ("Administrador",      settings.ADMIN_EMAIL,    settings.ADMIN_SENHA, PapelUsuario.ADMIN),
+        ("Ana Paula Ramos",    "ana@sirs.com",                 "senha123",           PapelUsuario.RH),
+        ("Bruno Mendes",       "bruno@sirs.com",               "senha123",           PapelUsuario.RH),
+        ("Julia Duran",        "leitorairritada@gmail.com",    "senha123",           PapelUsuario.RH),
+        ("Carlos Andrade",     "carlos@sirs.com",              "senha123",           PapelUsuario.GESTOR),
+        ("Daniela Torres",     "daniela@sirs.com",             "senha123",           PapelUsuario.GESTOR),
+        ("Eduardo Silva",      "eduardo@sirs.com",             "senha123",           PapelUsuario.GESTOR),
+        ("Administrador",      settings.ADMIN_EMAIL,           settings.ADMIN_SENHA, PapelUsuario.ADMIN),
     ]
     usuarios = [
         Usuario(nome=n, email=e, senha_hash=hash_senha(s), papel=p)
@@ -542,6 +543,21 @@ CANDIDATOS_DATA = [
              "Experiência em cursos livres, colégio bilíngue e preparatório para vestibular. "
              "Moodle, Teams e materiais autorais."
          )),
+
+    # índice 36 — candidata real
+    dict(nome="Julia Duran",        email="juliaduran1515@gmail.com",    tel="11991110038",
+         nasc=date(2000,1,15), cidade="São Paulo",     uf="SP",
+         linkedin="https://linkedin.com/in/julia-machado-duran-791317253",
+         portfolio="https://github.com/JuliaDuran15",
+         formacao=[{"curso":"Ciência da Computação","instituicao":"UFRJ","nivel":"graduacao","status":"em_andamento","ano_conclusao":None}],
+         cv=(
+             "Desenvolvedora Python com 3 anos de experiência em projetos de backend. "
+             "FastAPI, SQLAlchemy, PostgreSQL, Docker e Docker Compose. "
+             "APIs REST com autenticação JWT, testes automatizados com pytest. "
+             "CI/CD com GitHub Actions. Redis e Celery em projetos acadêmicos. "
+             "Inglês técnico para leitura de documentação. "
+             "Interesse em IA aplicada e NLP."
+         )),
 ]
 
 def criar_candidatos():
@@ -653,6 +669,9 @@ VINCULOS = [
     (35, 11, "aprovado_triagem"),   # Marie (fr nativo+ing+esp B2) → aprovada triagem
     (13, 11, "reprovado_triagem"),  # Patricia (RH, sem idiomas)   → reprovada
     (17, 11, "triagem_pendente"),   # Larissa (direito)            → triagem
+
+    # ── Dev Python (vaga 0) — Julia Duran candidata ───────────────────────────
+    (36,  0, "triagem_pendente"),   # Julia Duran (Python pleno)   → aguardando triagem
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -709,11 +728,12 @@ NOTAS_TEC = [
 def criar_candidaturas(vagas, candidatos, usuarios):
     ana     = usuarios["ana@sirs.com"]
     bruno   = usuarios["bruno@sirs.com"]
+    julia   = usuarios["leitorairritada@gmail.com"]
     carlos  = usuarios["carlos@sirs.com"]
     daniela = usuarios["daniela@sirs.com"]
     eduardo = usuarios["eduardo@sirs.com"]
 
-    rhs     = [ana, bruno]
+    rhs     = [ana, bruno, julia]
     gestores= [carlos, daniela, eduardo]
 
     criadas = []
@@ -926,8 +946,11 @@ def resumo(vagas, candidatos, candidaturas, usuarios):
 
     print("\n  Logins:")
     print("  ana@sirs.com / bruno@sirs.com         → RH       (senha123)")
+    print("  leitorairritada@gmail.com             → RH       (senha123)")
     print("  carlos / daniela / eduardo @sirs.com  → Gestor   (senha123)")
     print(f"  {settings.ADMIN_EMAIL:<40} → Admin    ({settings.ADMIN_SENHA})")
+    print("\n  Candidata adicionada:")
+    print("  juliaduran1515@gmail.com → triagem_pendente na vaga 'Desenvolvedor Python Sênior'")
     print("=" * 60)
 
 

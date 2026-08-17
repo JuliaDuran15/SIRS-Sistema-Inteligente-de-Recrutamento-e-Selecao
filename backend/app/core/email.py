@@ -24,15 +24,20 @@ def enviar_email(destinatario: str, assunto: str, corpo_html: str) -> bool:
     Envia um e-mail HTML.
     Retorna True em caso de sucesso, False se SMTP não configurado ou erro.
     """
-    if not smtp_configurado():
-        return False
+    return bool(enviar_emails_em_lote([(destinatario, assunto, corpo_html)]))
 
-    remetente = settings.SMTP_FROM or settings.SMTP_USER
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = Header(assunto, "utf-8")
-    msg["From"]    = remetente
-    msg["To"]      = destinatario
-    msg.attach(MIMEText(corpo_html, "html", "utf-8"))
+
+def enviar_emails_em_lote(mensagens: list[tuple[str, str, str]]) -> list[bool]:
+    """
+    Envia múltiplos e-mails em uma única sessão SMTP.
+    mensagens: lista de (destinatario, assunto, corpo_html)
+    Retorna lista de bool com o resultado de cada envio.
+    """
+    if not smtp_configurado() or not mensagens:
+        return [False] * len(mensagens)
+
+    remetente  = settings.SMTP_FROM or settings.SMTP_USER
+    resultados: list[bool] = []
 
     try:
         ctx = ssl.create_default_context()
@@ -40,11 +45,23 @@ def enviar_email(destinatario: str, assunto: str, corpo_html: str) -> bool:
             smtp.ehlo()
             smtp.starttls(context=ctx)
             smtp.login(settings.SMTP_USER, settings.SMTP_PASS)
-            smtp.sendmail(remetente, destinatario, msg.as_string())
-        return True
+            for destinatario, assunto, corpo_html in mensagens:
+                try:
+                    msg = MIMEMultipart("alternative")
+                    msg["Subject"] = Header(assunto, "utf-8")
+                    msg["From"]    = remetente
+                    msg["To"]      = destinatario
+                    msg.attach(MIMEText(corpo_html, "html", "utf-8"))
+                    smtp.sendmail(remetente, destinatario, msg.as_string())
+                    resultados.append(True)
+                except Exception as exc:
+                    print(f"[EMAIL] Falha ao enviar para {destinatario}: {exc}")
+                    resultados.append(False)
     except Exception as exc:
-        print(f"[EMAIL] Falha ao enviar para {destinatario}: {exc}")
-        return False
+        print(f"[EMAIL] Falha na sessão SMTP: {exc}")
+        return [False] * len(mensagens)
+
+    return resultados
 
 
 def email_reset_senha(destinatario: str, nome: str, reset_url: str) -> bool:
@@ -226,14 +243,14 @@ def _fmt_data(dt: datetime) -> str:
     return f"{dt.day} de {_MESES[dt.month - 1]} de {dt.year}, às {dt.hour:02d}h{dt.minute:02d}"
 
 
-def email_entrevista_agendada(
-    destinatario       : str,
+def compor_entrevista_agendada(
     nome_entrevistador : str,
     candidato_nome     : str,
     vaga_nome          : str,
-    tipo               : str,       # "rh" | "tecnica"
+    tipo               : str,
     agendada_para      : datetime,
-) -> bool:
+) -> tuple[str, str]:
+    """Retorna (assunto, corpo_html) sem enviar."""
     tipo_label = "Entrevista de RH" if tipo == "rh" else "Entrevista Técnica"
     data_fmt   = _fmt_data(agendada_para)
     assunto    = f"SIRS — {tipo_label} agendada: {candidato_nome}"
@@ -296,17 +313,31 @@ def email_entrevista_agendada(
 
         '</table></td></tr></table></body></html>'
     )
+    return assunto, corpo
+
+
+def email_entrevista_agendada(
+    destinatario       : str,
+    nome_entrevistador : str,
+    candidato_nome     : str,
+    vaga_nome          : str,
+    tipo               : str,       # "rh" | "tecnica"
+    agendada_para      : datetime,
+) -> bool:
+    assunto, corpo = compor_entrevista_agendada(
+        nome_entrevistador, candidato_nome, vaga_nome, tipo, agendada_para
+    )
     return enviar_email(destinatario, assunto, corpo)
 
 
-def email_entrevista_candidato(
-    destinatario   : str,
+def compor_entrevista_candidato(
     candidato_nome : str,
     vaga_nome      : str,
     agendada_para  : datetime,
     email_rh       : str = "",
     tipo           : str = "rh",
-) -> bool:
+) -> tuple[str, str]:
+    """Retorna (assunto, corpo_html) sem enviar."""
     data_fmt    = _fmt_data(agendada_para)
     tipo_label  = "Entrevista com RH" if tipo == "rh" else "Entrevista Técnica"
     assunto     = f"Parabens! Voce foi selecionado(a) para {tipo_label} — {vaga_nome}"
@@ -371,6 +402,20 @@ def email_entrevista_candidato(
     </td></tr>
   </table>
 </body></html>"""
+    return assunto, corpo
+
+
+def email_entrevista_candidato(
+    destinatario   : str,
+    candidato_nome : str,
+    vaga_nome      : str,
+    agendada_para  : datetime,
+    email_rh       : str = "",
+    tipo           : str = "rh",
+) -> bool:
+    assunto, corpo = compor_entrevista_candidato(
+        candidato_nome, vaga_nome, agendada_para, email_rh, tipo
+    )
     return enviar_email(destinatario, assunto, corpo)
 
 
