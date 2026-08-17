@@ -128,7 +128,8 @@ def upload_curriculo(candidatura_id: str, arquivo: UploadFile = File(...),
     if not candidatura:
         raise HTTPException(status_code=404, detail="Candidatura não encontrada")
 
-    if candidatura.status != StatusCandidatura.NOVO:
+    _STATUS_PERMITE_CV = {StatusCandidatura.NOVO, StatusCandidatura.TRIAGEM_PENDENTE}
+    if candidatura.status not in _STATUS_PERMITE_CV:
         raise HTTPException(
             status_code=409,
             detail=f"Currículo não pode ser enviado neste momento (status: {candidatura.status.value})",
@@ -188,7 +189,8 @@ def upload_curriculo_texto(
     if not candidatura:
         raise HTTPException(status_code=404, detail="Candidatura não encontrada")
 
-    if candidatura.status != StatusCandidatura.NOVO:
+    _STATUS_PERMITE_CV = {StatusCandidatura.NOVO, StatusCandidatura.TRIAGEM_PENDENTE}
+    if candidatura.status not in _STATUS_PERMITE_CV:
         raise HTTPException(
             status_code=409,
             detail=f"Currículo não pode ser enviado neste momento (status: {candidatura.status.value})",

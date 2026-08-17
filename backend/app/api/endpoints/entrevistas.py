@@ -2,7 +2,11 @@ from datetime import datetime
 
 from app.api.deps import DB
 from app.core.auth import QUALQUER_PAPEL, get_usuario_atual
-from app.core.email import email_entrevista_agendada, email_entrevista_candidato
+from app.core.email import (
+    compor_entrevista_agendada,
+    compor_entrevista_candidato,
+    enviar_emails_em_lote,
+)
 from app.models.candidatura import Candidatura, StatusCandidatura
 from app.models.entrevista import Entrevista
 from app.models.usuario import PapelUsuario
@@ -114,39 +118,27 @@ def agendar_entrevista(
         if u.email
     ] if rh_ids else []
 
-    # Notify scheduler (gestor or rh)
-    email_entrevista_agendada(
-        destinatario       = usuario.email,
-        nome_entrevistador = usuario.nome,
-        candidato_nome     = candidato.nome if candidato else "—",
-        vaga_nome          = vaga.nome if vaga else "—",
-        tipo               = dados.tipo,
-        agendada_para      = dados.agendada_para,
-    )
+    cand_nome = candidato.nome if candidato else "—"
+    vaga_nome = vaga.nome if vaga else "—"
 
-    # When gestor schedules, also notify each RH of the vaga
+    # Build all outgoing messages and send in one SMTP session
+    assunto_ag, corpo_ag = compor_entrevista_agendada(
+        usuario.nome, cand_nome, vaga_nome, dados.tipo, dados.agendada_para
+    )
+    msgs: list[tuple[str, str, str]] = [(usuario.email, assunto_ag, corpo_ag)]
+
     if usuario.papel == PapelUsuario.GESTOR:
         for rh_email in rh_emails:
-            email_entrevista_agendada(
-                destinatario       = rh_email,
-                nome_entrevistador = usuario.nome,
-                candidato_nome     = candidato.nome if candidato else "—",
-                vaga_nome          = vaga.nome if vaga else "—",
-                tipo               = dados.tipo,
-                agendada_para      = dados.agendada_para,
-            )
+            msgs.append((rh_email, assunto_ag, corpo_ag))
 
-    # Contact email shown to candidate is always RH's, not gestor's
     contato_rh = rh_emails[0] if rh_emails else usuario.email
     if candidato and candidato.email:
-        email_entrevista_candidato(
-            destinatario   = candidato.email,
-            candidato_nome = candidato.nome,
-            vaga_nome      = vaga.nome if vaga else "—",
-            agendada_para  = dados.agendada_para,
-            email_rh       = contato_rh,
-            tipo           = dados.tipo,
+        assunto_c, corpo_c = compor_entrevista_candidato(
+            cand_nome, vaga_nome, dados.agendada_para, contato_rh, dados.tipo
         )
+        msgs.append((candidato.email, assunto_c, corpo_c))
+
+    enviar_emails_em_lote(msgs)
 
     return entrevista
 

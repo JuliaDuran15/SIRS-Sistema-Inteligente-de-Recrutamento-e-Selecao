@@ -208,6 +208,7 @@ def _recalcular_scores_vaga(vaga: Vaga, db: Session) -> int:
             s_rh, s_mkt, novo_score,
             vaga.peso_rh, vaga.peso_mercado,
             features_cv=feat_cv, features_vaga=feat_vaga,
+            bonus_estrutural=bonus,
         )
 
         entrevistas = db.query(Entrevista).filter(

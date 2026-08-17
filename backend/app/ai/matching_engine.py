@@ -79,13 +79,14 @@ def calcular_score_curriculo(
 
 
 def gerar_explicacao(
-    score_rh        : float,
-    score_mercado   : float,
-    score_curriculo : float,
-    peso_rh         : float,
-    peso_mercado    : float,
-    features_cv     : dict | None = None,
-    features_vaga   : dict | None = None,
+    score_rh         : float,
+    score_mercado    : float,
+    score_curriculo  : float,
+    peso_rh          : float,
+    peso_mercado     : float,
+    features_cv      : dict | None = None,
+    features_vaga    : dict | None = None,
+    bonus_estrutural : float = 0.0,
 ) -> dict:
     def classificar(score: float) -> str:
         if score >= 0.80:
@@ -100,7 +101,8 @@ def gerar_explicacao(
     contrib_mercado = round(score_mercado * peso_mercado * 100, 1)
 
     resultado: dict = {
-        "score_final": score_curriculo,
+        "score_final"     : score_curriculo,
+        "bonus_estrutural": round(bonus_estrutural * 100, 1),
         "componentes": {
             "aderencia_vaga": {
                 "score"        : round(score_rh * 100, 1),
@@ -132,8 +134,9 @@ def gerar_explicacao(
     if features_cv and features_vaga:
         # Usa apenas skills do texto dos requisitos (não termos de mercado) para o display.
         hab_vaga_display = features_vaga.get("habilidades_texto") or features_vaga.get("habilidades", set())
-        overlap = features_cv.get("habilidades", set()) & hab_vaga_display
-        resultado["sinais_estruturais"]["habilidades_em_comum"] = sorted(overlap)
+        hab_cv = features_cv.get("habilidades", set())
+        resultado["sinais_estruturais"]["habilidades_em_comum"] = sorted(hab_cv & hab_vaga_display)
+        resultado["sinais_estruturais"]["habilidades_ausentes"]  = sorted(hab_vaga_display - hab_cv)
 
     return resultado
 

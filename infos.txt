@@ -911,3 +911,28 @@ O que aconteceu:
 Resumindo: o Celery quase não adiciona latência uma vez aquecido (42ms), mas o worker precisa de ~1.4 GB de RAM por causa do modelo de embedding que ele carrega na primeira tarefa.
 
 /mnt/c/Windows/explorer.exe "$(wslpath -w /home/julia/projetos/sirs-v2/docs/documentacao_tecnica.html)"
+docker compose exec api python tests/demo_triagem_webhook.py
+
+curl -s -X POST http://localhost:8000/webhook/importar \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fonte": "meu_sistema",
+    "vagas": [
+      {
+        "external_id": "v1",
+        "nome": "Analista de Dados",
+        "requisitos_texto": "Python, SQL, Power BI, Excel avançado"
+      }
+    ],
+    "candidatos": [
+      {
+        "external_id": "c1",
+        "nome": "João Silva",
+        "email": "joao.silva@email.com",
+        "cidade": "São Paulo",
+        "estado": "SP",
+        "curriculo_texto": "Analista de dados com 4 anos. Python, SQL, Power BI.",
+        "vaga_external_id": "v1"
+      }
+    ]
+  }' | python3 -m json.tool
