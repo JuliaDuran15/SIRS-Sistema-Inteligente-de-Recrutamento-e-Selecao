@@ -138,6 +138,7 @@ def _recalcular_scores_mercado(db, vaga: Vaga) -> int:
                 s_rh_raw, novo_mkt, novo_final,
                 vaga.peso_rh, vaga.peso_mercado,
                 features_cv=feat_cv, features_vaga=feat_vaga,
+                bonus_estrutural=bonus,
             )
 
             cur.score_rh        = round(s_rh_raw * 100, 1)
@@ -249,8 +250,9 @@ def processar_curriculo(self, candidatura_id: str, caminho_pdf: str):
         explicacao = gerar_explicacao(
             score_rh, score_mercado, score_curriculo,
             vaga.peso_rh, vaga.peso_mercado,
-            features_cv   = feat_cv,
-            features_vaga = feat_vaga,
+            features_cv      = feat_cv,
+            features_vaga    = feat_vaga,
+            bonus_estrutural = bonus,
         )
 
         # 7. Verificação de nome (aviso suave — não bloqueia)
@@ -464,8 +466,9 @@ def processar_curriculo_texto(self, candidatura_id: str, texto: str):
         explicacao = gerar_explicacao(
             score_rh, score_mercado, score_curriculo,
             vaga.peso_rh, vaga.peso_mercado,
-            features_cv   = feat_cv,
-            features_vaga = feat_vaga,
+            features_cv      = feat_cv,
+            features_vaga    = feat_vaga,
+            bonus_estrutural = bonus,
         )
 
         # Verificação de nome (aviso suave — não bloqueia)

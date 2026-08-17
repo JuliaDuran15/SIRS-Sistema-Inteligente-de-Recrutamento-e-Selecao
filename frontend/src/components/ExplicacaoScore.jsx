@@ -14,15 +14,32 @@ function corComp(cls) {
          cls === "regular"   ? "#FCD34D" : "#FCA5A5"
 }
 
+function SinalChip({ label }) {
+  return (
+    <span className="text-xs px-2 py-1 rounded-lg"
+      style={{
+        background: "rgba(77,200,232,0.07)",
+        color: "rgba(125,216,240,0.65)",
+        border: "1px solid rgba(77,200,232,0.12)",
+      }}>
+      {label}
+    </span>
+  )
+}
+
 export function ExplicacaoScore({ explicacao, expandido, onToggle }) {
   if (!explicacao) return null
   const { componentes, sinais_estruturais: sinais, alerta_nome: alertaNome } = explicacao
-  const vaga_c  = componentes?.aderencia_vaga    ?? {}
-  const mkt_c   = componentes?.aderencia_mercado ?? {}
-  const skills  = sinais?.habilidades_em_comum   ?? []
-  const anosExp = sinais?.anos_experiencia        ?? 0
-  const nivSen  = sinais?.nivel_senioridade       ?? 0
-  const nivEduc = sinais?.nivel_educacao          ?? 0
+  const vaga_c   = componentes?.aderencia_vaga    ?? {}
+  const mkt_c    = componentes?.aderencia_mercado ?? {}
+  const skills   = sinais?.habilidades_em_comum ?? []
+  const ausentes = sinais?.habilidades_ausentes  ?? []
+  const anosExp  = sinais?.anos_experiencia       ?? 0
+  const nivSen   = sinais?.nivel_senioridade      ?? 0
+  const nivEduc  = sinais?.nivel_educacao         ?? 0
+  const bonus    = explicacao?.bonus_estrutural   ?? 0
+
+  const temSinais = anosExp > 0 || nivSen > 0 || nivEduc > 0
 
   return (
     <div className="space-y-2">
@@ -59,6 +76,7 @@ export function ExplicacaoScore({ explicacao, expandido, onToggle }) {
         <div className="mt-2 rounded-xl p-3 space-y-3"
           style={{ background: "var(--s-content)", border: "1px solid var(--b-ghost)" }}>
 
+          {/* Aderência à vaga */}
           {vaga_c.score != null && (
             <div className="space-y-1">
               <div className="flex items-center justify-between gap-2">
@@ -71,13 +89,11 @@ export function ExplicacaoScore({ explicacao, expandido, onToggle }) {
               <MiniBar valor={vaga_c.score} cor={corComp(vaga_c.classificacao)} />
               <p className="text-xs text-brand-pale/30">
                 Contribui com <strong style={{ color: corComp(vaga_c.classificacao) }}>{vaga_c.contribuicao} pts</strong> no score final
-                {anosExp > 0 && ` · ${anosExp} ${anosExp === 1 ? "ano" : "anos"} de experiência`}
-                {nivSen  > 0 && ` · ${LABELS_SENIORIDADE[nivSen]}`}
-                {nivEduc > 0 && ` · ${LABELS_EDUCACAO[nivEduc]}`}
               </p>
             </div>
           )}
 
+          {/* Aderência ao mercado */}
           {mkt_c.score != null && (
             <div className="space-y-1">
               <div className="flex items-center justify-between gap-2">
@@ -95,10 +111,41 @@ export function ExplicacaoScore({ explicacao, expandido, onToggle }) {
             </div>
           )}
 
+          {/* Bônus estrutural */}
+          {bonus !== 0 && (
+            <div className="flex items-center justify-between text-xs pt-1 border-t"
+              style={{ borderColor: "var(--b-ghost)" }}>
+              <span style={{ color: "rgba(125,216,240,0.4)" }}>Bônus estrutural</span>
+              <span className="font-mono font-bold"
+                style={{ color: bonus > 0 ? "#2EE8B4" : "#FCA5A5" }}>
+                {bonus > 0 ? "+" : ""}{bonus} pts
+              </span>
+            </div>
+          )}
+
+          {/* Perfil detectado */}
+          {temSinais && (
+            <div className="space-y-1.5 pt-2 border-t" style={{ borderColor: "var(--b-ghost)" }}>
+              <span className="text-xs" style={{ color: "rgba(125,216,240,0.3)" }}>Perfil detectado</span>
+              <div className="flex flex-wrap gap-1.5">
+                {anosExp > 0 && (
+                  <SinalChip label={`${anosExp} ${anosExp === 1 ? "ano" : "anos"} de exp.`} />
+                )}
+                {nivSen > 0 && (
+                  <SinalChip label={LABELS_SENIORIDADE[nivSen]} />
+                )}
+                {nivEduc > 0 && (
+                  <SinalChip label={LABELS_EDUCACAO[nivEduc]} />
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Skills em comum */}
           {skills.length > 0 && (
-            <div className="space-y-1.5 pt-1 border-t" style={{ borderColor: "var(--b-ghost)" }}>
-              <span className="text-xs text-brand-pale/35">
-                {skills.length} {skills.length === 1 ? "skill do candidato" : "skills do candidato"} alinhadas ao perfil da vaga:
+            <div className="space-y-1.5 pt-2 border-t" style={{ borderColor: "var(--b-ghost)" }}>
+              <span className="text-xs" style={{ color: "rgba(125,216,240,0.3)" }}>
+                {skills.length} {skills.length === 1 ? "skill" : "skills"} alinhadas ao perfil da vaga
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {skills.map(s => (
@@ -111,8 +158,29 @@ export function ExplicacaoScore({ explicacao, expandido, onToggle }) {
             </div>
           )}
 
-          {skills.length === 0 && anosExp === 0 && (
-            <p className="text-xs text-brand-pale/25 italic">
+          {/* Skills faltantes */}
+          {ausentes.length > 0 && (
+            <div className="space-y-1.5 pt-2 border-t" style={{ borderColor: "var(--b-ghost)" }}>
+              <span className="text-xs" style={{ color: "rgba(125,216,240,0.3)" }}>
+                {ausentes.length} {ausentes.length === 1 ? "skill exigida" : "skills exigidas"} não encontradas no CV
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {ausentes.map(s => (
+                  <span key={s} className="text-xs px-2 py-0.5 rounded-lg font-mono"
+                    style={{
+                      background: "rgba(252,165,165,0.07)",
+                      color: "rgba(252,165,165,0.45)",
+                      border: "1px solid rgba(252,165,165,0.12)",
+                    }}>
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {skills.length === 0 && ausentes.length === 0 && !temSinais && (
+            <p className="text-xs italic" style={{ color: "rgba(125,216,240,0.2)" }}>
               Nenhuma skill específica detectada — score baseado em similaridade semântica do texto.
             </p>
           )}
