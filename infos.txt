@@ -936,3 +936,23 @@ curl -s -X POST http://localhost:8000/webhook/importar \
       }
     ]
   }' | python3 -m json.tool
+
+
+O TF-IDF manual serve exclusivamente como critério de desempate dentro de cada categoria — não classifica, não filtra.
+
+O fluxo é:
+
+Classificação (sinal primário): cada sentença vai para fortes, fracos ou neutros via dicionário léxico (linha 160-167)
+TF-IDF (sinal secundário): dentro de cada lista já classificada, ordena as sentenças pela relevância calculada (linhas 170-172), e aí pega as max_por_categoria melhores
+O que o TF-IDF mede aqui: sentenças com palavras incomuns na transcrição (IDF alto) e que as repetem com alguma frequência (TF) ganham score maior. Na prática, isso favorece sentenças que falam de algo específico — um projeto, uma tecnologia, um episódio concreto — em vez de frases genéricas como "trabalhei muito" que usam tokens altamente frequentes na transcrição inteira.
+
+O comentário na linha 144-146 explica a razão da ordem: se o TF-IDF fosse o sinal primário, keywords raras (ex: um acrônimo técnico mencionado uma vez) dominariam o ranking mesmo em sentenças neutras ou fracas. É TF-IDF manual, mas com uma lógica diferente do transcript_analyzer:
+
+transcript_analyzer	market_analyzer
+Corpus	sentenças de uma transcrição	vagas do Adzuna
+TF	frequência do token na sentença	fixo em 1 (presença binária)
+IDF	log((N+1) / (df+1)) — suavizado	log(N / (1 + df)) — sem suavização
+Propósito	desempatar sentenças já classificadas	ranquear skills por especificidade de mercado
+O objetivo aqui é o inverso do de transcrição: skills que aparecem em poucas vagas recebem IDF alto (são específicas, logo informativas), skills ubíquas como "liderança" recebem IDF baixo. TF fixo em 1 porque o que importa é "essa skill aparece nessa vaga?", não quantas vezes.
+
+O resultado final (linha 316) ainda converte o score float para int * 10 — o comentário deixa claro que é para compatibilidade, não tem significado estatístico real.

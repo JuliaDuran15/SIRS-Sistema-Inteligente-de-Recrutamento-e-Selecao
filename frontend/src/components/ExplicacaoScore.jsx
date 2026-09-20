@@ -16,7 +16,7 @@ function corComp(cls) {
 
 function SinalChip({ label }) {
   return (
-    <span className="text-xs px-2 py-1 rounded-lg"
+    <span className="sinal-chip text-xs px-2 py-1 rounded-lg"
       style={{
         background: "rgba(77,200,232,0.07)",
         color: "rgba(125,216,240,0.65)",
@@ -126,7 +126,7 @@ export function ExplicacaoScore({ explicacao, expandido, onToggle }) {
           {/* Perfil detectado */}
           {temSinais && (
             <div className="space-y-1.5 pt-2 border-t" style={{ borderColor: "var(--b-ghost)" }}>
-              <span className="text-xs" style={{ color: "rgba(125,216,240,0.3)" }}>Perfil detectado</span>
+              <span className="explicacao-label text-xs" style={{ color: "rgba(125,216,240,0.3)" }}>Perfil detectado</span>
               <div className="flex flex-wrap gap-1.5">
                 {anosExp > 0 && (
                   <SinalChip label={`${anosExp} ${anosExp === 1 ? "ano" : "anos"} de exp.`} />
@@ -144,12 +144,12 @@ export function ExplicacaoScore({ explicacao, expandido, onToggle }) {
           {/* Skills em comum */}
           {skills.length > 0 && (
             <div className="space-y-1.5 pt-2 border-t" style={{ borderColor: "var(--b-ghost)" }}>
-              <span className="text-xs" style={{ color: "rgba(125,216,240,0.3)" }}>
+              <span className="explicacao-label text-xs" style={{ color: "rgba(125,216,240,0.3)" }}>
                 {skills.length} {skills.length === 1 ? "skill" : "skills"} alinhadas ao perfil da vaga
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {skills.map(s => (
-                  <span key={s} className="text-xs px-2 py-0.5 rounded-lg font-mono"
+                  <span key={s} className="skill-match-chip text-xs px-2 py-0.5 rounded-lg font-mono"
                     style={{ background: "rgba(26,170,128,0.12)", color: "#2EE8B4" }}>
                     {s}
                   </span>
@@ -161,12 +161,12 @@ export function ExplicacaoScore({ explicacao, expandido, onToggle }) {
           {/* Skills faltantes */}
           {ausentes.length > 0 && (
             <div className="space-y-1.5 pt-2 border-t" style={{ borderColor: "var(--b-ghost)" }}>
-              <span className="text-xs" style={{ color: "rgba(125,216,240,0.3)" }}>
+              <span className="explicacao-label text-xs" style={{ color: "rgba(125,216,240,0.3)" }}>
                 {ausentes.length} {ausentes.length === 1 ? "skill exigida" : "skills exigidas"} não encontradas no CV
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {ausentes.map(s => (
-                  <span key={s} className="text-xs px-2 py-0.5 rounded-lg font-mono"
+                  <span key={s} className="skill-ausente-chip text-xs px-2 py-0.5 rounded-lg font-mono"
                     style={{
                       background: "rgba(252,165,165,0.07)",
                       color: "rgba(252,165,165,0.45)",
@@ -180,7 +180,7 @@ export function ExplicacaoScore({ explicacao, expandido, onToggle }) {
           )}
 
           {skills.length === 0 && ausentes.length === 0 && !temSinais && (
-            <p className="text-xs italic" style={{ color: "rgba(125,216,240,0.2)" }}>
+            <p className="explicacao-empty text-xs italic" style={{ color: "rgba(125,216,240,0.2)" }}>
               Nenhuma skill específica detectada — score baseado em similaridade semântica do texto.
             </p>
           )}
