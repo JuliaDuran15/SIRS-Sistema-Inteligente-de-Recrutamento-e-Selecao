@@ -136,8 +136,14 @@ def criar_candidatos():
             telefone        = "11999990001",
             origem          = "manual",
             data_nascimento = date(1995, 3, 15),
+            logradouro      = "Av. Paulista",
+            numero          = "1000",
+            complemento     = "Apto 42",
+            bairro          = "Bela Vista",
             cidade          = "São Paulo",
             estado          = "SP",
+            cep             = "01310100",
+            linkedin_url    = "https://linkedin.com/in/julia-souza",
             formacao        = [
                 {
                     "curso"       : "Ciência da Computação",
@@ -154,8 +160,12 @@ def criar_candidatos():
             telefone        = "11999990002",
             origem          = "externo",
             data_nascimento = date(1990, 7, 22),
+            logradouro      = "Rua Barão de Jaguara",
+            numero          = "901",
+            bairro          = "Centro",
             cidade          = "Campinas",
             estado          = "SP",
+            cep             = "13015001",
             formacao        = [
                 {
                     "curso"       : "Direito",
@@ -179,8 +189,14 @@ def criar_candidatos():
             telefone        = "11999990003",
             origem          = "manual",
             data_nascimento = date(1998, 11, 5),
+            logradouro      = "Av. Rio Branco",
+            numero          = "156",
+            complemento     = "Sala 1201",
+            bairro          = "Centro",
             cidade          = "Rio de Janeiro",
             estado          = "RJ",
+            cep             = "20040901",
+            linkedin_url    = "https://linkedin.com/in/mariana-costa-rh",
             formacao        = [
                 {
                     "curso"       : "Gestão de Recursos Humanos",
@@ -197,8 +213,12 @@ def criar_candidatos():
             telefone        = "11999990004",
             origem          = "manual",
             data_nascimento = date(1993, 5, 30),
+            logradouro      = "Av. Afonso Pena",
+            numero          = "1500",
+            bairro          = "Centro",
             cidade          = "Belo Horizonte",
             estado          = "MG",
+            cep             = "30130921",
             formacao        = [
                 {
                     "curso"       : "Engenharia Civil",

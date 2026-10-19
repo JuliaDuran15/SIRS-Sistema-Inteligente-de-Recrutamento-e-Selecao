@@ -18,9 +18,10 @@ export function Candidatos() {
   const [busca, setBusca]       = useState("")
   const [origem, setOrigem]     = useState("")  // "" | "manual" | "externo"
   const [form, setForm]         = useState({
-    nome: "", email: "", telefone: "",
-    cidade: "", estado: "", vaga_id: "",
-    linkedin_url: "", portfolio_url: "",
+    nome: "", email: "", telefone: "", data_nascimento: "",
+    logradouro: "", numero: "", complemento: "",
+    bairro: "", cidade: "", estado: "", cep: "",
+    vaga_id: "", linkedin_url: "", portfolio_url: "",
     curriculo_texto: "",
   })
   const [formacoes, setFormacoes] = useState([])
@@ -47,8 +48,32 @@ export function Candidatos() {
     carregar(0, busca, origem)
   }, [busca, origem])
 
+  const [buscandoCep, setBuscandoCep] = useState(false)
+
   function set(key) {
     return e => setForm(f => ({ ...f, [key]: e.target.value }))
+  }
+
+  async function handleCep(e) {
+    const valor = e.target.value
+    setForm(f => ({ ...f, cep: valor }))
+    const digitos = valor.replace(/\D/g, "")
+    if (digitos.length !== 8) return
+    setBuscandoCep(true)
+    try {
+      const res = await fetch(`https://viacep.com.br/ws/${digitos}/json/`)
+      const json = await res.json()
+      if (!json.erro) {
+        setForm(f => ({
+          ...f,
+          logradouro: json.logradouro || f.logradouro,
+          bairro:     json.bairro     || f.bairro,
+          cidade:     json.localidade || f.cidade,
+          estado:     json.uf         || f.estado,
+        }))
+      }
+    } catch { /* silent — usuário preenche manualmente */ }
+    finally { setBuscandoCep(false) }
   }
 
   function addFormacao() {
@@ -64,11 +89,12 @@ export function Candidatos() {
   async function handleSubmit(e) {
     e.preventDefault()
     setErroForm(null)
-    const { vaga_id, curriculo_texto, linkedin_url, portfolio_url, ...rest } = form
+    const { vaga_id, curriculo_texto, linkedin_url, portfolio_url, data_nascimento, ...rest } = form
     const dados = {
       ...rest,
-      linkedin_url: linkedin_url || null,
-      portfolio_url: portfolio_url || null,
+      linkedin_url:    linkedin_url    || null,
+      portfolio_url:   portfolio_url   || null,
+      data_nascimento: data_nascimento || null,
     }
     const formacaoLimpa = formacoes
       .filter(f => f.curso.trim() && f.instituicao.trim())
@@ -98,7 +124,13 @@ export function Candidatos() {
       await uploadCurriculoTexto(candidaturaId, curriculo_texto.trim())
     }
     setCriando(false)
-    setForm({ nome: "", email: "", telefone: "", cidade: "", estado: "", vaga_id: "", linkedin_url: "", portfolio_url: "", curriculo_texto: "" })
+    setForm({
+      nome: "", email: "", telefone: "", data_nascimento: "",
+      logradouro: "", numero: "", complemento: "",
+      bairro: "", cidade: "", estado: "", cep: "",
+      vaga_id: "", linkedin_url: "", portfolio_url: "",
+      curriculo_texto: "",
+    })
     setFormacoes([])
     carregar(0)
   }
@@ -167,13 +199,52 @@ export function Candidatos() {
             <div className="grid grid-cols-2 gap-4">
               {[
                 ["nome", "Nome completo", "text", "Ana Silva", true],
-                ["email", "Email", "email", "ana@email.com", true],
+                ["email", "Email", "text", "ana@email.com", true],
                 ["telefone", "Telefone", "text", "(11) 99999-0000", false],
-                ["cidade", "Cidade", "text", "São Paulo", false],
+                ["data_nascimento", "Data de nascimento", "date", "", false],
               ].map(([key, label, type, ph, req]) => (
                 <div key={key}>
                   <label className="block text-xs font-bold text-brand-pale/65 uppercase tracking-wider mb-1.5">{label}</label>
                   <input required={req} type={type} value={form[key]} onChange={set(key)}
+                    placeholder={ph} className={inputClass} />
+                </div>
+              ))}
+            </div>
+            {/* Endereço */}
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                ["logradouro", "Logradouro", "Rua das Flores"],
+                ["numero",     "Número",     "42"],
+                ["complemento","Complemento","Apto 5"],
+                ["bairro",     "Bairro",     "Centro"],
+              ].map(([key, label, ph]) => (
+                <div key={key}>
+                  <label className="block text-xs font-bold text-brand-pale/65 uppercase tracking-wider mb-1.5">{label}</label>
+                  <input type="text" value={form[key]} onChange={set(key)}
+                    placeholder={ph} className={inputClass} />
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-brand-pale/65 uppercase tracking-wider mb-1.5">CEP</label>
+                <div className="relative">
+                  <input type="text" value={form.cep} onChange={handleCep}
+                    placeholder="01310-100" maxLength={9} className={inputClass} />
+                  {buscandoCep && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-brand-pale/40">
+                      buscando…
+                    </span>
+                  )}
+                </div>
+              </div>
+              {[
+                ["cidade", "Cidade", "São Paulo"],
+                ["estado", "Estado", "SP"],
+              ].map(([key, label, ph]) => (
+                <div key={key}>
+                  <label className="block text-xs font-bold text-brand-pale/65 uppercase tracking-wider mb-1.5">{label}</label>
+                  <input type="text" value={form[key]} onChange={set(key)}
                     placeholder={ph} className={inputClass} />
                 </div>
               ))}

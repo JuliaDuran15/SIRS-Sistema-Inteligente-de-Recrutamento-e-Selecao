@@ -140,6 +140,7 @@ export function CandidatoDetalhe({ usuario }) {
   const [formacoesEdit, setFormacoesEdit] = useState([])
   const [salvando, setSalvando]           = useState(false)
   const [erroEdit, setErroEdit]           = useState(null)
+  const [buscandoCepEdit, setBuscandoCepEdit] = useState(false)
 
   const toggleExpandido = (id) => setExpandidos(prev => {
     const next = new Set(prev)
@@ -175,16 +176,44 @@ export function CandidatoDetalhe({ usuario }) {
 
   function abrirEdicao() {
     setFormEdit({
-      nome: candidato.nome ?? "",
-      telefone: candidato.telefone ?? "",
-      cidade: candidato.cidade ?? "",
-      estado: candidato.estado ?? "",
-      linkedin_url: candidato.linkedin_url ?? "",
-      portfolio_url: candidato.portfolio_url ?? "",
+      nome:           candidato.nome           ?? "",
+      telefone:       candidato.telefone       ?? "",
+      data_nascimento:candidato.data_nascimento ?? "",
+      logradouro:     candidato.logradouro     ?? "",
+      numero:         candidato.numero         ?? "",
+      complemento:    candidato.complemento    ?? "",
+      bairro:         candidato.bairro         ?? "",
+      cidade:         candidato.cidade         ?? "",
+      estado:         candidato.estado         ?? "",
+      cep:            candidato.cep            ?? "",
+      linkedin_url:   candidato.linkedin_url   ?? "",
+      portfolio_url:  candidato.portfolio_url  ?? "",
     })
     setFormacoesEdit((candidato.formacao ?? []).map(f => ({ ...f, ano_conclusao: f.ano_conclusao ?? "" })))
     setErroEdit(null)
     setEditando(true)
+  }
+
+  async function handleCepEdit(e) {
+    const valor = e.target.value
+    setFormEdit(f => ({ ...f, cep: valor }))
+    const digitos = valor.replace(/\D/g, "")
+    if (digitos.length !== 8) return
+    setBuscandoCepEdit(true)
+    try {
+      const res  = await fetch(`https://viacep.com.br/ws/${digitos}/json/`)
+      const json = await res.json()
+      if (!json.erro) {
+        setFormEdit(f => ({
+          ...f,
+          logradouro: json.logradouro || f.logradouro,
+          bairro:     json.bairro     || f.bairro,
+          cidade:     json.localidade || f.cidade,
+          estado:     json.uf         || f.estado,
+        }))
+      }
+    } catch { /* usuário preenche manualmente */ }
+    finally { setBuscandoCepEdit(false) }
   }
 
   function addFormacaoEdit() {
@@ -202,12 +231,18 @@ export function CandidatoDetalhe({ usuario }) {
     setSalvando(true); setErroEdit(null)
     try {
       const payload = {
-        nome: formEdit.nome || undefined,
-        telefone: formEdit.telefone || undefined,
-        cidade: formEdit.cidade || undefined,
-        estado: formEdit.estado || undefined,
-        linkedin_url: formEdit.linkedin_url || null,
-        portfolio_url: formEdit.portfolio_url || null,
+        nome:            formEdit.nome         || undefined,
+        telefone:        formEdit.telefone      || undefined,
+        data_nascimento: formEdit.data_nascimento || null,
+        logradouro:      formEdit.logradouro    || undefined,
+        numero:          formEdit.numero        || undefined,
+        complemento:     formEdit.complemento   || null,
+        bairro:          formEdit.bairro        || undefined,
+        cidade:          formEdit.cidade        || undefined,
+        estado:          formEdit.estado        || undefined,
+        cep:             formEdit.cep           || undefined,
+        linkedin_url:    formEdit.linkedin_url  || null,
+        portfolio_url:   formEdit.portfolio_url || null,
         formacao: formacoesEdit
           .filter(f => f.curso.trim() && f.instituicao.trim())
           .map(f => ({ ...f, ano_conclusao: f.ano_conclusao ? parseInt(f.ano_conclusao) : null })),
@@ -395,22 +430,66 @@ export function CandidatoDetalhe({ usuario }) {
                 className="text-brand-pale/35 hover:text-brand-pale text-xl leading-none transition-colors">×</button>
             </div>
 
+            {/* Nome, telefone, data */}
             <div className="grid grid-cols-2 gap-3">
               {[
-                ["nome",     "Nome completo", "text"],
-                ["telefone", "Telefone",       "text"],
-                ["cidade",   "Cidade",         "text"],
-                ["estado",   "Estado (UF)",    "text"],
-              ].map(([key, label, type]) => (
+                ["nome",            "Nome completo", "text", undefined],
+                ["telefone",        "Telefone",      "text", undefined],
+                ["data_nascimento", "Nascimento",    "date", undefined],
+              ].map(([key, label, type, max]) => (
                 <div key={key}>
                   <label className="block text-xs font-bold text-brand-pale/55 uppercase tracking-wider mb-1.5">{label}</label>
-                  <input type={type} value={formEdit[key] ?? ""} maxLength={key === "estado" ? 2 : undefined}
+                  <input type={type} value={formEdit[key] ?? ""} maxLength={max}
                     onChange={e => setFormEdit(f => ({ ...f, [key]: e.target.value }))}
                     className="w-full rounded-xl px-3 py-2.5 text-sm transition-all" />
                 </div>
               ))}
             </div>
 
+            {/* Endereço — linha 1 */}
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                ["logradouro",  "Logradouro",  undefined],
+                ["numero",      "Número",      undefined],
+                ["complemento", "Complemento", undefined],
+                ["bairro",      "Bairro",      undefined],
+              ].map(([key, label, max]) => (
+                <div key={key}>
+                  <label className="block text-xs font-bold text-brand-pale/55 uppercase tracking-wider mb-1.5">{label}</label>
+                  <input type="text" value={formEdit[key] ?? ""} maxLength={max}
+                    onChange={e => setFormEdit(f => ({ ...f, [key]: e.target.value }))}
+                    className="w-full rounded-xl px-3 py-2.5 text-sm transition-all" />
+                </div>
+              ))}
+            </div>
+
+            {/* Endereço — linha 2: CEP (com auto-fill) + cidade + estado */}
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-brand-pale/55 uppercase tracking-wider mb-1.5">CEP</label>
+                <div className="relative">
+                  <input type="text" value={formEdit.cep ?? ""} maxLength={9} placeholder="00000-000"
+                    onChange={handleCepEdit}
+                    className="w-full rounded-xl px-3 py-2.5 text-sm transition-all" />
+                  {buscandoCepEdit && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-brand-pale/40">buscando…</span>
+                  )}
+                </div>
+              </div>
+              {[
+                ["cidade", "Cidade", undefined],
+                ["estado", "Estado", 2],
+              ].map(([key, label, max]) => (
+                <div key={key}>
+                  <label className="block text-xs font-bold text-brand-pale/55 uppercase tracking-wider mb-1.5">{label}</label>
+                  <input type="text" value={formEdit[key] ?? ""} maxLength={max}
+                    onChange={e => setFormEdit(f => ({ ...f, [key]: e.target.value }))}
+                    className="w-full rounded-xl px-3 py-2.5 text-sm transition-all" />
+                </div>
+              ))}
+            </div>
+
+            {/* Links */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-bold text-brand-pale/55 uppercase tracking-wider mb-1.5">LinkedIn</label>
