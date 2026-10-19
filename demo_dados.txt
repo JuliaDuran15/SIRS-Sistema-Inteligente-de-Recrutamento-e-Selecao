@@ -1,0 +1,190 @@
+═══════════════════════════════════════════════════════════
+  DADOS DE DEMONSTRAÇÃO — SIRS v2
+  Copie e cole diretamente nos campos do site
+═══════════════════════════════════════════════════════════
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ USUÁRIOS  (Settings > Criar Usuário)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── Usuário 1 – RH ──────────────────────
+Nome:   Ana Paula Oliveira
+E-mail: ana.oliveira@empresa.com
+Senha:  senha123
+Papel:  RH
+
+── Usuário 2 – Gestor ──────────────────
+Nome:   Carlos Eduardo Mendes
+E-mail: carlos.mendes@empresa.com
+Senha:  senha123
+Papel:  GESTOR
+
+── Usuário 3 – Admin ───────────────────
+Nome:   Administrador SIRS
+E-mail: admin@empresa.com
+Senha:  admin123
+Papel:  ADMIN
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ VAGAS  (Vagas > Nova Vaga)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── Vaga 1 ──────────────────────────────
+Nome:
+Desenvolvedor Python Sênior
+
+Requisitos:
+Buscamos desenvolvedor Python sênior com sólida experiência em FastAPI, SQLAlchemy e PostgreSQL. Domínio de Docker, Kubernetes e AWS é essencial. Desejável experiência com Redis, Celery e arquiteturas de microsserviços. Familiaridade com CI/CD, boas práticas de clean code e trabalho em squads ágeis (Scrum/Kanban). Inglês intermediário para leitura de documentação técnica.
+
+── Vaga 2 ──────────────────────────────
+Nome:
+Engenheiro de Dados
+
+Requisitos:
+Profissional para construção e manutenção de pipelines de dados em ambiente cloud. Experiência com Apache Spark, Airflow e ferramentas de orquestração. Domínio de SQL avançado, Python e plataformas como AWS, Azure ou GCP. Conhecimento em modelagem de dados, data warehouse e ferramentas de visualização (Power BI ou Tableau). Desejável experiência com Databricks e práticas de DataOps.
+
+── Vaga 3 ──────────────────────────────
+Nome:
+Advogado Tributarista
+
+Requisitos:
+Advogado com sólida experiência em direito tributário, planejamento fiscal e contencioso administrativo e judicial. OAB ativa obrigatória. Domínio de IRPJ, CSLL, PIS, COFINS e demais tributos federais. Experiência com processos no STJ e STF. Conhecimento em processo civil e peticionamento eletrônico (PJe). Perfil analítico, atenção aos detalhes e boa comunicação escrita. Inglês intermediário para leitura de documentos.
+
+── Vaga 4 ──────────────────────────────
+Nome:
+Analista de RH — Recrutamento e Seleção
+
+Requisitos:
+Profissional de Recursos Humanos com experiência em recrutamento e seleção end-to-end, entrevistas por competências e aplicação de testes comportamentais. Conhecimento em eSocial, CLT e sistemas ATS (preferencialmente Gupy). Experiência com onboarding, offboarding e avaliação de desempenho. Domínio de Excel avançado e People Analytics. Perfil empático, organizado e com boa comunicação interpessoal.
+
+── Vaga 5 ──────────────────────────────
+Nome:
+Engenheiro Civil — Gestão de Obras
+
+Requisitos:
+Engenheiro civil para gestão de obras residenciais e comerciais de médio e grande porte. CREA ativo obrigatório. Experiência com AutoCAD, Revit e BIM. Conhecimento em SINAPI, orçamento de obras, gestão de equipes em campo e elaboração de laudos técnicos. Domínio de projetos estruturais, hidráulica e saneamento. Familiaridade com NR-18 e gestão de cronograma com MS Project.
+
+── Vaga 6 ──────────────────────────────
+Nome:
+Nutricionista Clínica
+
+Requisitos:
+Nutricionista com experiência em atendimento clínico ambulatorial e hospitalar. CRN ativo obrigatório. Domínio em avaliação nutricional, elaboração de planos alimentares e dietoterapia para pacientes com diabetes, hipertensão e obesidade. Experiência com nutrição enteral e parenteral. Habilidade com prontuário eletrônico e prescrição nutricional. Perfil humanizado, organizado e com boa comunicação com pacientes e equipe multidisciplinar.
+
+── Vaga 7 ──────────────────────────────
+Nome:
+Analista Financeiro
+
+Requisitos:
+Profissional com experiência em controladoria, planejamento financeiro e análise de DRE e fluxo de caixa. Domínio de Excel avançado e Power BI para elaboração de relatórios gerenciais. Conhecimento em conciliação bancária, auditoria interna e sistemas ERP (Totvs ou SAP). Desejável certificação CPA-10 ou CRC ativo. Perfil analítico, proativo e com boa capacidade de comunicação com áreas de negócio.
+
+── Vaga 8 ──────────────────────────────
+Nome:
+Professor de Matemática — Ensino Médio
+
+Requisitos:
+Professor licenciado em Matemática para atuar no Ensino Médio. Experiência comprovada em sala de aula, planejamento de aulas alinhado à BNCC e elaboração de materiais didáticos. Habilidade com metodologias ativas, avaliação formativa e uso de ferramentas digitais (Google Classroom, Microsoft Teams). Capacidade de trabalhar com turmas heterogêneas e engajar alunos em conteúdos de álgebra, geometria e estatística. Pós-graduação em Educação é diferencial.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ CANDIDATOS  (Candidatos > Novo Candidato)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+── Candidato 1 — Dev Python ────────────
+Nome:           Lucas Andrade
+E-mail:         lucas.andrade@email.com
+Telefone:       11987650001
+Data nascimento: 1993-04-12
+Logradouro:     Av. Paulista
+Número:         1000
+Complemento:    Apto 42
+Bairro:         Bela Vista
+CEP:            01310100
+Cidade:         São Paulo
+Estado:         SP
+LinkedIn:       https://linkedin.com/in/lucas-andrade-dev
+
+Currículo (cole no campo Currículo):
+Desenvolvedor Python com 8 anos de experiência. Especialista em FastAPI, SQLAlchemy e PostgreSQL. Vasta experiência com Docker, Kubernetes e AWS (EC2, RDS, S3, Lambda). Participei de projetos de alta disponibilidade utilizando Redis e Celery para processamento assíncrono. Certificado AWS Solutions Architect. Inglês fluente. Formação em Ciência da Computação pela USP.
+
+── Candidato 2 — Engenheiro de Dados ───
+Nome:           Fernanda Lima
+E-mail:         fernanda.lima@email.com
+Telefone:       11987650002
+Data nascimento: 1996-08-20
+Logradouro:     Rua dos Pinheiros
+Número:         500
+Bairro:         Pinheiros
+CEP:            05422010
+Cidade:         São Paulo
+Estado:         SP
+
+Currículo:
+Engenheira de Dados com 5 anos de experiência em pipelines de dados em larga escala. Domínio de Apache Spark, Airflow e dbt. Experiência com AWS (Glue, Redshift, S3) e GCP (BigQuery, Dataflow). SQL avançado e Python para ETL. Construção de dashboards no Power BI e Tableau. Formação em Engenharia de Computação pela Unicamp.
+
+── Candidato 3 — Advogado ──────────────
+Nome:           Ricardo Nascimento
+E-mail:         ricardo.nascimento@email.com
+Telefone:       21987650003
+Data nascimento: 1988-11-03
+Logradouro:     Av. Rio Branco
+Número:         156
+Complemento:    Sala 1210
+Bairro:         Centro
+CEP:            20040901
+Cidade:         Rio de Janeiro
+Estado:         RJ
+
+Currículo:
+Advogado tributarista com OAB/RJ ativa e 10 anos de experiência em contencioso tributário administrativo e judicial. Atuação em IRPJ, CSLL, PIS, COFINS e ICMS. Experiência em processos no STJ e STF. Pós-graduação em Direito Tributário pela FGV. Fluência em inglês para contratos internacionais e análise de documentos.
+
+── Candidato 4 — Analista de RH ────────
+Nome:           Beatriz Carvalho
+E-mail:         beatriz.carvalho@email.com
+Telefone:       11987650004
+Data nascimento: 1997-05-17
+Logradouro:     Av. Faria Lima
+Número:         2391
+Complemento:    Sala 305
+Bairro:         Itaim Bibi
+CEP:            01451001
+Cidade:         São Paulo
+Estado:         SP
+LinkedIn:       https://linkedin.com/in/beatriz-carvalho-rh
+
+Currículo:
+Analista de RH com 4 anos de experiência em recrutamento e seleção técnica e comportamental. Domínio do sistema Gupy, entrevistas por competências e mapeamento de perfil comportamental (DISC). Experiência em onboarding, avaliação de desempenho e gestão de eSocial. Excel avançado e noções de People Analytics. Formação em Psicologia pela PUC-SP.
+
+── Candidato 5 — Nutricionista ─────────
+Nome:           Camila Ferreira
+E-mail:         camila.ferreira@email.com
+Telefone:       31987650005
+Data nascimento: 1994-02-28
+Logradouro:     Av. Afonso Pena
+Número:         1500
+Bairro:         Centro
+CEP:            30130921
+Cidade:         Belo Horizonte
+Estado:         MG
+
+Currículo:
+Nutricionista clínica com CRN-MG ativo e 6 anos de experiência em atendimento ambulatorial e hospitalar. Especialista em dietoterapia para doenças crônicas (diabetes, hipertensão, obesidade). Experiência com nutrição enteral e parenteral em UTI. Domínio do prontuário eletrônico Tasy. Pós-graduação em Nutrição Clínica e Esportiva pela UFMG.
+
+── Candidato 6 — Professor ─────────────
+Nome:           Marcos Souza
+E-mail:         marcos.souza@email.com
+Telefone:       41987650006
+Data nascimento: 1990-09-14
+Logradouro:     Rua XV de Novembro
+Número:         800
+Bairro:         Centro
+CEP:            80020310
+Cidade:         Curitiba
+Estado:         PR
+
+Currículo:
+Professor de Matemática com 9 anos de experiência no Ensino Médio público e privado. Licenciatura em Matemática pela UFPR e pós-graduação em Educação Matemática. Domínio da BNCC, metodologias ativas e ensino híbrido. Experiência com Google Classroom e Microsoft Teams. Elaboração de materiais didáticos autorais e preparação para ENEM e olimpíadas de Matemática.
+
+═══════════════════════════════════════════════════════════

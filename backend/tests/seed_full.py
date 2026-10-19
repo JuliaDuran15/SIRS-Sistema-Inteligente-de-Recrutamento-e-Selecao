@@ -243,6 +243,7 @@ CANDIDATOS_DATA = [
     # Tech — Python
     dict(nome="Lucas Ferreira",     email="lucas.ferreira@email.com",    tel="11991110001",
          nasc=date(1993,4,12), cidade="São Paulo",     uf="SP",
+         logradouro="Av. Paulista",          numero="1578", complemento=None,        bairro="Bela Vista",      cep="01310200",
          linkedin="https://linkedin.com/in/lucas-ferreira-dev",
          portfolio="https://github.com/lucasferreira-dev",
          formacao=[{"curso":"Ciência da Computação","instituicao":"USP","nivel":"graduacao","status":"concluido","ano_conclusao":2015}],
@@ -250,6 +251,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Mariana Costa",      email="mariana.costa@email.com",     tel="11991110002",
          nasc=date(1996,7,23), cidade="Campinas",     uf="SP",
+         logradouro="Rua Barão de Jaguara",  numero="901",  complemento=None,        bairro="Centro",          cep="13015001",
          linkedin="https://linkedin.com/in/mariana-costa-backend",
          portfolio="https://github.com/marianacosta",
          formacao=[{"curso":"Sistemas de Informação","instituicao":"UNICAMP","nivel":"graduacao","status":"concluido","ano_conclusao":2018}],
@@ -257,6 +259,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Rafael Santos",      email="rafael.santos@email.com",     tel="11991110003",
          nasc=date(1998,1,5),  cidade="São Paulo",     uf="SP",
+         logradouro="Rua Augusta",           numero="500",  complemento="Apto 31",   bairro="Consolação",      cep="01304000",
          linkedin="https://linkedin.com/in/rafael-santos-py",
          portfolio=None,
          formacao=[{"curso":"Engenharia de Software","instituicao":"FIAP","nivel":"graduacao","status":"concluido","ano_conclusao":2020}],
@@ -265,6 +268,7 @@ CANDIDATOS_DATA = [
     # Tech — Full Stack
     dict(nome="Camila Rodrigues",   email="camila.rodrigues@email.com",  tel="11991110004",
          nasc=date(1995,9,30), cidade="Rio de Janeiro", uf="RJ",
+         logradouro="Av. Rio Branco",        numero="156",  complemento="Sala 1201", bairro="Centro",          cep="20040901",
          linkedin="https://linkedin.com/in/camila-rodrigues-fullstack",
          portfolio="https://camilarodrigues.dev",
          formacao=[{"curso":"Engenharia da Computação","instituicao":"PUC-Rio","nivel":"graduacao","status":"concluido","ano_conclusao":2017}],
@@ -272,6 +276,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Felipe Alves",       email="felipe.alves@email.com",      tel="11991110005",
          nasc=date(1997,3,18), cidade="Belo Horizonte", uf="MG",
+         logradouro="Av. Afonso Pena",       numero="1500", complemento=None,        bairro="Centro",          cep="30130921",
          linkedin="https://linkedin.com/in/felipe-alves-frontend",
          portfolio="https://github.com/felipealves-ui",
          formacao=[{"curso":"Análise e Desenvolvimento de Sistemas","instituicao":"FATEC","nivel":"tecnologo","status":"concluido","ano_conclusao":2019}],
@@ -279,6 +284,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Isabela Nunes",      email="isabela.nunes@email.com",     tel="11991110006",
          nasc=date(1999,11,8), cidade="Recife",         uf="PE",
+         logradouro="Rua do Bom Jesus",      numero="197",  complemento=None,        bairro="Recife Antigo",   cep="50030170",
          linkedin="https://linkedin.com/in/isabela-nunes",
          portfolio=None,
          formacao=[{"curso":"Ciência da Computação","instituicao":"UFPE","nivel":"graduacao","status":"em_andamento","ano_conclusao":None}],
@@ -287,6 +293,7 @@ CANDIDATOS_DATA = [
     # Tech — Dados
     dict(nome="André Oliveira",     email="andre.oliveira@email.com",    tel="11991110007",
          nasc=date(1991,6,14), cidade="São Paulo",     uf="SP",
+         logradouro="Rua Vergueiro",         numero="1800", complemento="Apto 42",   bairro="Vila Mariana",    cep="04101000",
          linkedin="https://linkedin.com/in/andre-oliveira-data",
          portfolio="https://github.com/andreoliveira-eng",
          formacao=[{"curso":"Estatística","instituicao":"USP","nivel":"graduacao","status":"concluido","ano_conclusao":2013},
@@ -295,6 +302,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Tatiane Lima",       email="tatiane.lima@email.com",      tel="11991110008",
          nasc=date(1994,2,27), cidade="Curitiba",      uf="PR",
+         logradouro="Rua XV de Novembro",    numero="700",  complemento=None,        bairro="Centro",          cep="80020310",
          linkedin="https://linkedin.com/in/tatiane-lima-dados",
          portfolio=None,
          formacao=[{"curso":"Ciência de Dados","instituicao":"PUCPR","nivel":"graduacao","status":"concluido","ano_conclusao":2016}],
@@ -302,6 +310,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Gabriel Martins",    email="gabriel.martins@email.com",   tel="11991110009",
          nasc=date(2000,5,3),  cidade="Porto Alegre",  uf="RS",
+         logradouro="Av. Borges de Medeiros", numero="1501", complemento=None,       bairro="Centro Histórico", cep="90110150",
          linkedin=None,
          portfolio=None,
          formacao=[{"curso":"Engenharia de Computação","instituicao":"PUCRS","nivel":"graduacao","status":"concluido","ano_conclusao":2022}],
@@ -310,6 +319,7 @@ CANDIDATOS_DATA = [
     # Tech — DevOps
     dict(nome="Bruno Carvalho",     email="bruno.carvalho@email.com",    tel="11991110010",
          nasc=date(1990,8,22), cidade="São Paulo",     uf="SP",
+         logradouro="Av. Brig. Faria Lima",  numero="2000", complemento="Cj. 51",    bairro="Itaim Bibi",      cep="01452001",
          linkedin="https://linkedin.com/in/bruno-carvalho-sre",
          portfolio="https://github.com/brunocarvalho-ops",
          formacao=[{"curso":"Redes de Computadores","instituicao":"SENAI","nivel":"tecnologo","status":"concluido","ano_conclusao":2012}],
@@ -317,6 +327,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Fernanda Souza",     email="fernanda.souza@email.com",    tel="11991110011",
          nasc=date(1993,12,9), cidade="São Paulo",     uf="SP",
+         logradouro="Rua Funchal",           numero="418",  complemento=None,        bairro="Vila Olímpia",    cep="04551060",
          linkedin="https://linkedin.com/in/fernanda-souza-devops",
          portfolio=None,
          formacao=[{"curso":"Engenharia de Software","instituicao":"Mackenzie","nivel":"graduacao","status":"concluido","ano_conclusao":2015}],
@@ -324,6 +335,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Ricardo Pereira",    email="ricardo.pereira@email.com",   tel="11991110012",
          nasc=date(2001,4,17), cidade="Florianópolis", uf="SC",
+         logradouro="Rua Felipe Schmidt",    numero="785",  complemento=None,        bairro="Centro",          cep="88010001",
          linkedin="https://linkedin.com/in/ricardo-pereira-infra",
          portfolio=None,
          formacao=[{"curso":"Ciência da Computação","instituicao":"UFSC","nivel":"graduacao","status":"em_andamento","ano_conclusao":None}],
@@ -332,6 +344,7 @@ CANDIDATOS_DATA = [
     # RH
     dict(nome="Juliana Mendes",     email="juliana.mendes@email.com",    tel="11991110013",
          nasc=date(1992,10,4), cidade="São Paulo",     uf="SP",
+         logradouro="Rua Pamplona",          numero="145",  complemento="Apto 81",   bairro="Jardim Paulista", cep="01405100",
          linkedin="https://linkedin.com/in/juliana-mendes-rh",
          portfolio=None,
          formacao=[{"curso":"Psicologia","instituicao":"USP","nivel":"graduacao","status":"concluido","ano_conclusao":2014},
@@ -340,6 +353,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Patricia Gomes",     email="patricia.gomes@email.com",    tel="11991110014",
          nasc=date(1995,3,21), cidade="Campinas",      uf="SP",
+         logradouro="Av. Francisco Glicério", numero="935", complemento=None,        bairro="Centro",          cep="13010111",
          linkedin="https://linkedin.com/in/patricia-gomes-rh",
          portfolio=None,
          formacao=[{"curso":"Administração com ênfase em RH","instituicao":"PUC-Campinas","nivel":"graduacao","status":"concluido","ano_conclusao":2017}],
@@ -347,6 +361,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Thiago Barbosa",     email="thiago.barbosa@email.com",    tel="11991110015",
          nasc=date(1998,8,11), cidade="Rio de Janeiro", uf="RJ",
+         logradouro="Rua da Assembleia",     numero="10",   complemento=None,        bairro="Centro",          cep="20011901",
          linkedin=None,
          portfolio=None,
          formacao=[{"curso":"Recursos Humanos","instituicao":"SENAC-RJ","nivel":"tecnologo","status":"concluido","ano_conclusao":2020}],
@@ -355,6 +370,7 @@ CANDIDATOS_DATA = [
     # Direito
     dict(nome="Amanda Ribeiro",     email="amanda.ribeiro@email.com",    tel="11991110016",
          nasc=date(1988,5,15), cidade="São Paulo",     uf="SP",
+         logradouro="Rua Tupi",              numero="250",  complemento=None,        bairro="Santa Cecília",   cep="01233010",
          linkedin="https://linkedin.com/in/amanda-ribeiro-adv",
          portfolio=None,
          formacao=[{"curso":"Direito","instituicao":"PUC-SP","nivel":"graduacao","status":"concluido","ano_conclusao":2010},
@@ -363,6 +379,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Rodrigo Teixeira",   email="rodrigo.teixeira@email.com",  tel="11991110017",
          nasc=date(1991,9,7),  cidade="São Paulo",     uf="SP",
+         logradouro="Rua Haddock Lobo",      numero="595",  complemento=None,        bairro="Cerqueira César", cep="01414001",
          linkedin="https://linkedin.com/in/rodrigo-teixeira-trabalhista",
          portfolio=None,
          formacao=[{"curso":"Direito","instituicao":"Mackenzie","nivel":"graduacao","status":"concluido","ano_conclusao":2013}],
@@ -370,6 +387,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Larissa Freitas",    email="larissa.freitas@email.com",   tel="11991110018",
          nasc=date(1997,1,29), cidade="Brasília",      uf="DF",
+         logradouro="SQN 213 Bloco B",       numero="213",  complemento="Apto 304",  bairro="Asa Norte",       cep="70864020",
          linkedin=None,
          portfolio=None,
          formacao=[{"curso":"Direito","instituicao":"UnB","nivel":"graduacao","status":"concluido","ano_conclusao":2019}],
@@ -378,6 +396,7 @@ CANDIDATOS_DATA = [
     # Engenharia Civil
     dict(nome="Gustavo Araújo",     email="gustavo.araujo@email.com",    tel="11991110019",
          nasc=date(1987,7,6),  cidade="São Paulo",     uf="SP",
+         logradouro="Av. Ibirapuera",        numero="2000", complemento=None,        bairro="Indianópolis",    cep="04029901",
          linkedin="https://linkedin.com/in/gustavo-araujo-eng",
          portfolio=None,
          formacao=[{"curso":"Engenharia Civil","instituicao":"USP","nivel":"graduacao","status":"concluido","ano_conclusao":2010}],
@@ -385,6 +404,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Beatriz Castro",     email="beatriz.castro@email.com",    tel="11991110020",
          nasc=date(1994,11,18),cidade="Belo Horizonte", uf="MG",
+         logradouro="Rua Espírito Santo",    numero="1000", complemento=None,        bairro="Centro",          cep="30160031",
          linkedin="https://linkedin.com/in/beatriz-castro-civil",
          portfolio=None,
          formacao=[{"curso":"Engenharia Civil","instituicao":"UFMG","nivel":"graduacao","status":"concluido","ano_conclusao":2016}],
@@ -392,6 +412,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Diego Monteiro",     email="diego.monteiro@email.com",    tel="11991110021",
          nasc=date(1999,3,25), cidade="Curitiba",      uf="PR",
+         logradouro="Rua Marechal Deodoro",  numero="500",  complemento=None,        bairro="Centro",          cep="80010010",
          linkedin=None,
          portfolio=None,
          formacao=[{"curso":"Engenharia Civil","instituicao":"UTFPR","nivel":"graduacao","status":"concluido","ano_conclusao":2022}],
@@ -400,6 +421,7 @@ CANDIDATOS_DATA = [
     # Financeiro
     dict(nome="Vanessa Correia",    email="vanessa.correia@email.com",   tel="11991110022",
          nasc=date(1990,6,3),  cidade="São Paulo",     uf="SP",
+         logradouro="Av. Paulista",          numero="2300", complemento="Cj. 1205",  bairro="Bela Vista",      cep="01310300",
          linkedin="https://linkedin.com/in/vanessa-correia-controladoria",
          portfolio=None,
          formacao=[{"curso":"Ciências Contábeis","instituicao":"FEA-USP","nivel":"graduacao","status":"concluido","ano_conclusao":2012},
@@ -408,6 +430,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Leonardo Azevedo",   email="leonardo.azevedo@email.com",  tel="11991110023",
          nasc=date(1993,8,14), cidade="Rio de Janeiro", uf="RJ",
+         logradouro="Av. das Américas",      numero="500",  complemento="Bloco 9",   bairro="Barra da Tijuca", cep="22640100",
          linkedin="https://linkedin.com/in/leonardo-azevedo-financas",
          portfolio=None,
          formacao=[{"curso":"Administração","instituicao":"FGV-RJ","nivel":"graduacao","status":"concluido","ano_conclusao":2015}],
@@ -415,6 +438,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Renata Moreira",     email="renata.moreira@email.com",    tel="11991110024",
          nasc=date(1997,5,20), cidade="São Paulo",     uf="SP",
+         logradouro="Rua Oscar Freire",      numero="800",  complemento=None,        bairro="Cerqueira César", cep="01426001",
          linkedin=None,
          portfolio=None,
          formacao=[{"curso":"Ciências Contábeis","instituicao":"Mackenzie","nivel":"graduacao","status":"concluido","ano_conclusao":2019}],
@@ -423,6 +447,7 @@ CANDIDATOS_DATA = [
     # Design UX/UI
     dict(nome="Stephanie Ramos",    email="stephanie.ramos@email.com",   tel="11991110025",
          nasc=date(1995,2,8),  cidade="São Paulo",     uf="SP",
+         logradouro="Alameda Santos",        numero="1800", complemento="Apto 52",   bairro="Jardim Paulista", cep="01418200",
          linkedin="https://linkedin.com/in/stephanie-ramos-ux",
          portfolio="https://behance.net/stephanieramos",
          formacao=[{"curso":"Design Digital","instituicao":"ESPM","nivel":"graduacao","status":"concluido","ano_conclusao":2017}],
@@ -430,6 +455,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Henrique Barros",    email="henrique.barros@email.com",   tel="11991110026",
          nasc=date(1998,9,12), cidade="Rio de Janeiro", uf="RJ",
+         logradouro="Rua Visconde de Pirajá", numero="414", complemento=None,        bairro="Ipanema",         cep="22410002",
          linkedin="https://linkedin.com/in/henrique-barros-design",
          portfolio="https://behance.net/henriquebarros",
          formacao=[{"curso":"Design Gráfico","instituicao":"PUC-Rio","nivel":"graduacao","status":"concluido","ano_conclusao":2020}],
@@ -437,6 +463,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Alice Fernandes",    email="alice.fernandes@email.com",   tel="11991110027",
          nasc=date(2001,7,31), cidade="Campinas",      uf="SP",
+         logradouro="Rua Conceição",         numero="100",  complemento=None,        bairro="Centro",          cep="13010050",
          linkedin="https://linkedin.com/in/alice-fernandes-design",
          portfolio="https://alicefernandes.myportfolio.com",
          formacao=[{"curso":"Design","instituicao":"UNICAMP","nivel":"graduacao","status":"em_andamento","ano_conclusao":None}],
@@ -445,6 +472,7 @@ CANDIDATOS_DATA = [
     # Marketing
     dict(nome="Carolina Lima",      email="carolina.lima@email.com",     tel="11991110028",
          nasc=date(1992,4,16), cidade="São Paulo",     uf="SP",
+         logradouro="Rua João Moura",        numero="540",  complemento=None,        bairro="Pinheiros",       cep="05412001",
          linkedin="https://linkedin.com/in/carolina-lima-marketing",
          portfolio=None,
          formacao=[{"curso":"Publicidade e Propaganda","instituicao":"ESPM","nivel":"graduacao","status":"concluido","ano_conclusao":2014}],
@@ -452,6 +480,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Marcos Vieira",      email="marcos.vieira@email.com",     tel="11991110029",
          nasc=date(1996,11,22),cidade="Curitiba",      uf="PR",
+         logradouro="Av. Sete de Setembro",  numero="3165", complemento=None,        bairro="Bigorrilho",      cep="80250210",
          linkedin="https://linkedin.com/in/marcos-vieira-mkt",
          portfolio=None,
          formacao=[{"curso":"Marketing","instituicao":"FAE","nivel":"graduacao","status":"concluido","ano_conclusao":2018}],
@@ -459,6 +488,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Priscila Sousa",     email="priscila.sousa@email.com",    tel="11991110030",
          nasc=date(1999,6,5),  cidade="Fortaleza",     uf="CE",
+         logradouro="Rua Tibúrcio Cavalcante", numero="1005", complemento=None,      bairro="Meireles",        cep="60125100",
          linkedin=None,
          portfolio=None,
          formacao=[{"curso":"Comunicação Social","instituicao":"UFC","nivel":"graduacao","status":"concluido","ano_conclusao":2021}],
@@ -467,6 +497,7 @@ CANDIDATOS_DATA = [
     # Nutrição — candidatos para testar detecção de skills nutricionais (30–32)
     dict(nome="Beatriz Nogueira",   email="beatriz.nogueira@email.com",  tel="11991110034",
          nasc=date(1989,5,8),  cidade="São Paulo",     uf="SP",
+         logradouro="Rua Domingos de Morais", numero="2187", complemento=None,       bairro="Vila Mariana",    cep="04035001",
          linkedin="https://linkedin.com/in/beatriz-nogueira-nutri",
          portfolio=None,
          formacao=[{"curso":"Nutrição","instituicao":"USP","nivel":"graduacao","status":"concluido","ano_conclusao":2011},
@@ -482,6 +513,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Camila Nascimento",  email="camila.nascimento@email.com", tel="11991110035",
          nasc=date(1994,9,14), cidade="Campinas",      uf="SP",
+         logradouro="Rua José Paulino",      numero="600",  complemento=None,        bairro="Nova Campinas",   cep="13092320",
          linkedin="https://linkedin.com/in/camila-nascimento-nutri",
          portfolio=None,
          formacao=[{"curso":"Nutrição","instituicao":"UNICAMP","nivel":"graduacao","status":"concluido","ano_conclusao":2016}],
@@ -494,6 +526,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Renato Cavalcante",  email="renato.cavalcante@email.com", tel="11991110036",
          nasc=date(2000,2,21), cidade="Recife",         uf="PE",
+         logradouro="Av. Boa Viagem",        numero="2090", complemento=None,        bairro="Boa Viagem",      cep="51020000",
          linkedin=None,
          portfolio=None,
          formacao=[{"curso":"Nutrição","instituicao":"UFPE","nivel":"graduacao","status":"concluido","ano_conclusao":2022}],
@@ -507,6 +540,7 @@ CANDIDATOS_DATA = [
     # Idiomas — candidatos para testar detecção de skills de línguas (33–35)
     dict(nome="Sofia Andrade",      email="sofia.andrade@email.com",     tel="11991110031",
          nasc=date(1990,3,14), cidade="São Paulo",     uf="SP",
+         logradouro="Rua Consolação",        numero="1765", complemento=None,        bairro="Consolação",      cep="01301100",
          linkedin="https://linkedin.com/in/sofia-andrade-idiomas",
          portfolio=None,
          formacao=[{"curso":"Letras — Inglês","instituicao":"USP","nivel":"graduacao","status":"concluido","ano_conclusao":2012},
@@ -521,6 +555,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Pedro Yamamoto",     email="pedro.yamamoto@email.com",    tel="11991110032",
          nasc=date(1988,7,22), cidade="São Paulo",     uf="SP",
+         logradouro="Rua Frei Caneca",       numero="975",  complemento=None,        bairro="Consolação",      cep="01307002",
          linkedin=None,
          portfolio=None,
          formacao=[{"curso":"Letras — Português/Inglês","instituicao":"UNIFESP","nivel":"graduacao","status":"concluido","ano_conclusao":2011}],
@@ -533,6 +568,7 @@ CANDIDATOS_DATA = [
 
     dict(nome="Marie Dupont",       email="marie.dupont@email.com",      tel="11991110033",
          nasc=date(1993,11,5), cidade="Rio de Janeiro", uf="RJ",
+         logradouro="Rua Dias Ferreira",     numero="636",  complemento=None,        bairro="Leblon",          cep="22431050",
          linkedin="https://linkedin.com/in/marie-dupont-idiomas",
          portfolio=None,
          formacao=[{"curso":"Letras — Francês/Português","instituicao":"UFRJ","nivel":"graduacao","status":"concluido","ano_conclusao":2015}],
@@ -547,6 +583,7 @@ CANDIDATOS_DATA = [
     # índice 36 — candidata real
     dict(nome="Julia Duran",        email="juliaduran1515@gmail.com",    tel="11991110038",
          nasc=date(2000,1,15), cidade="São Paulo",     uf="SP",
+         logradouro="Av. Prof. Luciano Gualberto", numero="380", complemento=None,   bairro="Butantã",         cep="05508010",
          linkedin="https://linkedin.com/in/julia-machado-duran-791317253",
          portfolio="https://github.com/JuliaDuran15",
          formacao=[{"curso":"Ciência da Computação","instituicao":"UFRJ","nivel":"graduacao","status":"em_andamento","ano_conclusao":None}],
@@ -566,7 +603,12 @@ def criar_candidatos():
         c = Candidato(
             nome=d["nome"], email=d["email"], telefone=d["tel"],
             data_nascimento=d["nasc"],
+            logradouro=d.get("logradouro"),
+            numero=d.get("numero"),
+            complemento=d.get("complemento"),
+            bairro=d.get("bairro"),
             cidade=d["cidade"], estado=d["uf"],
+            cep=d.get("cep"),
             formacao=d["formacao"],
             linkedin_url=d.get("linkedin"),
             portfolio_url=d.get("portfolio"),

@@ -399,6 +399,28 @@ html { scroll-behavior: smooth; }
     color: rgba(120, 53, 15, 0.80) !important;
   }
 
+  /* ── ExplicacaoScore ─────────────────────────────────────────────────────── */
+  html.light .explicacao-label {
+    color: rgba(15,80,130,0.65) !important;
+  }
+  html.light .sinal-chip {
+    background: rgba(26,112,168,0.1) !important;
+    color: rgba(15,80,130,0.75) !important;
+    border: 1px solid rgba(26,112,168,0.2) !important;
+  }
+  html.light .skill-match-chip {
+    background: rgba(4,120,87,0.1) !important;
+    color: #047857 !important;
+  }
+  html.light .skill-ausente-chip {
+    background: rgba(220,38,38,0.07) !important;
+    color: rgba(185,28,28,0.75) !important;
+    border: 1px solid rgba(220,38,38,0.15) !important;
+  }
+  html.light .explicacao-empty {
+    color: rgba(15,80,130,0.45) !important;
+  }
+
   /* Sidebar layout: empurra o conteúdo principal para a direita no desktop */
   .sidebar-layout-main {
     margin-left: 0;

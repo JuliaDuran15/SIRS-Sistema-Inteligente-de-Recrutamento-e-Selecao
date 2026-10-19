@@ -40,6 +40,7 @@ export function Vagas({ usuario }) {
   const [busca, setBusca]     = useState("")
   const [slaConfig, setSlaConfig] = useState(lerSlaConfig)
   const [modalSla, setModalSla]   = useState(false)
+  const [enviando, setEnviando]   = useState(false)
 
   useEffect(() => {
     localStorage.setItem("sla_config", JSON.stringify(slaConfig))
@@ -68,6 +69,8 @@ export function Vagas({ usuario }) {
 
   async function handleSubmit(e) {
     e.preventDefault(); setErro("")
+    if (enviando) return
+    setEnviando(true)
     try {
       const r = await createVaga(form)
       setVagas(v => [r.data, ...v])
@@ -76,6 +79,8 @@ export function Vagas({ usuario }) {
     } catch (e) {
       const msg = e.response?.data?.detail
       setErro(Array.isArray(msg) ? msg[0]?.msg : msg || "Erro ao criar vaga")
+    } finally {
+      setEnviando(false)
     }
   }
 
@@ -303,10 +308,10 @@ export function Vagas({ usuario }) {
             )}
 
             <div className="flex items-center gap-3 pt-1">
-              <button type="submit"
-                className="px-5 py-2.5 text-brand-black text-sm font-bold rounded-xl hover:opacity-90"
+              <button type="submit" disabled={enviando}
+                className="px-5 py-2.5 text-brand-black text-sm font-bold rounded-xl hover:opacity-90 disabled:opacity-50"
                 style={{ background: "linear-gradient(135deg, #1A8BBF, #4DC8E8)" }}>
-                Criar vaga
+                {enviando ? "Criando…" : "Criar vaga"}
               </button>
               <button type="button" onClick={() => { setCriando(false); setErro("") }}
                 className="px-5 py-2.5 text-brand-pale/45 hover:text-brand-cloud text-sm font-semibold transition-colors">
