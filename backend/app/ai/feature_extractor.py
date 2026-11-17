@@ -116,6 +116,30 @@ _HABILIDADES_TECH: frozenset[str] = frozenset({
     'dietpro', 'avanutri', 'dietbox',
     # Registro profissional
     'crn',
+    # Engenharia civil / obras
+    'crea', 'autocad', 'revit', 'bim', 'ms project', 'sinapi', 'nr-18',
+    # Testes
+    'jest', 'vitest', 'pytest', 'cypress', 'playwright',
+    # ORM / libs backend
+    'sqlalchemy',
+    # Dados / Cloud
+    'etl', 'redshift', 'modelagem dimensional',
+    # Observabilidade
+    'prometheus', 'grafana',
+    # Scripting
+    'bash',
+    # RH & Compliance
+    'esocial', 'lgpd', 'gupy', 'greenhouse', 'people analytics',
+    # Jurídico
+    'oab', 'pje', 'clt', 'fgts', 'direito trabalhista', 'negociação coletiva',
+    # Financeiro / Contábil
+    'dre', 'crc',
+    # Design UX/UI
+    'ux', 'ui', 'ux/ui', 'design systems', 'wcag', 'prototipação',
+    # Saúde
+    'prontuário eletrônico',
+    # Exames de proficiência — espanhol
+    'dele',
 })
 
 # ── Aliases → forma canônica ──────────────────────────────────────────────────
@@ -184,6 +208,39 @@ _ALIASES: dict[str, str] = {
     # Ensino / LMS
     'lms': 'moodle',
     'classroom': 'google classroom',
+    # Engenharia civil / obras
+    'auto cad': 'autocad', 'auto-cad': 'autocad',
+    'microsoft project': 'ms project', 'msp': 'ms project',
+    'building information modeling': 'bim',
+    'nr18': 'nr-18', 'nr 18': 'nr-18',
+    # Testes
+    'jest js': 'jest',
+    # Dados / Cloud
+    'amazon redshift': 'redshift',
+    'extract transform load': 'etl',
+    # Observabilidade
+    'grafana dashboard': 'grafana',
+    # RH & Compliance
+    'e-social': 'esocial',
+    'lei geral de proteção de dados': 'lgpd',
+    'general data protection': 'lgpd',
+    # Jurídico
+    'consolidação das leis do trabalho': 'clt',
+    'processo judicial eletrônico': 'pje',
+    'fundo de garantia': 'fgts',
+    'trabalhista': 'direito trabalhista',
+    # Financeiro
+    'demonstração de resultado': 'dre', 'demonstração do resultado': 'dre',
+    'conselho regional de contabilidade': 'crc',
+    # Design UX/UI
+    'user experience': 'ux', 'experiência do usuário': 'ux',
+    'user interface': 'ui', 'interface do usuário': 'ui',
+    'ux ui': 'ux/ui', 'ui ux': 'ux/ui',
+    'design system': 'design systems',
+    'web content accessibility': 'wcag',
+    'prototipacao': 'prototipação',
+    # Saúde
+    'prontuario eletronico': 'prontuário eletrônico',
     # Software de nutrição
     'diet pro': 'dietpro',
     'diet box': 'dietbox',

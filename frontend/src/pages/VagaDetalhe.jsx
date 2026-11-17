@@ -107,6 +107,7 @@ export function VagaDetalhe({ usuario }) {
   const [exportando, setExportando]       = useState(false)
   const [comparando, setComparando]       = useState(new Set())
   const [modalComparacao, setModalComparacao] = useState(false)
+  const [pagina, setPagina]               = useState(1)
   const [painelDescarte, setPainelDescarte] = useState(false)
   const [notaMinima, setNotaMinima]       = useState(50)
   const [descartando, setDescartando]     = useState(false)
@@ -173,6 +174,13 @@ export function VagaDetalhe({ usuario }) {
     const sb = b.curriculo?.score_curriculo ?? b.score_total ?? 0
     return sb - sa
   })
+
+  const POR_PAGINA     = 10
+  const totalPaginas   = Math.ceil(candidaturasFiltradas.length / POR_PAGINA)
+  const candidaturasPagina = candidaturasFiltradas.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA)
+
+  useEffect(() => { setPagina(1) }, [filtroStatus])
+
   const [erroRhsAutorizados, setErroRhsAutorizados] = useState(null)
 
   // Calcula permissões após vaga carregada
@@ -472,10 +480,15 @@ export function VagaDetalhe({ usuario }) {
   const termos     = vaga.ranking_mercado?.termos?.slice(0, 12) || []
   const totalVagas = vaga.ranking_mercado?.total_vagas_analisadas
 
-  // Candidaturas selecionadas para comparar, na ordem do ranking atual
-  const candidaturasComparacao = candidaturasFiltradas
-    .map((c, i) => ({ ...c, _rank: i + 1 }))
+  // Candidaturas selecionadas para comparar — usa candidaturas completas (não filtradas)
+  // para garantir que o modal abre mesmo se o filtro ativo excluir candidatos selecionados
+  const candidaturasComparacao = candidaturas
     .filter(c => comparando.has(c.id))
+    .map(c => {
+      const idx = candidaturasFiltradas.findIndex(cf => cf.id === c.id)
+      return { ...c, _rank: idx >= 0 ? idx + 1 : null }
+    })
+    .sort((a, b) => (a._rank ?? 9999) - (b._rank ?? 9999))
   const rankMap = Object.fromEntries(candidaturasComparacao.map(c => [c.id, c._rank]))
 
   // Candidaturas elegíveis para descarte por nota mínima
@@ -1072,7 +1085,8 @@ export function VagaDetalhe({ usuario }) {
               <p className="text-sm" style={{ color: "var(--t-faint2)" }}>Nenhum candidato nesta etapa.</p>
             </div>
           ) : (
-            candidaturasFiltradas.map((c, i) => {
+            candidaturasPagina.map((c, i) => {
+                const rank = (pagina - 1) * POR_PAGINA + i + 1
                 const curriculo      = c.curriculo
                 const scoreRH        = curriculo?.score_rh      ?? null
                 const scoreMkt       = curriculo?.score_mercado  ?? null
@@ -1123,12 +1137,12 @@ export function VagaDetalhe({ usuario }) {
                         {/* Rank badge */}
                         <div
                           className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                          style={rankStyle[i] ?? {
+                          style={rankStyle[rank - 1] ?? {
                             background: "var(--s-chip-dark)",
                             color: "var(--t-muted2)",
                           }}
                         >
-                          {i + 1}
+                          {rank}
                         </div>
                         <div>
                           <Link
@@ -1287,6 +1301,32 @@ export function VagaDetalhe({ usuario }) {
                 )
               })
           )}
+
+          {/* Paginação */}
+          {totalPaginas > 1 && (
+            <div className="flex items-center justify-between pt-4 mt-2" style={{ borderTop: "1px solid var(--b-subtle)" }}>
+              <button
+                onClick={() => setPagina(p => Math.max(1, p - 1))}
+                disabled={pagina === 1}
+                className="px-4 py-1.5 rounded-xl text-sm font-bold transition-all disabled:opacity-30"
+                style={{ background: "var(--s-chip)", border: "1px solid var(--b-subtle)", color: "var(--t-muted2)" }}
+              >
+                ← Anterior
+              </button>
+              <span className="text-xs font-semibold" style={{ color: "var(--t-faint2)" }}>
+                {pagina} / {totalPaginas}
+                <span className="ml-2 opacity-60">({candidaturasFiltradas.length} candidatos)</span>
+              </span>
+              <button
+                onClick={() => setPagina(p => Math.min(totalPaginas, p + 1))}
+                disabled={pagina === totalPaginas}
+                className="px-4 py-1.5 rounded-xl text-sm font-bold transition-all disabled:opacity-30"
+                style={{ background: "var(--s-chip)", border: "1px solid var(--b-subtle)", color: "var(--t-muted2)" }}
+              >
+                Próxima →
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Sidebar: skills de mercado */}
@@ -1356,7 +1396,7 @@ export function VagaDetalhe({ usuario }) {
       {/* Barra flutuante de comparação */}
       {comparando.size >= 2 && !modalComparacao && (
         <div
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl"
+          className="fixed top-16 lg:top-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-5 py-3 rounded-2xl shadow-2xl"
           style={{
             background: "#0E2030",
             border: "1px solid rgba(167,139,250,0.35)",
@@ -1387,8 +1427,9 @@ export function VagaDetalhe({ usuario }) {
           </button>
           <button
             onClick={() => setComparando(new Set())}
-            className="text-brand-pale/30 hover:text-brand-pale transition-colors text-lg leading-none ml-1"
-            title="Limpar seleção"
+            className="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold transition-all"
+            style={{ background: "rgba(239,68,68,0.12)", border: "1px solid rgba(239,68,68,0.3)", color: "#EF4444" }}
+            title="Cancelar seleção"
           >
             ×
           </button>

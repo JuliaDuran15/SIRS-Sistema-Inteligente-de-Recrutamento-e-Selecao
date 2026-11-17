@@ -956,3 +956,7 @@ Propósito	desempatar sentenças já classificadas	ranquear skills por especific
 O objetivo aqui é o inverso do de transcrição: skills que aparecem em poucas vagas recebem IDF alto (são específicas, logo informativas), skills ubíquas como "liderança" recebem IDF baixo. TF fixo em 1 porque o que importa é "essa skill aparece nessa vaga?", não quantas vezes.
 
 O resultado final (linha 316) ainda converte o score float para int * 10 — o comentário deixa claro que é para compatibilidade, não tem significado estatístico real.
+
+
+
+ CREA ativo. Gestão de obras comerciais e industriais, AutoCAD, Revit, BIM, MS Project, SINAPI, NR-18.
